@@ -11,6 +11,21 @@ how it was verified, and any lesson worth keeping.
 
 ---
 
+## 28 Oct 2026
+
+### On GitHub, with develop, qa and main
+- **What:** the repository is pushed to
+  [royal-cyber-inc/corporate-gifting](https://github.com/royal-cyber-inc/corporate-gifting)
+  (`04e1397` on `main`), with `develop` and `qa` branched from it. CI now runs
+  on pushes to all three, as well as on every pull request. The
+  [git workflow](git-workflow.md) describes the flow: feature branches into
+  `develop`, then `develop` → `qa` → `main` by pull request. It also covers
+  hotfixes and the branch-protection settings to turn on. The deployment doc
+  maps `qa` to the QA environment and `main` to the demo environment (from
+  M7).
+- **Why:** the team works in parallel from `develop`, and QA tests a stable
+  `qa` while new work continues.
+
 ## 27 Oct 2026
 
 ### shadcn/ui in `@gifting/ui`

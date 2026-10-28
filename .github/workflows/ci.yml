@@ -1,11 +1,12 @@
-# Every push to main and every pull request: lint, typecheck, unit tests and a
-# production build. No secrets: CI never connects to a database, never calls
-# commercetools and never sends a message.
+# Every push to main, qa and develop, and every pull request: lint, typecheck,
+# unit tests and a production build. No secrets: CI never connects to a
+# database, never calls commercetools and never sends a message.
+# Branch flow: docs/engineering/git-workflow.md.
 name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, qa, develop]
   pull_request:
 
 permissions:
