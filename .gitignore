@@ -12,6 +12,8 @@ next-env.d.ts
 .DS_Store
 *.log
 playwright-report/
+# Client catalog snapshots (real brand data): never committed. See docs/plans/christie-catalog-import.md.
+.data/
 test-results/
 
 # Personal Claude Code settings; shared ones go in .claude/settings.json.

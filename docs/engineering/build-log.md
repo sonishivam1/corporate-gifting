@@ -13,6 +13,23 @@ how it was verified, and any lesson worth keeping.
 
 ## 28 Oct 2026
 
+### Cloud environment moves from AWS to Google Cloud (ADR 0014)
+- **What:** the planned POC cloud is now Google Cloud in `us-central1`, the
+  same region as the commercetools project
+  ([ADR 0014](../architecture/decisions/0014-google-cloud.md)):
+  - Cloud Run for the apps, API and worker;
+  - a load balancer with Cloud CDN and Cloud Armor;
+  - Pub/Sub for commercetools events, with a dead-letter topic;
+  - Secret Manager, Artifact Registry, and Workload Identity Federation
+    for CI;
+  - MongoDB Atlas on GCP;
+  - SendGrid for email.
+
+  ADR 0009 now offers Google Cloud Identity Platform instead of Cognito.
+  Deployment, configuration, operations, security, integrations, the
+  overview and the POC plan are updated.
+- **Why:** we have paid Google Cloud capacity. No code depended on AWS.
+
 ### On GitHub, with develop, qa and main
 - **What:** the repository is pushed to
   [royal-cyber-inc/corporate-gifting](https://github.com/royal-cyber-inc/corporate-gifting)
