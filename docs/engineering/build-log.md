@@ -13,6 +13,18 @@ how it was verified, and any lesson worth keeping.
 
 ## 28 Oct 2026
 
+### Proposed: M1 sign-in plan; ADR 0009 accepted (Auth0)
+- **What:** [M1: sign-in, invitations and member access](../plans/m1-sign-in.md),
+  proposed:
+  - Auth0 Free plan, with Google and email and password;
+  - invite-only and work emails only;
+  - members in commercetools Business Units;
+  - the Gifting API decides access from the member record.
+
+  ADR 0009 is accepted as Auth0, and open question 7 is answered.
+- **Why:** sign-in is the base of every M1 to M7 flow. The prototype has no
+  auth screens, so the plan sets them out in its look.
+
 ### Cloud environment moves from AWS to Google Cloud (ADR 0014)
 - **What:** the planned POC cloud is now Google Cloud in `us-central1`, the
   same region as the commercetools project

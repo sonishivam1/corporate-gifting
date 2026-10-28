@@ -1,6 +1,6 @@
 # 0009 — A hosted identity provider (Auth0 or Google Cloud Identity Platform)
 
-**Status:** Proposed (27 Oct 2026). Decide before M1.
+**Status:** Accepted (28 Oct 2026, Shivam): **Auth0, Free plan.** See "Decision" at the end.
 
 ## Context
 
@@ -31,3 +31,20 @@ provider secret beyond its own client id.
   never the request body.
 - Local development uses a development sign-in switch (disabled when
   `NODE_ENV=production`) so the flows can be built before the tenant exists.
+
+## Decision (28 Oct 2026)
+
+**Auth0 on its Free plan.**
+- **It's free now:** up to 25,000 monthly active users.
+- **It needs no company Google account to start.** Auth0's developer keys
+  cover Google sign-in while we build. Our own Google OAuth client
+  replaces them before any external demo.
+- **It covers what we need:** hosted login with Google and email and
+  password, verification and reset emails, and RBAC.
+
+Joining is invite-only, with work emails only. Auth0 proves who someone is,
+and the Gifting API decides access from the commercetools member record.
+
+The development sign-in switch above is replaced by tests that sign their
+own tokens. The build plan is [M1: sign-in](../../plans/m1-sign-in.md).
+
