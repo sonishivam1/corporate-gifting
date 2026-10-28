@@ -11,6 +11,7 @@ import { vendorChannelDraft } from "@gifting/ct-setup";
 import { createCtImportApi, importRequests, runImport } from "@gifting/ct/import";
 import { AppError, createLogger } from "@gifting/logger";
 
+import { CHRISTIE_GIFTING } from "../src/christie";
 import { categoryImports, inventoryImports, productDraftImport } from "../src/import";
 import { catalogSnapshotSchema, snapshotPath } from "../src/snapshot";
 
@@ -37,7 +38,7 @@ try {
   }
 
   const categories = categoryImports(snapshot);
-  const products = snapshot.products.map((p) => productDraftImport(p, snapshot));
+  const products = snapshot.products.map((p) => productDraftImport(p, snapshot, CHRISTIE_GIFTING));
   const inventory = inventoryImports(snapshot);
   const run = await runImport(createCtImportApi(config), "christie", [
     ...importRequests("category", categories),

@@ -45,8 +45,8 @@ Node 24 and pnpm 10. On Windows with fnm, prefix commands with
 | `pnpm db:up` / `pnpm db:down` | Local MongoDB (Atlas Local) and Mailpit in Docker |
 | `pnpm db:indexes` | Create the MongoDB indexes (`packages/db`) |
 | `pnpm ct:plan` | Print the commercetools setup drafts (store, channels, types); no calls |
-| `pnpm ct:apply` | Create the missing ones in the project from `.env`, skipping any that exist (first run 28 Oct 2026, project `corporate-gifting`) |
-| `pnpm seed` | Import the fictional vendors' products and stock, and the fictional demo customers, through the Import API (run `ct:apply` first) |
+| `pnpm ct:apply` | Set up the project from `.env`: types, product types, tax, zone and shipping, channels, store, associate roles, gift categories. Creates what's missing and adds missing fields and attributes; safe to re-run |
+| `pnpm seed` | Import the fictional products and stock, 250 demo customers, and 5 demo companies with 10 teams (Business Units) through the Import API (run `ct:apply` first) |
 | `pnpm catalog:extract` | Read the Christie Cookie storefront into `.data/catalogs/christie-cookie.json` (gitignored; with the client's permission) |
 | `pnpm catalog:import` / `pnpm catalog:remove` | Import that snapshot into the project (vendor channel, categories, products with images, stock), or delete it all again |
 | `pnpm worker` | Start the worker (today: lists the registered jobs) |

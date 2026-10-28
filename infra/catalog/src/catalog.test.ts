@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { CHRISTIE_ROOT_CATEGORY, CHRISTIE_VENDOR, linkCategories, pageCategories, productFromPage, productLinks } from "./christie";
+import { CHRISTIE_GIFTING, CHRISTIE_ROOT_CATEGORY, CHRISTIE_VENDOR, linkCategories, pageCategories, productFromPage, productLinks } from "./christie";
 import { findObjects, flightRows } from "./flight";
 import { imageSize } from "./image-size";
 import { categoryImports, inventoryImports, NOMINAL_STOCK, productDraftImport } from "./import";
@@ -108,10 +108,17 @@ describe("import mapping", () => {
     expect(images?.map((i) => i.dimensions)).toEqual([{ w: 800, h: 600 }, { w: 1080, h: 1080 }]);
   });
 
-  it("sets the marketplace attributes and the tin attributes", () => {
+  it("sets the marketplace, gifting and tin attributes", () => {
     const { snapshot, product } = sample();
-    const names = productDraftImport(product, snapshot).masterVariant?.attributes?.map((a) => a.name);
-    expect(names).toEqual(["brand", "vendorKey", "tags", "cookieFlavor", "cookieCount", "tinColor", "itemType", "corporateTin"]);
+    const names = productDraftImport(product, snapshot, CHRISTIE_GIFTING).masterVariant?.attributes?.map((a) => a.name);
+    expect(names).toEqual(["brand", "vendorKey", "tags", "perishable", "shipsTo", "leadTimeDays", "cookieFlavor", "cookieCount", "tinColor", "itemType", "corporateTin"]);
+  });
+
+  it("adds the standard tax category and the marketplace gift category", () => {
+    const { snapshot, product } = sample();
+    const draft = productDraftImport(product, snapshot, CHRISTIE_GIFTING);
+    expect(draft.taxCategory).toEqual({ typeId: "tax-category", key: "standard" });
+    expect(draft.categories?.map((c) => c.key)).toEqual(["christie-shop-by-tin", "christie-small", "gifts-food-treats"]);
   });
 
   it("stocks in-stock SKUs at the vendor channel and out-of-stock ones at zero", () => {

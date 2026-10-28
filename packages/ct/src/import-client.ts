@@ -46,11 +46,13 @@ export function batches<T>(items: readonly T[], size = IMPORT_BATCH_SIZE): T[][]
   return out;
 }
 
-type Importable = Extract<ImportRequest, { type: "category" | "customer" | "inventory" | "product-draft" }>;
+type Importable = Extract<ImportRequest, { type: "business-unit" | "category" | "customer" | "inventory" | "product-draft" }>;
 
 function submit(api: CtImportApi, importContainerKey: string, request: Importable) {
   const args = { importContainerKey };
   switch (request.type) {
+    case "business-unit":
+      return api.businessUnits().importContainers().withImportContainerKeyValue(args).post({ body: request }).execute();
     case "category":
       return api.categories().importContainers().withImportContainerKeyValue(args).post({ body: request }).execute();
     case "customer":

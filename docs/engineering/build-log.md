@@ -13,6 +13,39 @@ how it was verified, and any lesson worth keeping.
 
 ## 28 Oct 2026
 
+### commercetools holds everything the gifting flows need, except the subscription
+- **What:**
+  - `ct:apply` now creates more of the project:
+    - the `standard` tax category (demo base rates for the 10 seeded
+      states and a US fallback);
+    - the US zone and a default $8.00 shipping method;
+    - the `company-balance-payment` type;
+    - `approverIds` on `team-settings`;
+    - four gifting attributes on both product types: `perishable`,
+      `shipsTo`, `leadTimeDays`, `minimumAge`;
+    - the owner, admin, approver and sender associate roles;
+    - a `gifts` category tree.
+
+    It also links every vendor channel to the store, and adds missing
+    fields and attributes to existing types instead of skipping them.
+  - `pnpm seed` adds five fictional companies, each with two teams, as
+    Business Units. The 250 demo customers are their associates: an owner
+    and an admin per company, and an approver and senders per team. The
+    fictional products gain descriptions, the tax category, gift
+    categories and the gifting attributes.
+  - `catalog:import` gives Christie Cookie products the tax category, the
+    food-and-treats gift category, and perishable, ships-to-US and lead
+    time.
+- **Why:** so the spikes and M1 to M4 start from a project where a cart can
+  be priced, and the commercetools setup can be handed off.
+- **Verified:**
+  - Import summaries: 289 of 289 operations for the seed and 742 of 742 for
+    the catalog.
+  - Read back: 15 units, 250 associates, 261 published products, every one
+    taxed and in a gift category, and 5 supply channels on the store.
+  - A test cart priced correctly: $57.00 item, $8.00 shipping and 7% TN tax
+    make $69.55. It was deleted afterwards.
+
 ### Christie Cookie catalog and demo customers in commercetools
 - **What:**
   - A new `infra/catalog` package.

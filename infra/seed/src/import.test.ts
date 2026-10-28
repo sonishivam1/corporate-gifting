@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { inventoryImport, productDraftImport, slugFor } from "./import";
+import { giftCategoryKeys, inventoryImport, productDraftImport, slugFor, TAX_CATEGORY_KEY } from "./import";
 import { products } from "./index";
 
 describe("catalog import mapping", () => {
@@ -21,10 +21,22 @@ describe("catalog import mapping", () => {
     expect(price?.country).toBe("US");
   });
 
-  it("sets the brand, vendorKey and tags attributes the product type defines", () => {
+  it("sets the marketplace and gifting attributes the product type defines", () => {
     const attributes = productDraftImport(product).masterVariant?.attributes ?? [];
-    expect(attributes.map((a) => a.name)).toEqual(["brand", "vendorKey", "tags"]);
+    expect(attributes.map((a) => a.name)).toEqual(["brand", "vendorKey", "tags", "perishable", "shipsTo", "leadTimeDays"]);
     expect(attributes.find((a) => a.name === "vendorKey")?.value).toBe(product.vendorKey);
+    expect(attributes.find((a) => a.name === "perishable")?.value).toBe(true);
+    expect(attributes.find((a) => a.name === "leadTimeDays")?.value).toBe(3);
+  });
+
+  it("gives every product a description, the standard tax category and a gift category", () => {
+    for (const p of products) {
+      const draft = productDraftImport(p);
+      expect(draft.description?.["en-US"], p.sku).toBeTruthy();
+      expect(draft.taxCategory, p.sku).toEqual({ typeId: "tax-category", key: TAX_CATEGORY_KEY });
+      expect(draft.categories?.length, p.sku).toBeGreaterThan(0);
+    }
+    expect(giftCategoryKeys(["food", "sweet", "team"])).toEqual(["gifts-food-treats"]);
   });
 
   it("stocks each SKU at its vendor's supply channel", () => {

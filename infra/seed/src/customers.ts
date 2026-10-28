@@ -9,6 +9,8 @@
  */
 import type { CustomerImport } from "@commercetools/importapi-sdk";
 
+import { demoCompanies } from "./index";
+
 /** About one demo customer per catalog product. */
 export const DEMO_CUSTOMER_COUNT = 250;
 
@@ -18,6 +20,7 @@ export type DemoCustomer = {
   firstName: string;
   lastName: string;
   email: string;
+  companyKey: string;
   companyName: string;
   phone: string;
   address: { streetNumber: string; streetName: string; city: string; state: string; postalCode: string };
@@ -36,14 +39,6 @@ const LAST_NAMES = [
   "Quintrell", "Ravenscroft", "Sutherland", "Thornbury", "Underhill", "Vance", "Whitlock", "Yardley",
   "Abernathy", "Brightwater", "Castellan", "Delacroix", "Elsworth", "Fenwick", "Greaves", "Holloway",
   "Ironside", "Kettering", "Larkspur", "Mayfield", "Nightingale", "Ortega", "Prescott", "Rowntree",
-];
-
-const COMPANIES = [
-  { name: "Lumen Labs", domain: "lumenlabs.example" },
-  { name: "Harbor & Finch", domain: "harborfinch.example" },
-  { name: "Bluepeak Health", domain: "bluepeak.example" },
-  { name: "Copperline Logistics", domain: "copperline.example" },
-  { name: "Orbit Studio", domain: "orbitstudio.example" },
 ];
 
 const STREET_NAMES = [
@@ -83,7 +78,7 @@ export function demoCustomers(count = DEMO_CUSTOMER_COUNT, seed = 20261028): Dem
     const n = String(i + 1).padStart(4, "0");
     const firstName = pick(FIRST_NAMES);
     const lastName = pick(LAST_NAMES);
-    const company = COMPANIES[i % COMPANIES.length]!;
+    const company = demoCompanies[i % demoCompanies.length]!;
     const place = pick(CITIES);
     return {
       key: `customer-${n}`,
@@ -92,6 +87,7 @@ export function demoCustomers(count = DEMO_CUSTOMER_COUNT, seed = 20261028): Dem
       lastName,
       // The number keeps emails unique when two people share a name.
       email: `${firstName}.${lastName}.${n}@${company.domain}`.toLowerCase(),
+      companyKey: company.key,
       companyName: company.name,
       phone: `+1${place.area}55501${String(i % 100).padStart(2, "0")}`,
       address: {

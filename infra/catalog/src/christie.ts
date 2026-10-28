@@ -32,6 +32,13 @@ export const CHRISTIE_ROOT_CATEGORY: CatalogCategory = {
   path: "/diplay_categories",
 };
 
+/** What the marketplace adds to every Christie product: baked goods, shipped in the US. */
+export const CHRISTIE_GIFTING = {
+  categoryKeys: ["gifts-food-treats"],
+  perishable: true,
+  shipsTo: ["US"],
+};
+
 /** Every Christie product is tagged with these, besides its category slugs. */
 const BASE_TAGS = ["food", "sweet", "cookies"];
 
