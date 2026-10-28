@@ -1,0 +1,38 @@
+# Every push to main and every pull request: lint, typecheck, unit tests and a
+# production build. No secrets: CI never connects to a database, never calls
+# commercetools and never sends a message.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4 # version from package.json "packageManager"
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - name: Production build
+        run: pnpm build
+        env:
+          # The build never connects; services read the database at run time.
+          MONGODB_URI: mongodb://127.0.0.1:1/?serverSelectionTimeoutMS=2000

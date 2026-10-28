@@ -1,0 +1,30 @@
+import { z } from "zod";
+
+import { defineRoute } from "./http/route";
+import { MODULES } from "./modules/index";
+
+export const VERSION = "0.1.0";
+
+export const health = defineRoute({
+  method: "GET",
+  url: "/health",
+  schema: { response: z.object({ status: z.literal("ok") }) },
+  handler: async () => ({ status: "ok" as const }),
+});
+
+export const meta = defineRoute({
+  method: "GET",
+  url: "/v1/meta",
+  schema: {
+    response: z.object({
+      name: z.string(),
+      version: z.string(),
+      modules: z.array(z.object({ name: z.string(), milestone: z.string(), routes: z.number() })),
+    }),
+  },
+  handler: async () => ({
+    name: "gifting-api",
+    version: VERSION,
+    modules: MODULES.map((m) => ({ name: m.name, milestone: m.milestone, routes: m.routes.length })),
+  }),
+});

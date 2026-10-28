@@ -1,0 +1,35 @@
+{
+  "name": "corporate-gifting-marketplace",
+  "private": true,
+  "packageManager": "pnpm@10.25.0",
+  "engines": {
+    "node": ">=24.11"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "worker": "pnpm --filter @gifting/worker start",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:indexes": "pnpm --filter @gifting/db indexes",
+    "ct:plan": "pnpm --filter @gifting/ct-setup plan",
+    "ct:apply": "pnpm --filter @gifting/ct-setup apply",
+    "seed": "pnpm --filter @gifting/seed seed"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9",
+    "@types/node": "^24",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "esbuild": "^0.28",
+    "eslint": "^9",
+    "tsx": "^4",
+    "turbo": "2.11.10",
+    "typescript": "^5",
+    "typescript-eslint": "^8",
+    "vitest": "5.0.5"
+  }
+}

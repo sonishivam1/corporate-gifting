@@ -1,0 +1,19 @@
+{
+  "name": "@gifting/ct-setup",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "plan": "tsx scripts/plan.ts",
+    "apply": "tsx --env-file-if-exists=../../.env scripts/apply.ts",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@commercetools/platform-sdk": "9.7.0",
+    "@gifting/ct": "workspace:*",
+    "@gifting/logger": "workspace:*",
+    "@gifting/seed": "workspace:*"
+  }
+}

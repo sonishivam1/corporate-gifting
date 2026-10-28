@@ -1,0 +1,1188 @@
+<title>Gifting Marketplace Prototype</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Sora:wght@600;700;800&display=swap">
+<style>
+/* Layout: a sticky app switcher, then one of four apps. Sender is sidebar + soft-blue canvas;
+   recipient is a branded phone frame; vendor and ops are full-width tables. */
+:root{
+  color-scheme:light;
+  --bg:#FFFFFF; --bg-glow:#FFFFFF; --surface:#FFFFFF; --surface-2:#F5F8FC;
+  --ink:#012754; --ink-2:#59728F; --ink-3:#8398B0; --line:#E2E9F2;
+  --accent:#2570C5; --accent-hover:#1C5CA6; --accent-ink:#FFFFFF; --accent-soft:#EAF2FB;
+  --pop:#59728F;
+  --ok:#147A55; --ok-soft:#E6F4EE; --warn:#8A5300; --warn-soft:#FBF1DE; --info:#2570C5; --info-soft:#EAF2FB;
+  --neutral:#3A5273; --neutral-soft:#EEF3F8; --muted-badge:#7A8CA3; --muted-soft:#F2F5F9;
+  --danger:#B42840; --danger-soft:#FBEAED;
+  --tile-food:#FAF4EE; --tile-food-ink:#9A5A2E; --tile-home:#F5F3FA; --tile-home-ink:#5E4E96;
+  --tile-drink:#F0F6F3; --tile-drink-ink:#2D6B53; --tile-outdoors:#F0F4F9; --tile-outdoors-ink:#2F5B8A;
+  --brand:#0E7C74; --brand-ink:#FFFFFF; --brand-soft:#E3F2F0;
+  --scrim:rgba(11,27,63,.4);
+  --shadow:0 1px 2px rgba(11,27,63,.05),0 8px 24px rgba(11,27,63,.06);
+  --font-display:"Sora",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-body:"DM Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --r:12px; --r-lg:18px;
+}
+/* One light theme on purpose, matching the reference look; it ignores the viewer's dark mode. */
+*{box-sizing:border-box;scrollbar-width:none;-ms-overflow-style:none}
+*::-webkit-scrollbar{display:none;width:0;height:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--font-body)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:60;background:var(--surface)}
+h1,h2,h3{font-family:var(--font-display);color:var(--ink);text-wrap:balance;margin:0;letter-spacing:-.015em}
+h1{font-size:clamp(26px,3.2vw,34px);font-weight:700;line-height:1.15}
+h2{font-size:19px;font-weight:700;line-height:1.25}
+h3{font-size:15px;font-weight:600}
+p{margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:13px}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.muted{color:var(--ink-2)}
+.small{font-size:13px}
+.num{font-variant-numeric:tabular-nums}
+.stack-4,.stack-8,.stack-12,.stack-16,.stack-20,.stack-24{display:flex;flex-direction:column}
+.stack-4{gap:4px}.stack-8{gap:8px}.stack-12{gap:12px}.stack-16{gap:16px}.stack-20{gap:20px}.stack-24{gap:24px}
+.row-8{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.row-between{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.grow{flex:1;min-width:0}
+.center{text-align:center;align-items:center}
+.block{width:100%}
+.ic{flex:none}
+
+/* App switcher */
+.proto-bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;display:flex;align-items:center;gap:12px 20px;flex-wrap:wrap;padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));background:var(--surface);border-bottom:1px solid var(--line)}
+.wordmark{display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-weight:700;font-size:16px;white-space:nowrap;letter-spacing:-.01em}
+.wordmark .mark{width:30px;height:30px;border-radius:9px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center}
+.app-switch{display:flex;gap:4px;padding:4px;background:var(--surface-2);border-radius:12px;overflow-x:auto;max-width:100%}
+.app-switch button{display:flex;align-items:center;gap:6px;border:0;background:transparent;padding:7px 12px;border-radius:9px;font-weight:600;font-size:13.5px;color:var(--ink-2);white-space:nowrap}
+.app-switch button:hover{color:var(--ink)}
+.app-switch button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.proto-pill{margin-left:auto;font-size:12px;font-weight:600;color:var(--pop);border:1px solid currentColor;border-radius:999px;padding:3px 10px;white-space:nowrap}
+
+/* Sender shell */
+.sender{display:grid;grid-template-columns:240px minmax(0,1fr);min-height:calc(100vh - 57px)}
+.side{border-right:1px solid var(--line);background:var(--surface);padding:20px 14px;display:flex;flex-direction:column;gap:20px;position:sticky;top:calc(57px + env(safe-area-inset-top,0px));height:calc(100vh - 57px);overflow:auto}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav button{display:flex;align-items:center;gap:11px;border:0;background:none;padding:9px 12px;border-radius:10px;color:var(--ink-2);font-weight:500;text-align:left;white-space:nowrap}
+.nav button:hover{background:var(--surface-2);color:var(--ink)}
+.nav button[aria-current="page"]{background:var(--surface-2);color:var(--ink);font-weight:600}
+.nav button[aria-current="page"] .ic{color:var(--accent)}
+.side-foot{margin-top:auto;display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:14px;border:1px solid var(--line)}
+.side-foot .v{font-family:var(--font-display);font-weight:700;font-size:20px}
+.canvas{padding-block:28px 72px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));background:var(--bg);min-width:0}
+@media (min-width:901px){.canvas{padding-left:36px;padding-right:max(36px,env(safe-area-inset-right,0px))}}
+.page{max-width:1160px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+.page.narrow{max-width:760px}
+@media (max-width:900px){
+  .sender{grid-template-columns:1fr}
+  .side{position:sticky;top:calc(var(--bar-h,57px) + env(safe-area-inset-top,0px));z-index:40;height:auto;flex-direction:row;align-items:center;padding-block:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-right:0;border-bottom:1px solid var(--line);overflow-x:auto}
+  .nav{flex-direction:row}
+  .side-foot{display:none}
+}
+
+/* Controls */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:9px 16px;font-weight:600;font-size:14px;white-space:nowrap;transition:background .15s,border-color .15s,color .15s}
+.btn:hover{border-color:var(--ink-3)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{background:var(--accent-hover);border-color:var(--accent-hover)}
+.btn.brand{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--accent);padding-inline:10px}
+.btn.ghost:hover{background:var(--accent-soft)}
+.btn.danger{color:var(--danger)}
+.btn.danger-fill{background:var(--danger);border-color:var(--danger);color:var(--surface)}
+.btn.sm{padding:6px 11px;font-size:13px;border-radius:10px}
+.btn.lg{padding:12px 22px;font-size:15px;border-radius:16px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.link{border:0;background:none;padding:0;color:var(--accent);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.icon-btn{border:0;background:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:var(--ink-2)}
+.icon-btn:hover{background:var(--surface-2);color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 14px;font-size:13.5px;font-weight:500;color:var(--ink-2)}
+.chip:hover{color:var(--ink);border-color:var(--ink-3)}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600}
+.chip.static{cursor:default}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field label,.flabel{font-size:13.5px;font-weight:600}
+.input{width:100%;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 12px;outline:none;min-width:0}
+.input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.input[aria-invalid="true"]{border-color:var(--danger)}
+textarea.input{resize:vertical;line-height:1.5}
+.err{color:var(--danger);font-size:12.5px}
+.search{position:relative;flex:1;min-width:200px;max-width:340px}
+.search .ic{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--ink-3)}
+.search .input{padding-left:36px}
+.switch{position:relative;width:42px;height:24px;border-radius:999px;background:var(--line);border:0;flex:none;transition:background .15s;padding:0}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+.switch[aria-checked="true"]{background:var(--accent)}
+.switch[aria-checked="true"]::after{transform:translateX(18px)}
+
+/* Surfaces */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:20px;min-width:0}
+.card.raised{box-shadow:var(--shadow);border-color:transparent}
+.section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.alert{display:flex;gap:12px;align-items:flex-start;border-radius:14px;padding:14px 16px;font-size:14px}
+.alert.warn{background:var(--warn-soft);color:var(--warn)}
+.alert.danger{background:var(--danger-soft);color:var(--danger)}
+.alert.info{background:var(--info-soft);color:var(--info)}
+.alert b{display:block}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12.5px;font-weight:600;white-space:nowrap;text-transform:capitalize}
+.badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.badge.neutral{background:var(--neutral-soft);color:var(--neutral)}
+.badge.info{background:var(--info-soft);color:var(--info)}
+.badge.warn{background:var(--warn-soft);color:var(--warn)}
+.badge.ok{background:var(--ok-soft);color:var(--ok)}
+.badge.muted{background:var(--muted-soft);color:var(--muted-badge)}
+.avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:12.5px;font-weight:700;background:var(--accent-soft);color:var(--accent);flex:none}
+
+/* Home */
+.hello{display:flex;justify-content:space-between;align-items:flex-end;gap:16px 24px;flex-wrap:wrap}
+.hello h1{font-size:clamp(30px,4.2vw,42px);font-weight:800;letter-spacing:-.025em}
+.tiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
+.tile{display:flex;flex-direction:column;gap:10px;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:var(--r-lg);padding:12px 12px 16px;transition:transform .15s,box-shadow .15s;min-width:0}
+.tile:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+.tile .art{height:92px;border-radius:12px;display:grid;place-items:center}
+.tile b{font-weight:600;font-size:14.5px;display:flex;align-items:center;gap:4px;padding-inline:4px}
+.tile span.d{font-size:12.5px;color:var(--ink-2);padding-inline:4px}
+.art.a,.art.b,.art.c,.art.d,.art.e{background:var(--surface-2);color:var(--ink)}
+.tile .art.a{color:var(--accent)}
+.moment-ico.art{color:var(--ink-2)}
+@media (max-width:1100px){.tiles{grid-template-columns:repeat(3,minmax(0,1fr))}.tile.hero{grid-column:span 2}}
+@media (max-width:620px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.stats.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 18px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat .v{font-family:var(--font-display);font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.stat .l{font-size:13px;color:var(--ink-2)}
+.stat.lead{border-color:var(--ink-3)}
+.stat.lead .v{color:var(--ink)}
+@media (max-width:760px){.stats.four{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.stats{grid-template-columns:1fr}}
+.hscroll{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(230px,1fr);gap:14px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x mandatory}
+.coll{scroll-snap-align:start;display:flex;flex-direction:column;gap:12px;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:var(--r-lg);padding:12px;min-width:0;transition:box-shadow .15s}
+.coll:hover{box-shadow:var(--shadow)}
+.coll .meta{display:flex;flex-direction:column;gap:2px;padding:0 4px 4px}
+.mosaic{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:10px;border-radius:12px;background:var(--surface-2)}
+.mosaic .pt{aspect-ratio:1;border-radius:8px}
+.mosaic .pt.empty{background:var(--surface)}
+.split{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:20px;align-items:start}
+@media (max-width:980px){.split{grid-template-columns:1fr}}
+.list{display:flex;flex-direction:column}
+.list > *{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.list > *:last-child{border-bottom:0}
+.mini-bar{height:6px;border-radius:999px;background:var(--surface-2);overflow:hidden;width:72px;flex:none}
+.mini-bar i{display:block;height:100%;background:var(--accent);border-radius:999px}
+.moment-ico{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:none}
+
+/* Products */
+.pt{display:grid;place-items:center;border-radius:12px}
+.pt.food{background:var(--tile-food);color:var(--tile-food-ink)}
+.pt.home{background:var(--tile-home);color:var(--tile-home-ink)}
+.pt.drink{background:var(--tile-drink);color:var(--tile-drink-ink)}
+.pt.outdoors{background:var(--tile-outdoors);color:var(--tile-outdoors-ink)}
+.filters{display:flex;flex-direction:column;gap:14px}
+.frow{display:grid;grid-template-columns:86px minmax(0,1fr);gap:12px;align-items:center}
+@media (max-width:620px){.frow{grid-template-columns:1fr;gap:6px}}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
+.pcard{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;min-width:0;transition:box-shadow .15s}
+.pcard:hover{box-shadow:var(--shadow)}
+.pcard .pt{aspect-ratio:4/3;border-radius:0;border:0;width:100%;max-width:100%}
+.pcard .body{padding:14px 16px 16px;display:flex;flex-direction:column;gap:3px;flex:1}
+.brand{font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.pname{font-weight:600;line-height:1.3}
+.price{font-family:var(--font-display);font-weight:700;font-variant-numeric:tabular-nums}
+.pcard .foot{display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:12px;gap:8px}
+.empty-state{border:1.5px dashed var(--line);border-radius:var(--r-lg);padding:40px 20px;text-align:center;color:var(--ink-2);display:flex;flex-direction:column;gap:10px;align-items:center}
+.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.create-card{border:1.5px dashed var(--ink-3);background:transparent;border-radius:var(--r-lg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:28px;color:var(--accent);font-weight:600;min-height:220px}
+.create-card:hover{background:var(--accent-soft);border-color:var(--accent)}
+.tagline{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:12px;padding:2px 9px;border-radius:999px;background:var(--surface-2);color:var(--ink-2)}
+
+/* Send flow */
+.stepper{display:flex;gap:6px;flex-wrap:wrap}
+.stepper button{display:flex;align-items:center;gap:8px;border:0;background:none;padding:6px 14px 6px 6px;border-radius:999px;color:var(--ink-3);font-weight:600;font-size:14px}
+.stepper .n{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;border:1.5px solid currentColor;font-size:12.5px}
+.stepper button[aria-current="step"]{color:var(--accent);background:var(--accent-soft)}
+.stepper button[aria-current="step"] .n{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.stepper button.done{color:var(--ok)}
+.stepper button.done .n{background:var(--ok);color:var(--surface);border-color:var(--ok)}
+.stepper button[disabled]{cursor:not-allowed}
+.flow{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:24px;align-items:start}
+.flow aside{position:sticky;top:84px}
+@media (max-width:1040px){.flow{grid-template-columns:1fr}.flow aside{position:static}}
+.flow-nav{display:flex;justify-content:space-between;gap:12px;padding-top:20px;border-top:1px solid var(--line);flex-wrap:wrap}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:620px){.grid2{grid-template-columns:1fr}}
+.choice{display:flex;gap:14px;align-items:flex-start;text-align:left;border:1.5px solid var(--line);background:var(--surface);border-radius:var(--r-lg);padding:16px;width:100%}
+.choice:hover{border-color:var(--ink-3)}
+.choice[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.choice .ico{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:var(--surface);color:var(--accent);flex:none;border:1px solid var(--line)}
+.choice b{display:block;margin-bottom:2px}
+.pick{display:flex;align-items:center;gap:12px;text-align:left;border:1.5px solid var(--line);background:var(--surface);border-radius:14px;padding:10px 14px 10px 10px;width:100%}
+.pick:hover{border-color:var(--ink-3)}
+.pick[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.pick .pt{width:46px;height:46px;flex:none;border-radius:10px}
+.pick .tick{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;flex:none;color:transparent}
+.pick[aria-pressed="true"] .tick{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.picks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (max-width:700px){.picks{grid-template-columns:1fr}}
+.people{display:flex;flex-direction:column;max-height:330px;overflow:auto;border:1px solid var(--line);border-radius:14px}
+.person{display:flex;align-items:center;gap:12px;padding:10px 14px;border:0;border-bottom:1px solid var(--line);background:var(--surface);text-align:left;width:100%}
+.person:last-child{border-bottom:0}
+.person:hover{background:var(--surface-2)}
+.person .tick{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--ink-3);display:grid;place-items:center;flex:none;color:transparent}
+.person[aria-pressed="true"] .tick{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.chan-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:760px){.chan-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.chan{display:flex;gap:10px;align-items:flex-start;text-align:left;border:1.5px solid var(--line);background:var(--surface);border-radius:14px;padding:12px;min-width:0}
+.chan:hover{border-color:var(--ink-3)}
+.chan[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.chan[aria-pressed="true"] > .ic{color:var(--accent)}
+.chan b{display:block;font-size:14px}
+.swatches{display:flex;gap:10px;flex-wrap:wrap}
+.swatch{width:72px;height:50px;border-radius:12px;border:2px solid var(--line);padding:0}
+.swatch[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.review{margin:0;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px}
+.review > div{display:grid;grid-template-columns:130px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
+.review > div:last-child{border-bottom:0}
+.review dt{font-size:13px;color:var(--ink-2);font-weight:600}
+.review dd{margin:0;min-width:0}
+@media (max-width:560px){.review > div{grid-template-columns:1fr auto}.review dt{grid-column:1 / -1}}
+.cost{background:var(--surface-2);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:8px}
+.cost .row-between{font-size:14px}
+.cost .total{font-family:var(--font-display);font-weight:700;font-size:18px;padding-top:8px;border-top:1px solid var(--line)}
+.gcard{border-radius:16px;overflow:hidden;border:1px solid var(--line);background:var(--surface)}
+.gcard .cover{height:118px;display:grid;place-items:center;padding:12px}
+.gcard .cover .title{font-family:var(--font-display);font-weight:800;font-size:20px;color:var(--ink);background:var(--surface);padding:6px 16px;border-radius:999px;text-align:center;max-width:100%;overflow-wrap:anywhere}
+.gcard .msg{padding:16px 16px 6px;white-space:pre-wrap;font-size:14px;overflow-wrap:anywhere}
+.gcard .from{padding:0 16px 16px;font-size:13px;color:var(--ink-2)}
+.cover-confetti{background:radial-gradient(circle at 12% 28%,var(--pop) 0 4px,transparent 5px),radial-gradient(circle at 84% 22%,var(--accent) 0 5px,transparent 6px),radial-gradient(circle at 28% 82%,var(--warn) 0 4px,transparent 5px),radial-gradient(circle at 68% 74%,var(--ok) 0 4px,transparent 5px),radial-gradient(circle at 48% 12%,var(--accent) 0 3px,transparent 4px),radial-gradient(circle at 92% 86%,var(--pop) 0 3px,transparent 4px),var(--accent-soft);background-size:110px 110px}
+.cover-ribbon{background:repeating-linear-gradient(135deg,var(--tile-home) 0 16px,var(--surface-2) 16px 32px)}
+.cover-evergreen{background:linear-gradient(160deg,var(--tile-drink) 0 58%,var(--tile-drink-ink) 58% 100%)}
+.cover-brand{background:var(--brand)}
+.share{border-top:1px solid var(--line);padding-top:20px}
+.copyrow{display:flex;gap:8px;align-items:center;background:var(--surface-2);border-radius:10px;padding:8px 8px 8px 12px;min-width:0}
+.copyrow code{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.done-ico{width:64px;height:64px;border-radius:50%;display:grid;place-items:center}
+.done-ico.ok{background:var(--ok-soft);color:var(--ok)}
+.done-ico.warn{background:var(--warn-soft);color:var(--warn)}
+#qr{border-radius:10px;max-width:100%}
+
+/* Tables */
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);font-weight:600;text-align:left;padding:11px 16px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface-2)}
+td{padding:12px 16px;border-bottom:1px solid var(--line);vertical-align:middle}
+tbody tr:last-child td{border-bottom:0}
+tr.click{cursor:pointer}
+tr.click:hover td{background:var(--surface-2)}
+td.r,th.r{text-align:right}
+td .sub{display:block;font-size:12.5px;color:var(--ink-2)}
+.nowrap{white-space:nowrap}
+.chan-icons{display:flex;gap:6px;color:var(--ink-2)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs button{border:0;background:none;padding:10px 14px;font-weight:600;color:var(--ink-2);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.tabs button:hover{color:var(--ink)}
+.tabs button[aria-selected="true"]{color:var(--accent);border-color:var(--accent)}
+.funnel{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
+.fstep{display:flex;flex-direction:column;gap:8px;min-width:0}
+.fstep .bar{height:96px;background:var(--surface-2);border-radius:10px;display:flex;align-items:flex-end;overflow:hidden}
+.fstep .bar i{display:block;width:100%;background:var(--accent);border-radius:8px 8px 0 0;min-height:3px}
+.fstep.exp .bar i{background:var(--muted-badge)}
+.fstep .v{font-family:var(--font-display);font-weight:700;font-size:20px;font-variant-numeric:tabular-nums}
+@media (max-width:760px){.funnel{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.seg{display:flex;height:12px;border-radius:999px;overflow:hidden;background:var(--surface-2)}
+.seg i{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.s-delivered{background:var(--ok)} .s-shipped{background:var(--tile-drink-ink)} .s-chose{background:var(--accent)} .s-opened{background:var(--tile-outdoors-ink);opacity:.45} .s-sent{background:var(--ink-3);opacity:.35} .s-expired{background:var(--muted-badge)}
+.auto-card{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;align-items:flex-start}
+.kv{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:12px}
+.kv div{display:flex;flex-direction:column;gap:2px;font-size:13.5px;min-width:0}
+.kv span{color:var(--ink-3);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+@media (max-width:760px){.kv{grid-template-columns:repeat(2,minmax(0,1fr))}.auto-card{grid-template-columns:minmax(0,1fr) auto}.auto-card > .moment-ico{display:none}}
+
+/* Recipient */
+.rec-stage{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:32px;padding-block:32px 72px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));align-items:start;background:var(--surface-2);min-height:calc(100vh - 57px)}
+.rec-notes{justify-self:end;max-width:300px;width:100%}
+.rec-notes2{justify-self:start;max-width:300px;width:100%}
+.rec-steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;counter-reset:r}
+.rec-steps button{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;padding:8px 10px;border-radius:10px;text-align:left;color:var(--ink-2);font-weight:500}
+.rec-steps button:hover{background:var(--surface-2)}
+.rec-steps button[aria-current="step"]{background:var(--brand-soft);color:var(--ink);font-weight:600}
+.rec-steps .n{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;background:var(--surface-2)}
+.rec-steps button[aria-current="step"] .n{background:var(--brand);color:var(--brand-ink)}
+.notes{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;font-size:13.5px;color:var(--ink-2)}
+.phone{width:390px;max-width:100%;border:10px solid var(--ink);border-radius:46px;background:var(--surface);overflow:hidden;min-height:780px;display:flex;flex-direction:column;box-shadow:var(--shadow)}
+.ph-bar{display:flex;align-items:center;gap:10px;padding:18px 20px 14px;background:var(--brand);color:var(--brand-ink)}
+.ph-logo{width:30px;height:30px;border-radius:50%;background:var(--brand-ink);color:var(--brand);display:grid;place-items:center;font-family:var(--font-display);font-weight:800;font-size:14px}
+.ph-sub{margin-left:auto;font-size:12.5px;opacity:.85}
+.ph-body{padding:24px 20px;display:flex;flex-direction:column;gap:18px;flex:1}
+.ph-foot{text-align:center;padding:12px;border-top:1px solid var(--line)}
+.ph-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.ph-item{border:1px solid var(--line);border-radius:14px;overflow:hidden;text-align:left;background:var(--surface);padding:0;display:flex;flex-direction:column;min-width:0}
+.ph-item:hover{border-color:var(--brand)}
+.ph-item .pt{aspect-ratio:1;border-radius:0;width:100%}
+.ph-item > div{padding:10px 12px 12px;display:flex;flex-direction:column;gap:2px}
+.pt.hero{aspect-ratio:4/3;width:100%}
+.big{font-size:24px;font-weight:800;letter-spacing:-.02em}
+.chip.brandsel[aria-pressed="true"]{background:var(--brand-soft);border-color:var(--brand);color:var(--ink)}
+.chosen-row{display:flex;gap:12px;align-items:center;padding:10px;border-radius:14px;background:var(--surface-2)}
+.chosen-row .pt{width:54px;height:54px;flex:none}
+.giftbox{position:relative;width:170px;height:160px;margin:6px auto 0}
+.giftbox .base{position:absolute;bottom:0;left:14px;right:14px;height:104px;background:var(--brand);border-radius:12px;overflow:hidden}
+.giftbox .base::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:24px;transform:translateX(-50%);background:var(--brand-soft)}
+.giftbox .lid{position:absolute;top:26px;left:4px;right:4px;height:36px;background:var(--brand);border-radius:10px;box-shadow:0 6px 0 -2px var(--scrim);transition:transform .75s cubic-bezier(.2,.8,.2,1),opacity .75s;z-index:2}
+.giftbox .lid::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:24px;transform:translateX(-50%);background:var(--brand-soft)}
+.giftbox .bow{position:absolute;left:50%;top:-24px;width:64px;height:28px;transform:translateX(-50%)}
+.giftbox .bow::before,.giftbox .bow::after{content:"";position:absolute;top:2px;width:30px;height:24px;border:6px solid var(--brand-soft);border-radius:50% 50% 50% 50%}
+.giftbox .bow::before{left:0;transform:rotate(-18deg)}
+.giftbox .bow::after{right:0;transform:rotate(18deg)}
+.giftbox.wiggle{animation:wiggle 2.4s ease-in-out infinite}
+.giftbox.open{animation:none}
+.giftbox.open .lid{transform:translateY(-90px) rotate(-16deg);opacity:0}
+@keyframes wiggle{0%,80%,100%{transform:rotate(0)}84%{transform:rotate(-4deg)}88%{transform:rotate(4deg)}92%{transform:rotate(-3deg)}96%{transform:rotate(2deg)}}
+.reveal{animation:rise .5s ease-out}
+@keyframes rise{from{opacity:.2;transform:translateY(16px)}to{opacity:1;transform:none}}
+.track{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:0}
+.track li{display:flex;gap:12px;align-items:flex-start;position:relative;padding-bottom:16px}
+.track li:last-child{padding-bottom:0}
+.track li::before{content:"";position:absolute;left:11px;top:24px;bottom:0;width:2px;background:var(--line)}
+.track li:last-child::before{display:none}
+.track .dot{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;border:2px solid var(--line);background:var(--surface);flex:none;color:transparent;z-index:1}
+.track li.on .dot{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.spinner{width:40px;height:40px;border-radius:50%;border:4px solid var(--brand-soft);border-top-color:var(--brand);animation:spin .8s linear infinite;margin:0 auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (max-width:1080px){
+  .rec-stage{grid-template-columns:1fr;justify-items:center}
+  .rec-notes,.rec-notes2{justify-self:stretch;max-width:390px;margin:0 auto}
+  .rec-notes{order:0}.phone{order:1}.rec-notes2{order:2}
+}
+@media (max-width:480px){
+  .phone{border:0;border-radius:18px;min-height:auto}
+}
+
+/* Vendor + ops */
+.wide{max-width:1160px;margin:0 auto;padding-block:28px 72px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:24px}
+.wide-bg{background:var(--bg);min-height:calc(100vh - 57px)}
+.sel-field{min-width:240px}
+
+/* Modal + toast */
+.scrim{position:fixed;inset:0;background:var(--scrim);display:grid;place-items:center;z-index:100;padding:16px}
+.modal{background:var(--surface);border-radius:20px;max-width:540px;width:100%;max-height:calc(100vh - 32px);overflow:auto;padding:22px 24px 24px;box-shadow:0 24px 60px rgba(0,0,0,.3);display:flex;flex-direction:column;gap:16px}
+.modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding-top:4px}
+.toasts{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px;z-index:120;max-width:min(380px,calc(100vw - 32px))}
+.toast{background:var(--ink);color:var(--bg);padding:12px 16px;border-radius:12px;font-size:14px;box-shadow:var(--shadow);animation:rise .2s ease-out}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
+</style>
+
+<header class="proto-bar" id="proto-bar">
+  <div class="wordmark"><span class="mark" id="mark"></span>Gifting Marketplace</div>
+  <nav class="app-switch" aria-label="Apps" id="app-switch"></nav>
+  <span class="proto-pill">Prototype · fictional data</span>
+</header>
+<div id="view-sender" class="sender">
+  <aside class="side"><nav class="nav" id="sender-nav" aria-label="Sender dashboard"></nav><div class="side-foot" id="side-foot"></div></aside>
+  <main class="canvas" id="sender-main"></main>
+</div>
+<div id="view-recipient" hidden></div>
+<div id="view-vendor" class="wide-bg" hidden></div>
+<div id="view-ops" class="wide-bg" hidden></div>
+<div id="modal-root"></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+/* ---------- Icons ---------- */
+const ICONS={
+home:'<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>',
+grid:'<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
+layers:'<path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/>',
+send:'<path d="M21 3L10 14"/><path d="M21 3l-7 18-4-7-7-4 18-7z"/>',
+chart:'<path d="M3 20h18"/><path d="M6 16v-5M11 16V6M16 16v-8"/>',
+repeat:'<path d="M17 2l4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/>',
+wallet:'<rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18"/><circle cx="16.5" cy="15" r="1.2"/>',
+gift:'<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v9h14v-9"/><path d="M12 8v13"/><path d="M12 8c-2-4-6-4-6-1.5S9 8 12 8zM12 8c2-4 6-4 6-1.5S15 8 12 8z"/>',
+users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/><path d="M18 14.8c1.9.7 3.1 2.5 3.5 5.2"/>',
+check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+plus:'<path d="M12 5v14M5 12h14"/>',
+x:'<path d="M6 6l12 12M18 6L6 18"/>',
+'chev-r':'<path d="M9 6l6 6-6 6"/>',
+'chev-l':'<path d="M15 6l-6 6 6 6"/>',
+mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/>',
+sms:'<path d="M4 5h16v11H9l-5 4z"/><path d="M8 10h8"/>',
+hash:'<path d="M9 3L7 21M17 3l-2 18M4 9h17M3 15h17"/>',
+teams:'<rect x="3" y="5" width="13" height="14" rx="2"/><path d="M6.5 9h6M9.5 9v7"/><circle cx="19" cy="8" r="2"/><path d="M18 12h3v5a2 2 0 0 1-3 1.7"/>',
+link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+qr:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM18 18h3v3h-3zM14 20.5h2M20.5 14v2"/>',
+upload:'<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v4h16v-4"/>',
+truck:'<path d="M2 6h12v10H2zM14 10h4l3 3v3h-7"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>',
+calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+cake:'<path d="M4 21V12h16v9"/><path d="M4 16c2 1.5 4 1.5 6 0s4-1.5 6 0 4 1.5 4 0"/><path d="M12 12V8"/><path d="M12 4c1 1.1 1 2.2 0 3-1-.8-1-1.9 0-3z"/>',
+award:'<circle cx="12" cy="9" r="5.5"/><path d="M8.5 13.5L7 21l5-2.5 5 2.5-1.5-7.5"/>',
+sparkle:'<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/>',
+heart:'<path d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.4 4.3 4.3 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10z"/>',
+star:'<path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/>',
+search:'<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.3-4.3"/>',
+copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
+alert:'<path d="M12 3.5l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.5v.01"/>',
+info:'<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8v.01"/>',
+store:'<path d="M3 9l1.5-5h15L21 9"/><path d="M3 9h18v1.5a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0z"/><path d="M5 13v8h14v-8"/>',
+shield:'<path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/>',
+phone:'<rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18.5h2"/>',
+monitor:'<rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>',
+clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+tin:'<ellipse cx="12" cy="7" rx="7" ry="2.5"/><path d="M5 7v10c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V7"/><path d="M5 11.5c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5"/>',
+candle:'<rect x="7" y="10" width="10" height="11" rx="1.5"/><path d="M12 10V7.5"/><path d="M12 2.5c1.3 1.5 1.3 3 0 4-1.3-1-1.3-2.5 0-4z"/><path d="M7 14h10"/>',
+diffuser:'<path d="M8 21h8l-1-9H9z"/><path d="M10 12L7 3M12 12V2.5M14 12l3-9"/>',
+leaf:'<path d="M5 19c0-8 5-14 15-14 0 10-6 15-14 15"/><path d="M5 19l8-8"/>',
+teapot:'<path d="M6 10h11v5a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5z"/><path d="M17 11.5h1.5a2 2 0 0 1 0 4H17"/><path d="M6 12L3 9.5"/><path d="M9 10V8.5a2.5 2.5 0 0 1 5 0V10"/>',
+mug:'<path d="M4 7h12v9a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z"/><path d="M16 9h2a2.5 2.5 0 0 1 0 5h-2"/><path d="M8 3.5V5M12 3.5V5"/>',
+bottle:'<rect x="8.5" y="2.5" width="7" height="3" rx="1"/><path d="M8.5 5.5h7v2l1 2V20a1.5 1.5 0 0 1-1.5 1.5H9A1.5 1.5 0 0 1 7.5 20V9.5l1-2z"/><path d="M7.5 12h9"/>',
+blanket:'<rect x="3" y="7" width="18" height="11" rx="5.5"/><circle cx="8.5" cy="12.5" r="3"/><path d="M14 10h4M14 15h4"/>',
+backpack:'<path d="M6 9a6 6 0 0 1 12 0v11a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 20z"/><path d="M9.5 3.5h5M9 14h6v4H9z"/>',
+};
+const ic=(n,s=20)=>`<svg class="ic" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n]||''}</svg>`;
+
+/* ---------- Helpers ---------- */
+const $=(s,r=document)=>r.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money=(c,full)=>{const neg=c<0,v=Math.abs(c)/100;return(neg?'−':'')+'$'+v.toLocaleString('en-US',{minimumFractionDigits:full||v%1?2:0,maximumFractionDigits:2});};
+const pct=(a,b)=>b?Math.round(a/b*100):0;
+const B32='ABCDEFGHJKMNPQRSTVWXYZ23456789';
+function rand(n){const a=new Uint8Array(n);crypto.getRandomValues(a);return [...a].map(x=>B32[x%B32.length]).join('');}
+function linkToken(){const a=new Uint8Array(32);crypto.getRandomValues(a);return btoa(String.fromCharCode(...a)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
+const TODAY=new Date('2026-10-27T12:00:00');
+const fmtDate=d=>(typeof d==='string'?new Date(d+'T12:00:00'):d).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+const addDays=(n)=>{const d=new Date(TODAY);d.setDate(d.getDate()+n);return d;};
+const initials=n=>n.split(' ').map(w=>w[0]).slice(0,2).join('');
+const attrs=o=>Object.entries(o||{}).map(([k,v])=>`data-${k}="${esc(v)}"`).join(' ');
+
+/* ---------- Fictional demo data (mirrors infra/seed) ---------- */
+const VENDORS=[
+  {key:'vendor-north-bakery',name:'North Bakery Co.',method:'Portal',sla:3,onTime:98,active:true},
+  {key:'vendor-cedar-pine',name:'Cedar & Pine Candles',method:'Portal',sla:4,onTime:95,active:true},
+  {key:'vendor-brightleaf',name:'Brightleaf Tea House',method:'Email',sla:2,onTime:99,active:true},
+  {key:'vendor-trailhead',name:'Trailhead Goods',method:'Portal',sla:5,onTime:91,active:true},
+];
+const PRODUCTS=[
+  {sku:'NB-TIN-CLASSIC-12',name:'Classic Cookie Tin (12)',brand:'North Bakery',vendor:'vendor-north-bakery',cat:'food',icon:'tin',price:2800,stock:200,tags:['food','sweet','celebration'],occ:['birthday','thanks','appreciation'],desc:'Twelve butter cookies, baked the morning they ship and packed in a keepsake tin.'},
+  {sku:'NB-TIN-ASSORTED-24',name:'Assorted Cookie Tin (24)',brand:'North Bakery',vendor:'vendor-north-bakery',cat:'food',icon:'tin',price:4500,stock:120,tags:['food','sweet','team'],occ:['thanks','appreciation','newhire'],desc:'Two dozen cookies in six flavours. Big enough to share with a team.'},
+  {sku:'NB-TIN-HOLIDAY-18',name:'Holiday Cookie Tin (18)',brand:'North Bakery',vendor:'vendor-north-bakery',cat:'food',icon:'tin',price:3900,stock:80,tags:['food','sweet','holiday'],occ:['holiday'],desc:'Gingerbread, spiced shortbread and cranberry oat, eighteen in all.'},
+  {sku:'CP-CANDLE-CEDAR',name:'Cedarwood Candle',brand:'Cedar & Pine',vendor:'vendor-cedar-pine',cat:'home',icon:'candle',price:3200,stock:150,tags:['home','relax'],occ:['birthday','anniversary','thanks'],desc:'A soy candle that smells like a walk in the woods. About 45 hours of burn time.'},
+  {sku:'CP-CANDLE-TRIO',name:'Seasonal Candle Trio',brand:'Cedar & Pine',vendor:'vendor-cedar-pine',cat:'home',icon:'candle',price:4800,stock:60,tags:['home','relax','holiday'],occ:['holiday','appreciation'],desc:'Three travel candles: fir, orange peel and clove, and fireside.'},
+  {sku:'CP-DIFFUSER-LAV',name:'Lavender Reed Diffuser',brand:'Cedar & Pine',vendor:'vendor-cedar-pine',cat:'home',icon:'diffuser',price:2600,stock:90,tags:['home','relax'],occ:['thanks','birthday'],desc:'A slow, steady lavender scent for a desk or a bedside table.'},
+  {sku:'BL-TEA-SAMPLER',name:'Loose Leaf Tea Sampler',brand:'Brightleaf',vendor:'vendor-brightleaf',cat:'drink',icon:'leaf',price:2400,stock:300,tags:['food','drink','wellness'],occ:['thanks','newhire','birthday'],desc:'Eight loose leaf teas, from a bright green sencha to a malty breakfast blend.'},
+  {sku:'BL-TEA-CEREMONY',name:'Tea Ceremony Set',brand:'Brightleaf',vendor:'vendor-brightleaf',cat:'drink',icon:'teapot',price:6500,stock:40,tags:['drink','home'],occ:['anniversary','holiday'],desc:'A cast iron teapot, two cups and a tin of the house oolong.'},
+  {sku:'BL-MUG-PAIR',name:'Stoneware Mug Pair',brand:'Brightleaf',vendor:'vendor-brightleaf',cat:'drink',icon:'mug',price:3000,stock:110,tags:['drink','home'],occ:['newhire','anniversary','thanks'],desc:'Two hand-glazed 350 ml mugs. Dishwasher safe.',variants:['Sand','Charcoal']},
+  {sku:'TH-BOTTLE-750',name:'Insulated Bottle 750 ml',brand:'Trailhead',vendor:'vendor-trailhead',cat:'outdoors',icon:'bottle',price:3400,stock:250,tags:['outdoors','wellness'],occ:['newhire','appreciation'],desc:'Keeps drinks cold for a day or hot for half of one.',variants:['Moss','Navy','Snow']},
+  {sku:'TH-BLANKET-CAMP',name:'Packable Camp Blanket',brand:'Trailhead',vendor:'vendor-trailhead',cat:'outdoors',icon:'blanket',price:5900,stock:70,tags:['outdoors','home'],occ:['anniversary','holiday'],desc:'Water-resistant, warm and packs down to the size of a water bottle.',variants:['Forest','Slate']},
+  {sku:'TH-KIT-DAYHIKE',name:'Day Hike Kit',brand:'Trailhead',vendor:'vendor-trailhead',cat:'outdoors',icon:'backpack',price:7500,stock:30,tags:['outdoors','team'],occ:['newhire','anniversary','appreciation'],desc:'A 20 litre daypack with a bottle, trail snacks and a first aid kit.'},
+];
+const OCCASIONS=[
+  {key:'holiday',label:'Holiday',icon:'gift',title:'Happy holidays'},
+  {key:'anniversary',label:'Work anniversary',icon:'award',title:'Happy work anniversary'},
+  {key:'birthday',label:'Birthday',icon:'cake',title:'Happy birthday!'},
+  {key:'thanks',label:'Thank you',icon:'heart',title:'Thank you!'},
+  {key:'newhire',label:'New hire',icon:'sparkle',title:'Welcome to the team'},
+  {key:'appreciation',label:'Appreciation',icon:'star',title:"You're appreciated"},
+];
+const CATS=[{key:'food',label:'Food & treats'},{key:'home',label:'Home'},{key:'drink',label:'Tea & drinkware'},{key:'outdoors',label:'Outdoors'}];
+const TAGS=['food','sweet','drink','home','relax','wellness','outdoors','holiday','team','celebration'];
+const COVERS=[{key:'confetti',label:'Confetti'},{key:'ribbon',label:'Ribbon'},{key:'evergreen',label:'Evergreen'},{key:'brand',label:'Company colour'}];
+const CHANNELS=[
+  {key:'email',label:'Email',icon:'mail',note:'To their work inbox'},
+  {key:'sms',label:'SMS',icon:'sms',note:'A text with the link'},
+  {key:'slack',label:'Slack',icon:'hash',note:'A direct message'},
+  {key:'teams',label:'Teams',icon:'teams',note:'A chat message'},
+  {key:'link',label:'Gift link',icon:'link',note:'You share it yourself'},
+  {key:'qr',label:'QR code',icon:'qr',note:'Print it or show it'},
+];
+const COLLECTIONS=[
+  {id:'col-treats',name:'Treats & tea',budget:5000,tags:['food','drink']},
+  {id:'col-cozy',name:'Cozy at home',budget:6000,tags:['home','relax']},
+  {id:'col-holiday',name:'Holiday favourites',budget:7500,tags:['holiday','sweet','relax']},
+  {id:'col-outdoor',name:'Out and about',budget:10000,tags:['outdoors','wellness']},
+  {id:'col-all',name:'Anything under $50',budget:5000,tags:null},
+];
+const TEAMS=[
+  {key:'team-lumen-people',name:'People',threshold:100000,approver:'Rowan Ellis',members:9},
+  {key:'team-lumen-sales',name:'Sales',threshold:250000,approver:'Imani Brooks',members:14},
+];
+const LEDGER={
+  'team-lumen-people':[
+    {at:'1 Oct',type:'top-up',ref:'Card top-up (test mode)',amount:1500000},
+    {at:'1 Oct',type:'hold',ref:'New hire welcome · 8 × $100',amount:-80000},
+    {at:'1 Oct',type:'hold',ref:'Work anniversaries · 12 × $75',amount:-90000},
+    {at:'6 Oct',type:'hold',ref:'Q4 thank-you · 40 × $50',amount:-200000},
+    {at:'14 Oct',type:'release',ref:'Q4 thank-you · 26 chosen',amount:130000},
+    {at:'14 Oct',type:'capture',ref:'Q4 thank-you · 26 orders',amount:-87500},
+    {at:'16 Oct',type:'release',ref:'New hire welcome · 5 chosen',amount:50000},
+    {at:'16 Oct',type:'capture',ref:'New hire welcome · 5 orders',amount:-29100},
+    {at:'20 Oct',type:'top-up',ref:'Invoice INV-1042 paid',amount:500000},
+    {at:'22 Oct',type:'release',ref:'Work anniversaries · 6 chosen',amount:45000},
+    {at:'22 Oct',type:'capture',ref:'Work anniversaries · 6 orders',amount:-26000},
+  ],
+  'team-lumen-sales':[
+    {at:'2 Oct',type:'top-up',ref:'Invoice INV-1037 paid',amount:800000},
+    {at:'8 Oct',type:'hold',ref:'Partner thank-you · 12 × $50',amount:-60000},
+    {at:'19 Oct',type:'release',ref:'Partner thank-you · 7 chosen',amount:35000},
+    {at:'19 Oct',type:'capture',ref:'Partner thank-you · 7 orders',amount:-21800},
+  ],
+};
+const FIRST=['Jordan','Sam','Mei','Alex','Noor','Chris','Ravi','Elena','Tomás','Aisha','Ben','Grace','Kenji','Lucía','Omar','Hana','Felix','Zara','Marcus','Ines'];
+const LAST=['Lee','Okafor','Tan','Rivera','Haddad','Duval','Patel','Novak','Silva','Bello','Cohen','Park','Sato','Ortiz','Farah','Kim','Brandt','Malik','Reid','Costa'];
+const personName=i=>FIRST[i%20]+' '+LAST[(i*7+3+Math.floor(i/20))%20];
+const emailOf=n=>n.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/ /g,'.')+'@lumenlabs.example';
+const DEPTS=['Engineering','Design','Sales','Support','Finance','People','Marketing'];
+const DIRECTORY=Array.from({length:16},(_,i)=>{const n=personName(i);return{id:'p'+i,name:n,email:emailOf(n),dept:DEPTS[i%DEPTS.length]};});
+const UPCOMING=[
+  {who:2,type:'birthday',date:'29 Oct',note:'Birthday'},
+  {who:4,type:'anniversary',date:'2 Nov',note:'3 years at Lumen Labs'},
+  {who:6,type:'newhire',date:'3 Nov',note:'First day · Engineering'},
+  {who:11,type:'birthday',date:'8 Nov',note:'Birthday'},
+  {who:13,type:'anniversary',date:'14 Nov',note:'5 years at Lumen Labs'},
+];
+const AUTOMATIONS=[
+  {key:'birthday',label:'Birthdays',icon:'cake',on:true,collection:'col-treats',budget:5000,channel:'slack',timing:'On the day, 9:00 local time',next:2},
+  {key:'anniversary',label:'Work anniversaries',icon:'award',on:true,collection:'col-cozy',budget:7500,channel:'email',timing:'On the anniversary, years of service in the greeting',next:4},
+  {key:'newhire',label:'New hires',icon:'sparkle',on:true,collection:'col-outdoor',budget:10000,channel:'teams',timing:'On their first day',next:6},
+];
+const P='team-lumen-people',SL='team-lumen-sales';
+
+function seedCampaign(c,k,offset){
+  const st=[];const push=(s,n)=>{for(let i=0;i<n;i++)st.push(s);};
+  if(k.scheduled) push('scheduled',k.scheduled);
+  else if(k.pending) push('pending approval',k.pending);
+  else{
+    push('delivered',k.delivered);push('shipped',k.shipped-k.delivered);
+    const ro=k.redeemed-k.shipped;push('redeeming',ro>=2?1:0);push('redeemed',ro>=2?ro-1:ro);
+    push('expired',k.expired);push('opened',k.opened-k.redeemed);push('sent',k.sent-k.opened-k.expired);
+  }
+  const order=st.map((s,i)=>({s,k:((i+1)*2654435761>>>0)%9973})).sort((a,b)=>a.k-b.k).map(x=>x.s);
+  const pool=itemsFor(c.collection,c.budget);
+  c.gifts=order.map((s,i)=>{const n=personName(offset+i);const chose=['redeeming','redeemed','shipped','delivered'].includes(s);
+    return{id:'g_'+rand(6),name:n,email:emailOf(n),status:s,channel:c.channels[i%c.channels.length],sku:chose?pool[i%pool.length].sku:null};});
+  return c;
+}
+let CAMPAIGNS=[];
+let ORDERS=[
+  {no:'GFT-g_4KQ7RM',vendor:'vendor-cedar-pine',sku:'CP-CANDLE-TRIO',variant:null,shipTo:{name:'Elena Novak',line1:'18 Harbor Row',city:'Portland',region:'ME',postal:'04101',country:'US'},ordered:'24 Oct',due:'30 Oct',status:'open'},
+  {no:'GFT-g_8TWD3P',vendor:'vendor-cedar-pine',sku:'CP-CANDLE-CEDAR',variant:null,shipTo:{name:'Kenji Sato',line1:'402 Alder St, Apt 5',city:'Eugene',region:'OR',postal:'97401',country:'US'},ordered:'25 Oct',due:'31 Oct',status:'open'},
+  {no:'GFT-g_2MXR9H',vendor:'vendor-cedar-pine',sku:'CP-DIFFUSER-LAV',variant:null,shipTo:{name:'Aisha Bello',line1:'77 Linden Ave',city:'Madison',region:'WI',postal:'53703',country:'US'},ordered:'26 Oct',due:'1 Nov',status:'open'},
+  {no:'GFT-g_6PJN4Z',vendor:'vendor-cedar-pine',sku:'CP-CANDLE-TRIO',variant:null,shipTo:{name:'Ben Cohen',line1:'9 Orchard Lane',city:'Burlington',region:'VT',postal:'05401',country:'US'},ordered:'20 Oct',due:'26 Oct',status:'shipped',carrier:'Parcel post',tracking:'PP 4471 2290 18',shippedAt:'23 Oct'},
+  {no:'GFT-g_3HVA7K',vendor:'vendor-cedar-pine',sku:'CP-CANDLE-CEDAR',variant:null,shipTo:{name:'Grace Park',line1:'1210 Bay St',city:'Toronto',region:'ON',postal:'M5R 2A5',country:'CA'},ordered:'18 Oct',due:'24 Oct',status:'shipped',carrier:'Courier',tracking:'CR-88201-5530',shippedAt:'21 Oct'},
+  {no:'GFT-g_9ZRE2W',vendor:'vendor-north-bakery',sku:'NB-TIN-ASSORTED-24',variant:null,shipTo:{name:'Omar Farah',line1:'55 Market St',city:'Denver',region:'CO',postal:'80202',country:'US'},ordered:'26 Oct',due:'29 Oct',status:'open'},
+  {no:'GFT-g_5NCF8Q',vendor:'vendor-brightleaf',sku:'BL-MUG-PAIR',variant:'Sand',shipTo:{name:'Hana Kim',line1:'31 Willow Ct',city:'Austin',region:'TX',postal:'78704',country:'US'},ordered:'26 Oct',due:'28 Oct',status:'open'},
+  {no:'GFT-g_7YKB6T',vendor:'vendor-trailhead',sku:'TH-BOTTLE-750',variant:'Moss',shipTo:{name:'Felix Brandt',line1:'600 Pine Rd',city:'Boise',region:'ID',postal:'83702',country:'US'},ordered:'25 Oct',due:'30 Oct',status:'open'},
+];
+const COMPANIES=[
+  {name:'Lumen Labs',key:'company-lumen-labs',teams:2,members:214,gifts30:72,status:'Active'},
+  {name:'Orbit Fieldworks',key:'company-orbit-fieldworks',teams:3,members:86,gifts30:31,status:'Active',balance:420000},
+  {name:'Quillmark Studio',key:'company-quillmark-studio',teams:1,members:18,gifts30:0,status:'Onboarding',balance:0},
+];
+const RECON=[
+  {id:'r1',at:'27 Oct · 09:00',orders:41,ledger:182350,ct:181750,mismatch:1,status:'review',detail:{order:'GFT-g_7Q2W9P',ledger:3200,ct:2600}},
+  {id:'r2',at:'27 Oct · 08:00',orders:38,ledger:169900,ct:169900,mismatch:0,status:'matched'},
+  {id:'r3',at:'27 Oct · 07:00',orders:36,ledger:161400,ct:161400,mismatch:0,status:'matched'},
+  {id:'r4',at:'27 Oct · 06:00',orders:35,ledger:158800,ct:158800,mismatch:0,status:'matched'},
+];
+
+/* ---------- Derived ---------- */
+const prod=sku=>PRODUCTS.find(p=>p.sku===sku);
+const vendorOf=k=>VENDORS.find(v=>v.key===k);
+const activeP=p=>vendorOf(p.vendor).active&&p.stock>0;
+const coll=id=>COLLECTIONS.find(c=>c.id===id);
+const team=(k=S.team)=>TEAMS.find(t=>t.key===k);
+function itemsFor(colId,budget){const c=coll(colId);if(!c)return[];const cap=budget??c.budget;return PRODUCTS.filter(p=>activeP(p)&&p.price<=cap&&(!c.tags||p.tags.some(t=>c.tags.includes(t))));}
+function bal(k){const e=LEDGER[k];let top=0,held=0,spent=0,adj=0;for(const x of e){if(x.type==='top-up')top+=x.amount;else if(x.type==='hold')held-=x.amount;else if(x.type==='release')held-=x.amount;else if(x.type==='capture')spent-=x.amount;else adj+=x.amount;}return{top,held,spent,available:top+adj-held-spent};}
+function counts(c){const g=c.gifts,has=(...s)=>g.filter(x=>s.includes(x.status)).length;
+  return{total:g.length,sent:has('sent','opened','redeeming','redeemed','shipped','delivered','expired','cancelled'),opened:has('opened','redeeming','redeemed','shipped','delivered'),chose:has('redeeming','redeemed','shipped','delivered'),shipped:has('shipped','delivered'),delivered:has('delivered'),expired:has('expired','cancelled')};}
+const spendOf=c=>c.gifts.filter(g=>g.sku&&['redeemed','shipped','delivered'].includes(g.status)).reduce((a,g)=>a+prod(g.sku).price,0);
+const TONE={created:'neutral',scheduled:'neutral','pending approval':'neutral',sent:'info',opened:'info',redeeming:'warn',redeemed:'ok',shipped:'ok',delivered:'ok',expired:'muted',cancelled:'muted',active:'info',declined:'muted',completed:'ok',open:'warn','top-up':'ok',hold:'warn',release:'info',capture:'neutral',adjustment:'muted',matched:'ok',review:'warn',resolved:'ok',Active:'ok',Onboarding:'neutral'};
+const badge=(s,label)=>`<span class="badge ${TONE[s]||'neutral'}">${esc(label||s)}</span>`;
+const chanIcons=list=>`<span class="chan-icons">${list.map(k=>{const c=CHANNELS.find(x=>x.key===k);return `<span title="${c.label}">${ic(c.icon,16)}</span>`;}).join('')}</span>`;
+const chanLabels=list=>list.map(k=>CHANNELS.find(x=>x.key===k).label).join(', ');
+const mosaic=(list,n=4,sz=22)=>{let h='';for(let i=0;i<n;i++){const p=list[i];h+=p?`<span class="pt ${p.cat}">${ic(p.icon,sz)}</span>`:'<span class="pt empty"></span>';}return `<div class="mosaic" style="grid-template-columns:repeat(${n},minmax(0,1fr))">${h}</div>`;};
+const greeting=()=>{const h=new Date().getHours();return h<12?'Good morning':h<18?'Good afternoon':'Good evening';};
+
+/* ---------- State ---------- */
+const DEFAULT_GIFT={from:'Maya Chen',title:'Thank you!',message:"Thanks for everything you put into this quarter. Pick something you'll enjoy. It's on us.",cover:'confetti',collection:'col-holiday',budget:7500,sku:null,recipient:'Jordan',expiry:60,cid:null};
+const S={app:'sender',page:'home',team:P,browse:{budget:0,occ:'all',cat:'all',q:''},send:null,campaign:null,campFilter:'all',rsearch:'',rec:null,lastGift:null,vendor:'vendor-cedar-pine',vendorTab:'open',opsTab:'companies',modal:null};
+function freshSend(pre={}){return Object.assign({step:0,mode:'collection',collection:'col-treats',sku:null,budget:5000,occasion:'thanks',cover:'confetti',from:'Maya Chen',title:'Thank you!',message:"Thanks for everything you put into this quarter. Pick something you'll enjoy. It's on us.",recipients:[],channels:['email'],when:'now',date:'2026-11-03',expiry:60,reminders:true,cname:'',done:null},pre);}
+function freshRec(){return{step:0,opened:false,sku:null,variant:null,addr:{name:'',line1:'',line2:'',city:'',region:'',postal:'',country:'US'},errors:{},order:null,placing:false};}
+
+/* ---------- Shell ---------- */
+const APPS=[['sender','Sender dashboard','monitor'],['recipient','Recipient','phone'],['vendor','Vendor portal','store'],['ops','Ops admin','shield']];
+const NAV=[['home','Home','home'],['send','Send gifts','send'],['browse','Browse gifts','grid'],['collections','Collections','layers'],['campaigns','Campaigns','chart'],['automations','Automations','repeat'],['budgets','Budgets','wallet']];
+function render(){
+  $('#mark').innerHTML=ic('gift',18);
+  $('#app-switch').innerHTML=APPS.map(([k,l,i])=>`<button type="button" data-act="app" data-app="${k}" aria-pressed="${S.app===k}">${ic(i,16)}${l}</button>`).join('');
+  for(const [k] of APPS) $('#view-'+k).hidden=S.app!==k;
+  document.documentElement.style.setProperty('--bar-h',$('#proto-bar').offsetHeight+'px');
+  if(S.app==='sender')renderSender();else if(S.app==='recipient')renderRecipient();else if(S.app==='vendor')renderVendor();else renderOps();
+  renderModal();
+}
+function renderSender(){
+  $('#sender-nav').innerHTML=NAV.map(([k,l,i])=>`<button type="button" data-act="go" data-page="${k}" ${S.page===k?'aria-current="page"':''}>${ic(i,18)}<span>${l}</span></button>`).join('');
+  const b=bal(S.team);
+  $('#side-foot').innerHTML=`<div class="field"><label for="f-team">Team</label><select id="f-team" class="input" data-ch="team">${TEAMS.map(t=>`<option value="${t.key}" ${t.key===S.team?'selected':''}>${t.name}</option>`).join('')}</select></div>
+    <div><span class="muted small">Available to send</span><div class="v num">${money(b.available)}</div></div>
+    <button type="button" class="btn sm" data-act="topup">${ic('plus',16)} Top up</button>`;
+  const pages={home:pageHome,send:pageSend,browse:pageBrowse,collections:pageCollections,campaigns:pageCampaigns,automations:pageAutomations,budgets:pageBudgets};
+  $('#sender-main').innerHTML=pages[S.page]();
+  if(S.page==='send'&&S.send&&S.send.done)drawQR();
+}
+
+/* ---------- Sender: home ---------- */
+function pageHome(){
+  const t=team(),b=bal(S.team);
+  const camps=CAMPAIGNS.filter(c=>c.team===S.team).slice(0,4);
+  const pending=CAMPAIGNS.filter(c=>c.team===S.team&&c.status==='pending approval').length;
+  const tiles=[
+    ['a','send','Send a gift','Pick a gift, write a note, choose how it arrives.','new-send',{},'hero'],
+    ['b','grid','Browse gifts',`${PRODUCTS.filter(activeP).length} gifts from ${new Set(PRODUCTS.filter(activeP).map(p=>p.brand)).size} brands.`,'go',{page:'browse'}],
+    ['c','layers','Build a collection','Let people pick anything up to a budget.','new-collection',{}],
+    ['d','repeat','Automate moments','Birthdays, anniversaries and first days.','go',{page:'automations'}],
+    ['e','wallet','Top up budget','By card or invoice, straight into this team.','topup',{}],
+  ];
+  const mIcon={birthday:['cake','b'],anniversary:['award','c'],newhire:['sparkle','e']};
+  return `<div class="page">
+  <section class="hello">
+    <div class="stack-8"><p class="eyebrow">Lumen Labs · ${esc(t.name)} team</p><h1>${greeting()}, Maya</h1>
+      <p class="muted">You have <b class="num">${money(b.available)}</b> to give${pending?` and ${pending} send waiting for approval`:''}.</p></div>
+    <div class="row-8"><button type="button" class="btn" data-act="go" data-page="browse">${ic('grid',18)} Browse gifts</button><button type="button" class="btn primary lg" data-act="new-send">${ic('send',18)} Send a gift</button></div>
+  </section>
+  <section class="tiles" aria-label="Quick actions">${tiles.map(([a,i,l,d,act,data,cls])=>`<button type="button" class="tile ${cls||''}" data-act="${act}" ${attrs(data)}><span class="art ${a}">${ic(i,40)}</span><b>${l} ${ic('chev-r',16)}</b><span class="d">${d}</span></button>`).join('')}</section>
+  <section class="stats">
+    <div class="stat lead"><span class="l">Available to send</span><span class="v">${money(b.available)}</span></div>
+    <div class="stat"><span class="l">Held for gifts not yet chosen</span><span class="v">${money(b.held)}</span></div>
+    <div class="stat"><span class="l">Spent on chosen gifts</span><span class="v">${money(b.spent)}</span></div>
+  </section>
+  <section class="stack-12">
+    <div class="section-head"><h2>Your collections</h2><button type="button" class="btn ghost sm" data-act="go" data-page="collections">View all ${ic('chev-r',16)}</button></div>
+    <div class="hscroll">${COLLECTIONS.map(c=>{const its=itemsFor(c.id);return `<button type="button" class="coll" data-act="new-send" data-collection="${c.id}">${mosaic(its)}<span class="meta"><b>${esc(c.name)}</b><span class="muted small">Up to ${money(c.budget)} · ${its.length} gifts</span></span></button>`;}).join('')}</div>
+  </section>
+  <div class="split">
+    <section class="card stack-12"><div class="row-between"><h2>Recent campaigns</h2><button type="button" class="btn ghost sm" data-act="go" data-page="campaigns">All ${ic('chev-r',16)}</button></div>
+      <div class="list">${camps.map(c=>{const k=counts(c);const p=pct(k.chose,k.sent);return `<button type="button" class="row-plain" data-act="open-campaign" data-id="${c.id}" style="border:0;border-bottom:1px solid var(--line);background:none;text-align:left;width:100%;cursor:pointer"><span class="grow"><b>${esc(c.name)}</b><span class="sub muted small" style="display:block">${esc(c.type)} · ${k.total} gifts</span></span>${badge(c.status)}<span class="mini-bar" title="${p}% chose a gift"><i style="width:${p}%"></i></span><span class="num small" style="width:36px;text-align:right">${k.sent?p+'%':'–'}</span></button>`;}).join('')}</div>
+    </section>
+    <section class="card stack-12"><div class="row-between"><h2>Coming up</h2><span class="muted small">Next 3 weeks</span></div>
+      <div class="list">${UPCOMING.map(u=>{const a=AUTOMATIONS.find(x=>x.key===u.type);const [i,cl]=mIcon[u.type];return `<div><span class="moment-ico art ${cl}">${ic(i,18)}</span><span class="grow"><b>${esc(personName(u.who))}</b><span class="muted small" style="display:block">${esc(u.note)}</span></span><span class="small num">${u.date}</span>${a&&a.on?'<span class="badge info">Automated</span>':''}</div>`;}).join('')}</div>
+    </section>
+  </div></div>`;
+}
+
+/* ---------- Sender: browse ---------- */
+function browseList(){const f=S.browse;return PRODUCTS.filter(p=>activeP(p)&&(!f.budget||p.price<=f.budget)&&(f.occ==='all'||p.occ.includes(f.occ))&&(f.cat==='all'||p.cat===f.cat)&&(!f.q||(p.name+' '+p.brand).toLowerCase().includes(f.q.toLowerCase())));}
+function pcard(p){const v=vendorOf(p.vendor);return `<article class="pcard"><button type="button" class="pt ${p.cat}" data-act="product" data-sku="${p.sku}" aria-label="Details for ${esc(p.name)}">${ic(p.icon,54)}</button>
+  <div class="body"><span class="brand">${esc(p.brand)}</span><span class="pname">${esc(p.name)}</span><span class="muted small">Ships in ${v.sla} days · ${esc(v.name)}</span>
+  <div class="foot"><span class="price">${money(p.price)}</span><button type="button" class="btn sm" data-act="new-send" data-sku="${p.sku}">${ic('send',15)} Send</button></div></div></article>`;}
+function browseResults(){const l=browseList();return l.length?l.map(pcard).join(''):`<div class="empty-state" style="grid-column:1/-1">${ic('search',28)}<b>No gifts match these filters</b><span class="small">Try a higher budget or another occasion.</span><button type="button" class="btn sm" data-act="browse-clear">Clear filters</button></div>`;}
+function pageBrowse(){
+  const f=S.browse;
+  const ch=(act,val,label,on,icon)=>`<button type="button" class="chip" data-act="${act}" data-v="${val}" aria-pressed="${on}">${icon?ic(icon,15):''}${label}</button>`;
+  return `<div class="page">
+  <section class="stack-8"><h1>Browse gifts</h1><p class="muted">Every gift ships straight from the brand that makes it. Prices are what your budget pays, shipping included.</p></section>
+  <section class="card filters">
+    <div class="frow"><span class="flabel">Budget</span><div class="chips">${[[0,'Any'],[2500,'Up to $25'],[5000,'Up to $50'],[7500,'Up to $75'],[10000,'Up to $100']].map(([v,l])=>ch('b-budget',v,l,f.budget===v)).join('')}</div></div>
+    <div class="frow"><span class="flabel">Occasion</span><div class="chips">${ch('b-occ','all','All',f.occ==='all')}${OCCASIONS.map(o=>ch('b-occ',o.key,o.label,f.occ===o.key,o.icon)).join('')}</div></div>
+    <div class="frow"><span class="flabel">Category</span><div class="row-8" style="justify-content:space-between"><div class="chips">${ch('b-cat','all','All',f.cat==='all')}${CATS.map(c=>ch('b-cat',c.key,c.label,f.cat===c.key)).join('')}</div>
+      <div class="search">${ic('search',17)}<input id="f-bsearch" class="input" type="search" placeholder="Search gifts or brands" aria-label="Search gifts" value="${esc(f.q)}" data-in="b-search"></div></div></div>
+  </section>
+  <p class="muted small" id="bcount">${browseList().length} gifts</p>
+  <section class="pgrid" id="bgrid">${browseResults()}</section></div>`;
+}
+
+/* ---------- Sender: collections ---------- */
+function pageCollections(){
+  return `<div class="page">
+  <section class="section-head"><div class="stack-8"><h1>Collections</h1><p class="muted">A collection is a set of rules. People choose anything that matches, up to the budget you set.</p></div></section>
+  <section class="cgrid">
+    <button type="button" class="create-card" data-act="new-collection">${ic('plus',28)}Build a collection<span class="muted small" style="font-weight:500">Pick tags, set a budget, see what fits.</span></button>
+    ${COLLECTIONS.map(c=>{const its=itemsFor(c.id);return `<article class="card stack-12" style="padding:14px">${mosaic(its,4,26)}
+      <div class="stack-4" style="padding:0 4px"><div class="row-between"><b>${esc(c.name)}</b><span class="price">${money(c.budget)}</span></div>
+      <span class="muted small">${its.length} gifts from ${new Set(its.map(p=>p.brand)).size} brands</span>
+      <div class="tagline">${c.tags?c.tags.map(t=>`<span class="tag">${t}</span>`).join(''):'<span class="tag">every item</span>'}</div></div>
+      <div class="row-8" style="padding:0 4px 4px"><button type="button" class="btn primary sm" data-act="new-send" data-collection="${c.id}">${ic('send',15)} Send</button><button type="button" class="btn sm" data-act="coll-preview" data-id="${c.id}">See items</button></div></article>`;}).join('')}
+  </section></div>`;
+}
+
+/* ---------- Sender: send flow ---------- */
+const perGift=s=>s.mode==='single'&&s.sku?prod(s.sku).price:s.budget;
+const giftLabel=s=>s.mode==='single'?(s.sku?prod(s.sku).name:'No gift picked'):`${coll(s.collection).name}, up to ${money(s.budget)}`;
+const occ=k=>OCCASIONS.find(o=>o.key===k);
+function gcard(g){return `<div class="gcard"><div class="cover cover-${g.cover}"><span class="title">${esc(g.title||' ')}</span></div><div class="msg">${esc(g.message)}</div><div class="from">From ${esc(g.from||'…')}, Lumen Labs</div></div>`;}
+function sendSummary(){const s=S.send,n=s.recipients.length;return `
+  <p class="eyebrow">What they'll see</p>${gcard(s)}
+  <div class="card stack-8 small">
+    <div class="row-between"><span class="muted">Gift</span><b style="text-align:right">${esc(giftLabel(s))}</b></div>
+    <div class="row-between"><span class="muted">Recipients</span><b class="num">${n}</b></div>
+    <div class="row-between"><span class="muted">Channels</span>${chanIcons(s.channels)}</div>
+    <div class="row-between"><span class="muted">Hold at send</span><b class="num">${money(n*perGift(s))}</b></div>
+  </div>`;}
+function stepValid(i){const s=S.send;if(i===0)return s.mode==='single'?!!s.sku:itemsFor(s.collection,s.budget).length>0;if(i===1)return s.title.trim()&&s.from.trim()&&s.message.trim();if(i===2)return s.recipients.length>0&&s.channels.length>0&&(s.when==='now'||!!s.date);return true;}
+function pageSend(){
+  const s=S.send;if(s.done)return sendDone();
+  const steps=['Gift','Greeting','Recipients & delivery','Review'];
+  const body=[sendGift,sendGreeting,sendRecipients,sendReview][s.step]();
+  const n=s.recipients.length,hold=n*perGift(s),t=team(),b=bal(S.team),needs=hold>t.threshold,short=hold>b.available;
+  const nextLabel=s.step<3?'Continue':needs?'Submit for approval':s.when==='later'?`Schedule ${n} gift${n===1?'':'s'}`:`Send ${n} gift${n===1?'':'s'}`;
+  const hint=s.step===0&&!stepValid(0)?'Pick a gift to continue.':s.step===2&&!stepValid(2)?(n?'Pick at least one channel.':'Add at least one recipient.'):s.step===1&&!stepValid(1)?'Add a headline, a sender and a message.':'';
+  return `<div class="page">
+  <section class="section-head"><div class="stack-4"><p class="eyebrow">New send · ${esc(t.name)} team</p><h1>Send a gift</h1></div><button type="button" class="btn ghost" data-act="go" data-page="home">Cancel</button></section>
+  <nav class="stepper" aria-label="Steps">${steps.map((l,i)=>`<button type="button" data-act="send-step" data-i="${i}" ${i===s.step?'aria-current="step"':''} class="${i<s.step?'done':''}" ${i>s.step?'disabled':''}><span class="n">${i<s.step?ic('check',14):i+1}</span>${l}</button>`).join('')}</nav>
+  <div class="flow"><div class="card stack-24">${body}
+    <div class="flow-nav"><button type="button" class="btn" data-act="send-back" ${s.step===0?'disabled':''}>${ic('chev-l',16)} Back</button>
+      <div class="row-8">${hint?`<span class="muted small">${hint}</span>`:''}<button type="button" class="btn primary" data-act="send-next" ${!stepValid(s.step)||(s.step===3&&short)?'disabled':''}>${nextLabel} ${s.step<3?ic('chev-r',16):''}</button></div></div>
+  </div><aside class="stack-12" id="send-summary">${sendSummary()}</aside></div></div>`;
+}
+function sendGift(){
+  const s=S.send;
+  return `<div class="stack-12"><h2>What are you sending?</h2><div class="grid2">
+    <button type="button" class="choice" data-act="send-mode" data-v="collection" aria-pressed="${s.mode==='collection'}"><span class="ico">${ic('layers',22)}</span><span><b>Let them choose</b><span class="muted small">They pick one gift from a collection, up to your budget. Most people choose within a day.</span></span></button>
+    <button type="button" class="choice" data-act="send-mode" data-v="single" aria-pressed="${s.mode==='single'}"><span class="ico">${ic('gift',22)}</span><span><b>One specific gift</b><span class="muted small">Everyone gets the same item. They still add their own address and colour.</span></span></button>
+  </div></div>
+  ${s.mode==='collection'?`
+  <div class="stack-12"><h3>Budget per gift</h3><div class="chips">${[2500,5000,7500,10000].map(v=>`<button type="button" class="chip" data-act="send-budget" data-v="${v}" aria-pressed="${s.budget===v}">${money(v)}</button>`).join('')}</div></div>
+  <div class="stack-12"><h3>Collection</h3><div class="picks">${COLLECTIONS.map(c=>{const its=itemsFor(c.id,s.budget);return `<button type="button" class="pick" data-act="send-col" data-id="${c.id}" aria-pressed="${s.collection===c.id}" ${its.length?'':'disabled style="opacity:.5"'}><span class="pt ${its[0]?its[0].cat:'home'}">${ic(its[0]?its[0].icon:'layers',22)}</span><span class="grow"><b>${esc(c.name)}</b><span class="muted small" style="display:block">${its.length} gift${its.length===1?'':'s'} fit ${money(s.budget)}</span></span><span class="tick">${ic('check',14)}</span></button>`;}).join('')}</div></div>`
+  :`<div class="stack-12"><h3>Pick the gift</h3><div class="picks">${PRODUCTS.filter(activeP).map(p=>`<button type="button" class="pick" data-act="send-sku" data-sku="${p.sku}" aria-pressed="${s.sku===p.sku}"><span class="pt ${p.cat}">${ic(p.icon,22)}</span><span class="grow"><span class="brand">${esc(p.brand)}</span><b style="display:block">${esc(p.name)}</b></span><span class="price small">${money(p.price)}</span><span class="tick">${ic('check',14)}</span></button>`).join('')}</div></div>`}`;
+}
+function sendGreeting(){
+  const s=S.send;
+  return `<h2>Write the greeting</h2>
+  <div class="stack-12"><h3>Occasion</h3><div class="chips">${OCCASIONS.map(o=>`<button type="button" class="chip" data-act="send-occ" data-v="${o.key}" aria-pressed="${s.occasion===o.key}">${ic(o.icon,15)}${o.label}</button>`).join('')}</div></div>
+  <div class="stack-12"><h3>Card design</h3><div class="swatches">${COVERS.map(c=>`<button type="button" class="swatch cover-${c.key}" data-act="send-cover" data-v="${c.key}" aria-pressed="${s.cover===c.key}" aria-label="${c.label}" title="${c.label}"></button>`).join('')}</div></div>
+  <div class="grid2"><div class="field"><label for="f-title">Headline</label><input id="f-title" class="input" maxlength="40" value="${esc(s.title)}" data-in="send-text" data-k="title"></div>
+    <div class="field"><label for="f-from">From</label><input id="f-from" class="input" maxlength="40" value="${esc(s.from)}" data-in="send-text" data-k="from"></div></div>
+  <div class="field"><label for="f-msg">Message</label><textarea id="f-msg" class="input" rows="5" maxlength="500" data-in="send-text" data-k="message">${esc(s.message)}</textarea><span class="muted small" id="msg-count">${s.message.length} / 500</span></div>`;
+}
+function peopleList(){const s=S.send,q=S.rsearch.toLowerCase();const l=DIRECTORY.filter(p=>!q||(p.name+' '+p.email+' '+p.dept).toLowerCase().includes(q));
+  return l.length?l.map(p=>`<button type="button" class="person" data-act="send-rec" data-id="${p.id}" aria-pressed="${s.recipients.includes(p.id)}"><span class="tick">${ic('check',13)}</span><span class="avatar">${esc(initials(p.name))}</span><span class="grow"><b>${esc(p.name)}</b><span class="muted small" style="display:block;overflow:hidden;text-overflow:ellipsis">${esc(p.email)}</span></span><span class="muted small">${esc(p.dept)}</span></button>`).join(''):'<p class="muted small" style="padding:14px">Nobody in the directory matches. Add them by email below.</p>';}
+function sendRecipients(){
+  const s=S.send,n=s.recipients.length;
+  return `<h2>Who gets it, and how?</h2>
+  <div class="stack-12"><div class="row-between" style="flex-wrap:wrap"><h3>Recipients <span class="muted" style="font-weight:500">· ${n} selected</span></h3>
+    <div class="row-8"><button type="button" class="btn sm" data-act="send-all">${n===DIRECTORY.length?'Clear all':'Select all'}</button><button type="button" class="btn sm" data-act="send-csv">${ic('upload',15)} Upload CSV</button></div></div>
+    <div class="search" style="max-width:none">${ic('search',17)}<input id="f-rsearch" class="input" type="search" placeholder="Search the Lumen Labs directory" aria-label="Search the directory" value="${esc(S.rsearch)}" data-in="r-search"></div>
+    <div class="people" id="people">${peopleList()}</div>
+    <div class="field"><label for="f-add">Add someone by email</label><div class="row-8" style="flex-wrap:nowrap"><input id="f-add" class="input" type="email" placeholder="name@company.example" data-enter="add-email"><button type="button" class="btn" data-act="add-email">Add</button></div><span class="err" id="add-err" hidden></span></div>
+  </div>
+  <div class="stack-12"><h3>Delivery</h3><p class="muted small">Pick one or more. Each person gets the first channel we can reach them on; links and QR codes are for you to hand out.</p>
+    <div class="chan-grid">${CHANNELS.map(c=>`<button type="button" class="chan" data-act="send-chan" data-v="${c.key}" aria-pressed="${s.channels.includes(c.key)}">${ic(c.icon,20)}<span><b>${c.label}</b><span class="muted small">${c.note}</span></span></button>`).join('')}</div></div>
+  <div class="grid2">
+    <div class="stack-8"><h3>When</h3><div class="chips"><button type="button" class="chip" data-act="send-when" data-v="now" aria-pressed="${s.when==='now'}">Send now</button><button type="button" class="chip" data-act="send-when" data-v="later" aria-pressed="${s.when==='later'}">${ic('calendar',15)} Schedule</button></div>
+      ${s.when==='later'?`<input id="f-date" type="date" class="input" aria-label="Send date" min="2026-10-28" value="${s.date}" data-ch="send-date">`:''}</div>
+    <div class="field"><label for="f-exp">Expires after</label><select id="f-exp" class="input" data-ch="send-expiry">${[30,60,90].map(d=>`<option value="${d}" ${s.expiry===d?'selected':''}>${d} days (${fmtDate(addDays(d))})</option>`).join('')}</select></div>
+  </div>
+  <div class="row-between"><span><b>Reminders</b><span class="muted small" style="display:block">Nudge on day 3 and day 7 until they choose.</span></span><button type="button" class="switch" role="switch" aria-checked="${s.reminders}" aria-label="Reminders" data-act="send-rem"></button></div>`;
+}
+function sendReview(){
+  const s=S.send,n=s.recipients.length,per=perGift(s),hold=n*per,t=team(),b=bal(S.team),needs=hold>t.threshold,short=hold>b.available;
+  const defName=`${occ(s.occasion).label} · ${fmtDate(s.when==='later'?s.date:TODAY)}`;
+  const row=(k,v,i)=>`<div><dt>${k}</dt><dd>${v}</dd>${i!=null?`<button type="button" class="btn ghost sm" data-act="send-step" data-i="${i}">Edit</button>`:'<span></span>'}</div>`;
+  return `<h2>Review and send</h2>
+  <div class="field"><label for="f-cname">Campaign name</label><input id="f-cname" class="input" maxlength="60" placeholder="${esc(defName)}" value="${esc(s.cname)}" data-in="send-text" data-k="cname"></div>
+  <dl class="review">
+    ${row('Gift',esc(giftLabel(s)),0)}
+    ${row('Greeting',`${esc(s.title)} · from ${esc(s.from)}`,1)}
+    ${row('Recipients',`${n} ${n===1?'person':'people'}`,2)}
+    ${row('Delivery',`${chanLabels(s.channels)} · ${s.when==='now'?'now':'on '+fmtDate(s.date)}`,2)}
+    ${row('Expiry',`${s.expiry} days${s.reminders?', with reminders':''}`,2)}
+  </dl>
+  <div class="cost num">
+    <div class="row-between"><span class="muted">${n} gift${n===1?'':'s'} × ${s.mode==='single'?'price':'budget'} ${money(per)}</span><b>${money(hold)}</b></div>
+    <div class="row-between"><span class="muted">${esc(t.name)} budget available now</span><span>${money(b.available)}</span></div>
+    <div class="row-between total"><span>Available after this send</span><span>${money(b.available-hold)}</span></div>
+    <p class="muted small">We hold the full amount when gifts go out. When someone chooses, we charge the real price and release the rest. Gifts nobody opens release their hold when they expire.</p>
+  </div>
+  ${short?`<div class="alert danger">${ic('alert',20)}<span><b>The ${esc(t.name)} budget is ${money(hold-b.available)} short.</b>Top up the team or send to fewer people.</span></div>`
+    :needs?`<div class="alert warn">${ic('info',20)}<span><b>This send needs approval.</b>It's over the ${esc(t.name)} team's ${money(t.threshold)} limit, so ${esc(t.approver)} will be asked to approve it. Nothing is held until then.</span></div>`:''}`;
+}
+function sendDone(){
+  const s=S.send,d=s.done;const showShare=s.channels.includes('link')||s.channels.includes('qr');
+  const head=d.needs?'Sent for approval':d.status==='scheduled'?`${d.n} gift${d.n===1?'':'s'} scheduled for ${fmtDate(s.date)}`:`${d.n} gift${d.n===1?' is':'s are'} on the way`;
+  const sub=d.needs?`${esc(team().approver)} has a request to approve ${money(d.hold)}. The gifts go out as soon as they say yes.`:`Recipients hear from you by ${esc(chanLabels(s.channels).toLowerCase())}. Opens and choices show up on the campaign page.`;
+  return `<div class="page narrow"><section class="card raised stack-20" style="padding:32px">
+    <div class="done-ico ${d.needs?'warn':'ok'}">${ic(d.needs?'clock':'check',30)}</div>
+    <div class="stack-8"><h1>${head}</h1><p class="muted">${sub}</p></div>
+    ${showShare&&!d.needs?`<div class="share grid2"><div class="stack-8 grow"><h3>Gift link</h3><div class="copyrow"><code id="glink">https://gifts.lumenlabs.example/r/${d.token}</code><button type="button" class="btn sm" data-act="copy">${ic('copy',15)} Copy</button></div><p class="muted small">Each person gets their own link. Links carry 32 random bytes and we store only a hash of them.</p></div>
+      <div class="stack-8"><h3>QR code</h3><canvas id="qr" width="150" height="150" aria-label="QR code preview"></canvas><p class="muted small">Illustrative preview.</p></div></div>`:''}
+    <div class="row-8"><button type="button" class="btn primary" data-act="open-campaign" data-id="${d.cid}">Track this campaign</button><button type="button" class="btn" data-act="app" data-app="recipient">${ic('phone',16)} See what they see</button><button type="button" class="btn ghost" data-act="new-send">Send another</button></div>
+  </section></div>`;
+}
+function submitSend(){
+  const s=S.send,n=s.recipients.length,per=perGift(s),hold=n*per,t=team(),needs=hold>t.threshold;
+  const status=needs?'pending approval':s.when==='later'?'scheduled':'sent';
+  const name=s.cname.trim()||`${occ(s.occasion).label} · ${fmtDate(s.when==='later'?s.date:TODAY)}`;
+  const cid='cmp-'+rand(5).toLowerCase();
+  const people=s.recipients.map(id=>DIRECTORY.find(p=>p.id===id));
+  CAMPAIGNS.unshift({id:cid,name,team:S.team,type:s.when==='later'?'Scheduled · '+fmtDate(s.date):'One-time',collection:s.mode==='collection'?s.collection:null,sku:s.mode==='single'?s.sku:null,budget:per,channels:[...s.channels],created:fmtDate(TODAY),status:needs?'pending approval':s.when==='later'?'scheduled':'active',
+    gifts:people.map((p,i)=>({id:'g_'+rand(6),name:p.name,email:p.email,status,channel:s.channels[i%s.channels.length],sku:null}))});
+  if(status==='sent')LEDGER[S.team].push({at:fmtDate(TODAY),type:'hold',ref:`${name} · ${n} × ${money(per)}`,amount:-hold});
+  s.done={cid,needs,n,hold,status,token:linkToken()};
+  S.lastGift={from:s.from,title:s.title,message:s.message,cover:s.cover,collection:s.mode==='collection'?s.collection:null,budget:per,sku:s.mode==='single'?s.sku:null,recipient:people[0].name.split(' ')[0],expiry:s.expiry,cid};
+  S.rec=null;
+  toast(needs?`Approval requested from ${team().approver}.`:status==='scheduled'?`${n} gifts scheduled.`:`${n} gifts sent. ${money(hold)} held.`);
+}
+function drawQR(){
+  const cv=$('#qr');if(!cv)return;const ctx=cv.getContext('2d');const cs=getComputedStyle(document.documentElement);
+  const fg=cs.getPropertyValue('--ink').trim(),bg=cs.getPropertyValue('--surface').trim();
+  const N=29,q=2,cell=cv.width/(N+q*2);ctx.fillStyle=bg;ctx.fillRect(0,0,cv.width,cv.height);
+  let seed=[...S.send.done.token].reduce((a,c)=>(a*31+c.charCodeAt(0))>>>0,7);const rnd=()=>(seed=(seed*1664525+1013904223)>>>0)/4294967296;
+  const finder=(x,y)=>x<8&&y<8||x>=N-8&&y<8||x<8&&y>=N-8;ctx.fillStyle=fg;
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){if(finder(x,y))continue;if(rnd()<.48)ctx.fillRect((x+q)*cell,(y+q)*cell,cell+.5,cell+.5);}
+  for(const [fx,fy] of [[0,0],[N-7,0],[0,N-7]]){const px=(fx+q)*cell,py=(fy+q)*cell;ctx.fillStyle=fg;ctx.fillRect(px,py,7*cell,7*cell);ctx.fillStyle=bg;ctx.fillRect(px+cell,py+cell,5*cell,5*cell);ctx.fillStyle=fg;ctx.fillRect(px+2*cell,py+2*cell,3*cell,3*cell);}
+}
+
+/* ---------- Sender: campaigns ---------- */
+function pageCampaigns(){
+  if(S.campaign)return pageCampaign(CAMPAIGNS.find(c=>c.id===S.campaign));
+  const mine=CAMPAIGNS.filter(c=>c.team===S.team);
+  const tot=mine.reduce((a,c)=>{const k=counts(c);for(const x in k)a[x]=(a[x]||0)+k[x];return a;},{});
+  const F=[['Sent','sent'],['Opened','opened'],['Chose a gift','chose'],['Shipped','shipped'],['Delivered','delivered'],['Expired','expired']];
+  const filt={all:()=>true,active:c=>c.status==='active',scheduled:c=>c.status==='scheduled',approval:c=>c.status==='pending approval'};
+  const list=mine.filter(filt[S.campFilter]);
+  const tab=(k,l)=>`<button type="button" role="tab" aria-selected="${S.campFilter===k}" data-act="camp-filter" data-v="${k}">${l} <span class="muted">${mine.filter(filt[k]).length}</span></button>`;
+  return `<div class="page">
+  <section class="section-head"><div class="stack-4"><p class="eyebrow">${esc(team().name)} team</p><h1>Campaigns</h1></div><button type="button" class="btn primary" data-act="new-send">${ic('send',16)} New send</button></section>
+  <section class="card stack-16"><div class="row-between" style="flex-wrap:wrap"><h2>Gift funnel</h2><span class="muted small">All ${esc(team().name)} campaigns that have gone out</span></div>
+    <div class="funnel">${F.map(([l,k])=>{const v=tot[k]||0,p=pct(v,tot.sent);return `<div class="fstep ${k==='expired'?'exp':''}"><div class="bar"><i style="height:${Math.max(p,2)}%"></i></div><span class="v">${v}</span><span class="muted small">${l}${k!=='sent'?` · ${p}%`:''}</span></div>`;}).join('')}</div></section>
+  <div class="stack-12"><div class="tabs" role="tablist">${tab('all','All')}${tab('active','Active')}${tab('scheduled','Scheduled')}${tab('approval','Needs approval')}</div>
+  <div class="table-wrap"><table><thead><tr><th>Campaign</th><th>Status</th><th class="r">Gifts</th><th class="r">Chose</th><th class="r">Spend</th><th>Channels</th><th></th></tr></thead><tbody>
+  ${list.map(c=>{const k=counts(c);return `<tr class="click" tabindex="0" data-act="open-campaign" data-id="${c.id}"><td><b>${esc(c.name)}</b><span class="sub">${esc(c.type)} · ${money(c.budget)} each</span></td><td>${badge(c.status)}</td><td class="r num">${k.total}</td><td class="r num nowrap">${k.sent?`${k.chose} · ${pct(k.chose,k.sent)}%`:'–'}</td><td class="r num">${money(spendOf(c))}</td><td>${chanIcons(c.channels)}</td><td class="r">${ic('chev-r',16)}</td></tr>`;}).join('')||'<tr><td colspan="7" class="muted">No campaigns here yet.</td></tr>'}
+  </tbody></table></div></div></div>`;
+}
+function pageCampaign(c){
+  const k=counts(c),seg=[['delivered',k.delivered],['shipped',k.shipped-k.delivered],['chose',k.chose-k.shipped],['opened',k.opened-k.chose],['sent',k.sent-k.opened-k.expired],['expired',k.expired]];
+  const what=c.collection?`${coll(c.collection).name}, up to ${money(c.budget)}`:prod(c.sku).name;
+  const acts=g=>{const a=[];if(['sent','opened'].includes(g.status))a.push(`<button type="button" class="btn sm" data-act="g-remind" data-id="${g.id}">Remind</button>`);
+    if(['sent','opened','expired'].includes(g.status))a.push(`<button type="button" class="btn sm" data-act="g-extend" data-id="${g.id}">Extend</button>`);
+    if(['sent','opened'].includes(g.status))a.push(`<button type="button" class="btn sm danger" data-act="g-cancel" data-id="${g.id}">Cancel</button>`);return a.join(' ')||'<span class="muted">–</span>';};
+  return `<div class="page">
+  <div><button type="button" class="btn ghost sm" data-act="back-campaigns">${ic('chev-l',16)} All campaigns</button></div>
+  <section class="section-head"><div class="stack-4"><p class="eyebrow">${esc(c.type)}</p><h1>${esc(c.name)}</h1><p class="muted">${esc(what)} · created ${esc(c.created)} · ${esc(chanLabels(c.channels))}</p></div>
+    <div class="row-8">${badge(c.status)}${c.status==='pending approval'?`<button type="button" class="btn danger" data-act="camp-decline">Decline</button><button type="button" class="btn primary" data-act="camp-approve">${ic('check',16)} Approve ${money(k.total*c.budget)}</button>`:`<button type="button" class="btn" data-act="export">${ic('upload',16)} Export CSV</button>`}</div></section>
+  ${c.status==='pending approval'?`<div class="alert warn">${ic('info',20)}<span><b>Waiting for ${esc(team(c.team).approver)}.</b>You're seeing the approver's view. Approving places a ${money(c.budget)} hold per gift and sends them.</span></div>`:''}
+  <section class="stats four"><div class="stat"><span class="l">Gifts</span><span class="v">${k.total}</span></div><div class="stat"><span class="l">Opened</span><span class="v">${k.opened}</span></div><div class="stat"><span class="l">Chose a gift</span><span class="v">${k.chose}<span class="muted small" style="font-family:var(--font-body);font-weight:500"> · ${pct(k.chose,k.sent)}%</span></span></div><div class="stat"><span class="l">Spent</span><span class="v">${money(spendOf(c))}</span></div></section>
+  ${k.sent?`<section class="stack-8"><div class="seg">${seg.map(([s,v])=>v>0?`<i class="s-${s}" style="width:${v/k.total*100}%"></i>`:'').join('')}</div><div class="legend">${seg.map(([s,v])=>`<span><i class="s-${s}"></i>${{delivered:'Delivered',shipped:'Shipped',chose:'Chose, not shipped',opened:'Opened',sent:'Not opened',expired:'Expired or cancelled'}[s]} ${v}</span>`).join('')}</div></section>`:''}
+  <div class="table-wrap"><table><thead><tr><th>Recipient</th><th>Status</th><th>Channel</th><th>Gift chosen</th><th class="r">Actions</th></tr></thead><tbody>
+  ${c.gifts.map(g=>`<tr><td><b>${esc(g.name)}</b><span class="sub">${esc(g.email)}</span></td><td>${badge(g.status)}</td><td class="nowrap">${(()=>{const ch=CHANNELS.find(x=>x.key===g.channel);return `<span class="row-8" style="flex-wrap:nowrap">${ic(ch.icon,16)}${ch.label}</span>`;})()}</td><td>${g.sku?`${esc(prod(g.sku).name)}`:'<span class="muted">–</span>'}</td><td class="r nowrap">${acts(g)}</td></tr>`).join('')}
+  </tbody></table></div></div>`;
+}
+
+/* ---------- Sender: automations ---------- */
+function pageAutomations(){
+  const cl={birthday:'b',anniversary:'c',newhire:'e'};
+  return `<div class="page">
+  <section class="stack-8"><h1>Automations</h1><p class="muted">Gifts that send themselves from your directory. Each person gets one gift per occasion, even if the sync runs twice.</p></section>
+  <section class="stack-16">${AUTOMATIONS.map(a=>`<article class="card auto-card"><span class="moment-ico art ${cl[a.key]}" style="width:46px;height:46px;border-radius:14px">${ic(a.icon,22)}</span>
+    <div class="stack-4"><h2>${a.label}</h2><p class="muted small">${esc(a.timing)}</p>
+      <div class="kv"><div><span>Collection</span>${esc(coll(a.collection).name)}</div><div><span>Budget</span>${money(a.budget)}</div><div><span>Channel</span>${CHANNELS.find(c=>c.key===a.channel).label}</div><div><span>Next up</span>${esc(personName(a.next))}</div></div></div>
+    <button type="button" class="switch" role="switch" aria-checked="${a.on}" aria-label="${a.label} on or off" data-act="auto-toggle" data-k="${a.key}"></button></article>`).join('')}</section>
+  <section class="card row-between" style="flex-wrap:wrap"><div class="stack-4"><h2>Directory</h2><p class="muted small">CSV upload · last import 24 Oct · ${DIRECTORY.length} people in this demo</p></div>
+    <div class="row-8"><button type="button" class="btn" data-act="soon" data-msg="CSV re-import arrives with recipients (M5).">${ic('upload',16)} Upload CSV</button><button type="button" class="btn primary" data-act="soon" data-msg="HR system sync arrives in M5.">Connect an HR system</button></div></section></div>`;
+}
+
+/* ---------- Sender: budgets ---------- */
+function pageBudgets(){
+  const e=LEDGER[S.team];
+  return `<div class="page">
+  <section class="section-head"><div class="stack-8"><h1>Budgets</h1><p class="muted">Each team has its own budget. Balances are worked out from the ledger, never typed in.</p></div><button type="button" class="btn primary" data-act="topup">${ic('plus',16)} Top up ${esc(team().name)}</button></section>
+  <section class="grid2">${TEAMS.map(t=>{const b=bal(t.key);return `<button type="button" class="card stack-12" style="text-align:left;${t.key===S.team?'border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)':''}" data-act="pick-team" data-k="${t.key}">
+    <div class="row-between"><h2>${esc(t.name)}</h2>${t.key===S.team?'<span class="badge info">Showing</span>':''}</div>
+    <div class="stack-4"><span class="muted small">Available</span><span class="price" style="font-size:28px">${money(b.available)}</span></div>
+    <div class="row-8 small muted"><span>Held ${money(b.held)}</span>·<span>Spent ${money(b.spent)}</span>·<span>Approval over ${money(t.threshold)} by ${esc(t.approver)}</span></div></button>`;}).join('')}</section>
+  <section class="stack-12"><div class="row-between" style="flex-wrap:wrap"><h2>${esc(team().name)} ledger</h2><span class="muted small">Entries are never edited. Corrections are posted as adjustments.</span></div>
+  <div class="table-wrap"><table><thead><tr><th>Date</th><th>Entry</th><th>Reference</th><th class="r">Amount</th></tr></thead><tbody>
+  ${[...e].reverse().map(x=>`<tr><td class="nowrap num">${x.at}</td><td>${badge(x.type)}</td><td>${esc(x.ref)}</td><td class="r num nowrap" style="${x.amount>0?'color:var(--ok)':''}">${x.amount>0?'+':''}${money(x.amount,true)}</td></tr>`).join('')}
+  </tbody></table></div></section></div>`;
+}
+
+/* ---------- Recipient ---------- */
+function recGift(){return S.lastGift||DEFAULT_GIFT;}
+function recItems(){const g=recGift();return g.sku?[prod(g.sku)].filter(activeP):itemsFor(g.collection,g.budget);}
+function renderRecipient(){
+  if(!S.rec)S.rec=freshRec();
+  const r=S.rec,g=recGift(),labels=['Unwrap','Choose','Ship','Track'];
+  const scr=[recUnwrap,recChoose,recShip,recTrack][r.step]();
+  $('#view-recipient').innerHTML=`<div class="rec-stage">
+    <aside class="rec-notes card stack-12"><p class="eyebrow">Recipient experience</p><h2>What ${esc(g.recipient)} sees</h2><p class="muted small">The page wears the sending company's colour and logo. No prices, no account, no app to install.</p>
+      <ol class="rec-steps">${labels.map((l,i)=>`<li><button type="button" data-act="rec-jump" data-i="${i}" ${r.step===i?'aria-current="step"':''}><span class="n">${i+1}</span>${l}</button></li>`).join('')}</ol>
+      <button type="button" class="btn sm" data-act="rec-reset">Start over</button></aside>
+    <div class="phone"><div class="ph-bar"><span class="ph-logo">L</span><b>Lumen Labs</b><span class="ph-sub">A gift for ${esc(g.recipient)}</span></div><div class="ph-body">${scr}</div><div class="ph-foot muted small">Sent with Gifting Marketplace</div></div>
+    <aside class="rec-notes2 card stack-12"><p class="eyebrow">Behind the screen</p><ul class="notes">
+      <li>The link holds 32 random bytes. We keep only a hash, so a leaked database can't open gifts.</li>
+      <li>Choosing locks the gift once. A second tap or a replayed request can't create a second order.</li>
+      <li>The server re-reads the item's price, stock and the budget. Nothing about price comes from the phone.</li>
+      <li>The order goes to the vendor that owns the item. The address goes to them, not to ${esc(g.from.split(' ')[0])}.</li></ul></aside>
+  </div>`;
+}
+function recUnwrap(){
+  const r=S.rec,g=recGift(),n=recItems().length;
+  if(!r.opened)return `<div class="stack-20 center" style="padding-top:12px"><p class="eyebrow">You've got a gift</p><h2 class="big">${esc(g.from.split(' ')[0])} from Lumen Labs sent you something</h2>
+    <div class="giftbox wiggle" id="gbox"><span class="lid"><span class="bow"></span></span><span class="base"></span></div>
+    <button type="button" class="btn brand lg block" data-act="rec-open">Open your gift</button><p class="muted small">Open by ${fmtDate(addDays(g.expiry||60))}</p></div>`;
+  return `<div class="stack-16 reveal">${gcard(g)}<button type="button" class="btn brand lg block" data-act="rec-goto" data-i="1">Choose your gift ${ic('chev-r',16)}</button><p class="muted small center">${n} gift${n===1?'':'s'} to pick from. Shipping is covered.</p></div>`;
+}
+function recChoose(){
+  const r=S.rec,list=recItems();
+  if(r.sku){const p=prod(r.sku),v=vendorOf(p.vendor);return `<div class="stack-16 reveal"><div><button type="button" class="btn ghost sm" data-act="rec-unpick">${ic('chev-l',16)} All gifts</button></div>
+    <div class="pt ${p.cat} hero">${ic(p.icon,72)}</div><div class="stack-4"><span class="brand">${esc(p.brand)}</span><h2>${esc(p.name)}</h2></div><p class="muted">${esc(p.desc)}</p>
+    ${p.variants?`<div class="stack-8"><b class="small">Colour</b><div class="chips">${p.variants.map(x=>`<button type="button" class="chip brandsel" data-act="rec-variant" data-v="${x}" aria-pressed="${r.variant===x}">${x}</button>`).join('')}</div></div>`:''}
+    <p class="muted small row-8" style="flex-wrap:nowrap">${ic('truck',16)} Ships from ${esc(v.name)} in about ${v.sla} business days.</p>
+    <button type="button" class="btn brand lg block" data-act="rec-goto" data-i="2" ${p.variants&&!r.variant?'disabled':''}>${p.variants&&!r.variant?'Pick a colour':'Choose this gift'}</button></div>`;}
+  if(!list.length)return `<div class="empty-state">${ic('gift',28)}<b>Everything here just sold out</b><span class="small">We've told Lumen Labs. They'll send you a new gift.</span></div>`;
+  return `<div class="stack-4"><h2>Pick one gift</h2><p class="muted small">${list.length} options from ${new Set(list.map(p=>p.brand)).size} brands</p></div>
+    <div class="ph-grid">${list.map(p=>`<button type="button" class="ph-item" data-act="rec-item" data-sku="${p.sku}"><span class="pt ${p.cat}">${ic(p.icon,40)}</span><div><span class="brand">${esc(p.brand)}</span><b class="small">${esc(p.name)}</b></div></button>`).join('')}</div>`;
+}
+function recShip(){
+  const r=S.rec;if(r.placing)return `<div class="stack-16 center" style="padding-top:80px"><div class="spinner"></div><b>Placing your order…</b><p class="muted small">Checking stock with the vendor.</p></div>`;
+  const p=prod(r.sku),v=vendorOf(p.vendor),a=r.addr,e=r.errors;
+  const f=(k,l,o={})=>`<div class="field" style="${o.style||''}"><label for="ra-${k}">${l}</label><input id="ra-${k}" class="input" autocomplete="${o.ac||'off'}" value="${esc(a[k])}" data-in="rec-addr" data-k="${k}" ${e[k]?'aria-invalid="true" aria-describedby="re-'+k+'"':''}>${e[k]?`<span class="err" id="re-${k}">${e[k]}</span>`:''}</div>`;
+  return `<div class="stack-16"><div><button type="button" class="btn ghost sm" data-act="rec-goto" data-i="1">${ic('chev-l',16)} Change gift</button></div>
+    <div class="chosen-row"><span class="pt ${p.cat}">${ic(p.icon,26)}</span><div class="stack-4"><span class="brand">${esc(p.brand)}</span><b class="small">${esc(p.name)}${r.variant?` · ${esc(r.variant)}`:''}</b></div></div>
+    <h2>Where should it go?</h2>
+    ${f('name','Full name',{ac:'name'})}${f('line1','Street address',{ac:'address-line1'})}${f('line2','Apartment, suite (optional)',{ac:'address-line2'})}${f('city','City',{ac:'address-level2'})}
+    <div class="grid2" style="grid-template-columns:1fr 1fr">${f('region','State',{ac:'address-level1'})}${f('postal','ZIP code',{ac:'postal-code'})}</div>
+    <div class="field"><label for="ra-country">Country</label><select id="ra-country" class="input" data-ch="rec-country">${[['US','United States'],['CA','Canada']].map(([c,l])=>`<option value="${c}" ${a.country===c?'selected':''}>${l}</option>`).join('')}</select></div>
+    <p class="muted small row-8" style="flex-wrap:nowrap;align-items:flex-start">${ic('shield',16)} Your address goes only to ${esc(v.name)}, who ships it. Lumen Labs doesn't see it.</p>
+    <button type="button" class="btn brand lg block" data-act="rec-submit">Confirm my gift</button></div>`;
+}
+function recTrack(){
+  const r=S.rec,o=ORDERS.find(x=>x.no===r.order),p=prod(o.sku),v=vendorOf(o.vendor);const st=o.status==='shipped'?1:0;
+  return `<div class="stack-16 reveal"><div class="stack-12 center"><div class="done-ico ok" style="background:var(--brand-soft);color:var(--brand)">${ic('check',30)}</div><h2>It's on its way to you</h2><p class="muted small">${esc(p.name)}${o.variant?` in ${esc(o.variant)}`:''} ships from ${esc(v.name)}.</p></div>
+    <div class="card stack-16" style="padding:16px"><div class="row-between small"><span class="muted">Order</span><b class="num">${o.no}</b></div>
+      <ol class="track">${[['Ordered',fmtDate(TODAY)],['Shipped',o.status==='shipped'?`${o.shippedAt} · ${esc(o.carrier)}`:`Usually within ${v.sla} business days`],['Delivered','We email you when it arrives']].map(([l,d],i)=>`<li class="${i<=st?'on':''}"><span class="dot">${ic('check',13)}</span><span class="stack-4"><b class="small">${l}</b><span class="muted small">${d}</span></span></li>`).join('')}</ol>
+      ${o.status==='shipped'?`<p class="small">Tracking number <b class="num">${esc(o.tracking)}</b></p>`:''}</div>
+    <p class="muted small center">Prototype tip: ${o.status==='shipped'?'the vendor has marked it shipped.':`<button type="button" class="link" data-act="to-vendor" data-k="${o.vendor}">open the vendor portal</button> and mark it shipped to move this tracker.`}</p></div>`;
+}
+function placeOrder(){
+  const r=S.rec,p=prod(r.sku),gid='g_'+rand(6),no='GFT-'+gid,v=vendorOf(p.vendor);
+  ORDERS.unshift({no,vendor:p.vendor,sku:p.sku,variant:r.variant,shipTo:{...r.addr},ordered:fmtDate(TODAY),due:fmtDate(addDays(v.sla)),status:'open',fromRec:true});
+  r.order=no;r.step=3;r.placing=false;
+  const c=recGift().cid&&CAMPAIGNS.find(x=>x.id===recGift().cid);
+  if(c){const g=c.gifts.find(x=>['sent','opened'].includes(x.status));if(g){g.status='redeemed';g.sku=p.sku;g.order=no;}}
+}
+
+/* ---------- Vendor ---------- */
+function renderVendor(){
+  const v=vendorOf(S.vendor),mine=ORDERS.filter(o=>o.vendor===v.key),open=mine.filter(o=>o.status==='open'),shipped=mine.filter(o=>o.status==='shipped');
+  const soon=open.filter(o=>['27 Oct','28 Oct','29 Oct'].includes(o.due)).length;
+  const addr=a=>`<b>${esc(a.name)}</b><span class="sub">${esc(a.line1)}${a.line2?', '+esc(a.line2):''}, ${esc(a.city)} ${esc(a.region)} ${esc(a.postal)}, ${esc(a.country)}</span>`;
+  const list=S.vendorTab==='open'?open:shipped;
+  $('#view-vendor').innerHTML=`<div class="wide">
+    <section class="section-head"><div class="stack-8"><p class="eyebrow">Vendor portal</p><h1>${esc(v.name)}</h1><p class="muted">Orders routed to your channel. You see what you need to ship, and nothing else.</p></div>
+      <div class="field sel-field"><label for="f-vendor">Signed in as</label><select id="f-vendor" class="input" data-ch="vendor">${VENDORS.map(x=>`<option value="${x.key}" ${x.key===v.key?'selected':''}>${esc(x.name)}</option>`).join('')}</select></div></section>
+    <section class="stats"><div class="stat lead"><span class="l">To ship</span><span class="v">${open.length}</span></div><div class="stat"><span class="l">Due in the next 2 days</span><span class="v">${soon}</span></div><div class="stat"><span class="l">Shipped</span><span class="v">${shipped.length}</span></div></section>
+    <div class="stack-12"><div class="tabs" role="tablist"><button type="button" role="tab" aria-selected="${S.vendorTab==='open'}" data-act="vendor-tab" data-v="open">To ship <span class="muted">${open.length}</span></button><button type="button" role="tab" aria-selected="${S.vendorTab==='shipped'}" data-act="vendor-tab" data-v="shipped">Shipped <span class="muted">${shipped.length}</span></button></div>
+    ${list.length?`<div class="table-wrap"><table><thead><tr><th>Order</th><th>Item</th><th>Ship to</th>${S.vendorTab==='open'?'<th>Ordered</th><th>Ship by</th><th></th>':'<th>Shipped</th><th>Carrier and tracking</th>'}</tr></thead><tbody>
+    ${list.map(o=>{const p=prod(o.sku);return `<tr><td class="num nowrap"><b>${o.no}</b>${o.fromRec?'<span class="sub" style="color:var(--accent)">Just ordered</span>':''}</td><td><b>${esc(p.name)}</b><span class="sub">${esc(p.sku)}${o.variant?` · ${esc(o.variant)}`:''} · qty 1</span></td><td style="min-width:220px">${addr(o.shipTo)}</td>
+      ${S.vendorTab==='open'?`<td class="nowrap">${o.ordered}</td><td class="nowrap">${o.due}</td><td class="r"><button type="button" class="btn primary sm" data-act="ship" data-no="${o.no}">${ic('truck',15)} Mark shipped</button></td>`:`<td class="nowrap">${o.shippedAt}</td><td>${esc(o.carrier)}<span class="sub num">${esc(o.tracking)}</span></td>`}</tr>`;}).join('')}
+    </tbody></table></div>`:`<div class="empty-state">${ic('truck',28)}<b>${S.vendorTab==='open'?'Nothing waiting to ship':'Nothing shipped yet'}</b><span class="small">New orders show up here as soon as someone chooses one of your items.</span></div>`}</div></div>`;
+}
+
+/* ---------- Ops ---------- */
+function renderOps(){
+  const inFlight=CAMPAIGNS.reduce((a,c)=>a+c.gifts.filter(g=>['sent','opened','redeeming','redeemed','shipped'].includes(g.status)).length,0);
+  const recon=RECON.find(r=>r.status==='review');
+  const tab=(k,l)=>`<button type="button" role="tab" aria-selected="${S.opsTab===k}" data-act="ops-tab" data-v="${k}">${l}</button>`;
+  let body='';
+  if(S.opsTab==='companies')body=`<div class="table-wrap"><table><thead><tr><th>Company</th><th>Key</th><th class="r">Teams</th><th class="r">People</th><th class="r">Balance</th><th class="r">Gifts, 30 days</th><th>Status</th></tr></thead><tbody>
+    ${COMPANIES.map(c=>{const b=c.key==='company-lumen-labs'?TEAMS.reduce((a,t)=>a+bal(t.key).available,0):c.balance;return `<tr><td><b>${esc(c.name)}</b></td><td><code>${c.key}</code></td><td class="r num">${c.teams}</td><td class="r num">${c.members}</td><td class="r num">${money(b)}</td><td class="r num">${c.gifts30}</td><td>${badge(c.status)}</td></tr>`;}).join('')}</tbody></table></div>`;
+  else if(S.opsTab==='vendors')body=`<div class="table-wrap"><table><thead><tr><th>Vendor</th><th>Gets orders by</th><th class="r">Ship within</th><th class="r">On time</th><th class="r">Open orders</th><th class="r">Items</th><th>Active</th></tr></thead><tbody>
+    ${VENDORS.map(v=>`<tr><td><b>${esc(v.name)}</b><span class="sub"><code>${v.key}</code></span></td><td>${v.method}</td><td class="r num">${v.sla} days</td><td class="r num">${v.onTime}%</td><td class="r num">${ORDERS.filter(o=>o.vendor===v.key&&o.status==='open').length}</td><td class="r num">${PRODUCTS.filter(p=>p.vendor===v.key).length}</td><td><button type="button" class="switch" role="switch" aria-checked="${v.active}" aria-label="${esc(v.name)} active" data-act="ops-vendor" data-k="${v.key}"></button></td></tr>`).join('')}</tbody></table></div>
+    <p class="muted small">Pausing a vendor takes its items out of every collection straight away. Try it, then look at Browse gifts or the recipient's choices.</p>`;
+  else body=`<div class="table-wrap"><table><thead><tr><th>Run</th><th class="r">Orders checked</th><th class="r">Ledger captures</th><th class="r">Payments in commercetools</th><th class="r">Mismatches</th><th>Status</th><th></th></tr></thead><tbody>
+    ${RECON.map(r=>`<tr><td class="nowrap">${r.at}</td><td class="r num">${r.orders}</td><td class="r num">${money(r.ledger,true)}</td><td class="r num">${money(r.ct,true)}</td><td class="r num">${r.mismatch}</td><td>${badge(r.status,r.status==='review'?'needs review':r.status)}</td><td class="r">${r.status==='review'?`<button type="button" class="btn sm" data-act="recon" data-id="${r.id}">Review</button>`:''}</td></tr>`).join('')}</tbody></table></div>
+    <p class="muted small">Runs hourly. Compares every captured ledger entry with the payment on its commercetools order.</p>`;
+  $('#view-ops').innerHTML=`<div class="wide">
+    <section class="section-head"><div class="stack-8"><p class="eyebrow">Ops admin</p><h1>Platform overview</h1></div><button type="button" class="btn primary" data-act="soon" data-msg="Creating companies arrives with accounts (M1).">${ic('plus',16)} New company</button></section>
+    <section class="stats four"><div class="stat"><span class="l">Companies</span><span class="v">${COMPANIES.length}</span></div><div class="stat"><span class="l">Active vendors</span><span class="v">${VENDORS.filter(v=>v.active).length} / ${VENDORS.length}</span></div><div class="stat"><span class="l">Gifts in flight</span><span class="v">${inFlight}</span></div>
+      <div class="stat" style="${recon?'border-color:var(--warn)':''}"><span class="l">Last reconciliation</span><span class="v" style="font-size:18px;padding-top:6px">${recon?badge('review','1 mismatch'):badge('matched','All matched')}</span></div></section>
+    <div class="stack-12"><div class="tabs" role="tablist">${tab('companies','Companies')}${tab('vendors','Vendors')}${tab('recon','Reconciliation')}</div>${body}</div></div>`;
+}
+
+/* ---------- Modals ---------- */
+const MODALS={
+  product(m){const p=prod(m.sku),v=vendorOf(p.vendor);return{title:p.name,body:`<div class="pt ${p.cat} hero" style="border-radius:14px">${ic(p.icon,72)}</div>
+    <div class="row-between"><span class="brand">${esc(p.brand)}</span><span class="price" style="font-size:20px">${money(p.price)}</span></div><p>${esc(p.desc)}</p>
+    <div class="kv" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div><span>Ships from</span>${esc(v.name)}</div><div><span>Ships in</span>${v.sla} days</div><div><span>In stock</span>${p.stock}</div></div>
+    ${p.variants?`<p class="muted small">Recipients pick a colour: ${p.variants.join(', ')}.</p>`:''}<p class="muted small"><code>${p.sku}</code></p>`,
+    actions:[{label:'Close',act:'modal-close'},{label:'Send this gift',act:'new-send',kind:'primary',data:{sku:p.sku}}]};},
+  collPreview(m){const c=coll(m.id),its=itemsFor(c.id);return{title:c.name,body:`<p class="muted">Up to ${money(c.budget)}. ${its.length} gifts match today; the list updates as stock and vendors change.</p>
+    <div class="list">${its.map(p=>`<div><span class="pt ${p.cat}" style="width:40px;height:40px;flex:none;border-radius:10px">${ic(p.icon,20)}</span><span class="grow"><span class="brand">${esc(p.brand)}</span><b style="display:block" class="small">${esc(p.name)}</b></span><span class="price small">${money(p.price)}</span></div>`).join('')}</div>`,
+    actions:[{label:'Close',act:'modal-close'},{label:'Send this collection',act:'new-send',kind:'primary',data:{collection:c.id}}]};},
+  topup(m){const t=team();return{title:`Top up ${t.name}`,body:`<div class="stack-8"><span class="flabel">Amount</span><div class="chips">${[100000,500000,1000000].map(v=>`<button type="button" class="chip" data-act="m-set" data-k="amount" data-v="${v}" aria-pressed="${m.amount===v}">${money(v)}</button>`).join('')}</div></div>
+    <div class="stack-8"><span class="flabel">Pay by</span><div class="grid2"><button type="button" class="choice" data-act="m-set" data-k="method" data-v="card" aria-pressed="${m.method==='card'}"><span class="ico">${ic('wallet',20)}</span><span><b>Card</b><span class="muted small">Test mode. Funds land straight away.</span></span></button>
+    <button type="button" class="choice" data-act="m-set" data-k="method" data-v="invoice" aria-pressed="${m.method==='invoice'}"><span class="ico">${ic('mail',20)}</span><span><b>Invoice</b><span class="muted small">Net 30. Funds land when it's paid.</span></span></button></div></div>
+    <p class="muted small">The payment writes one top-up entry to the ${esc(t.name)} ledger.</p>`,
+    actions:[{label:'Cancel',act:'modal-close'},{label:m.method==='card'?`Pay ${money(m.amount)}`:`Send invoice for ${money(m.amount)}`,act:'topup-go',kind:'primary'}]};},
+  collection(m){const fake={id:'_tmp',budget:m.budget,tags:m.tags.length?m.tags:null};COLLECTIONS.push(fake);const its=itemsFor('_tmp');COLLECTIONS.pop();
+    return{title:'Build a collection',body:`<div class="field"><label for="m-cname">Name</label><input id="m-cname" class="input" maxlength="40" placeholder="Desk upgrades" value="${esc(m.name)}" data-in="m-name"></div>
+    <div class="stack-8"><span class="flabel">Budget per gift</span><div class="chips">${[2500,5000,7500,10000].map(v=>`<button type="button" class="chip" data-act="m-set" data-k="budget" data-v="${v}" aria-pressed="${m.budget===v}">${money(v)}</button>`).join('')}</div></div>
+    <div class="stack-8"><span class="flabel">Include items tagged</span><div class="chips">${TAGS.map(t=>`<button type="button" class="chip" data-act="m-tag" data-v="${t}" aria-pressed="${m.tags.includes(t)}">${t}</button>`).join('')}</div><span class="muted small">No tags means every item under the budget.</span></div>
+    <div class="cost"><div class="row-between"><b>${its.length} gifts match</b><span class="muted small">${new Set(its.map(p=>p.brand)).size} brands</span></div>${mosaic(its,6,20)}</div>`,
+    actions:[{label:'Cancel',act:'modal-close'},{label:'Save collection',act:'coll-save',kind:'primary',disabled:!m.name.trim()||!its.length}]};},
+  cancelGift(m){const c=CAMPAIGNS.find(x=>x.id===S.campaign),g=c.gifts.find(x=>x.id===m.id);return{title:`Cancel ${g.name}'s gift?`,body:`<p class="muted">Their link stops working and the ${money(c.budget)} hold goes back to the ${esc(team(c.team).name)} budget.</p>`,
+    actions:[{label:'Keep it',act:'modal-close'},{label:'Cancel gift',act:'g-cancel-go',kind:'danger-fill'}]};},
+  ship(m){const o=ORDERS.find(x=>x.no===m.no),p=prod(o.sku);return{title:`Ship ${o.no}`,body:`<div class="chosen-row"><span class="pt ${p.cat}">${ic(p.icon,24)}</span><div class="stack-4"><b class="small">${esc(p.name)}${o.variant?` · ${esc(o.variant)}`:''}</b><span class="muted small">To ${esc(o.shipTo.name)}, ${esc(o.shipTo.city)} ${esc(o.shipTo.region)}</span></div></div>
+    <div class="field"><label for="m-carrier">Carrier</label><input id="m-carrier" class="input" placeholder="Parcel post" value="${esc(m.carrier)}" data-in="m-field" data-k="carrier" ${m.err&&!m.carrier.trim()?'aria-invalid="true"':''}></div>
+    <div class="field"><label for="m-track">Tracking number</label><input id="m-track" class="input" placeholder="PP 1234 5678 90" value="${esc(m.tracking)}" data-in="m-field" data-k="tracking" ${m.err&&!m.tracking.trim()?'aria-invalid="true"':''}>${m.err?'<span class="err">Add the carrier and the tracking number.</span>':''}</div>
+    <p class="muted small">We add a delivery and parcel to the commercetools order, and the recipient's tracker moves to Shipped.</p>`,
+    actions:[{label:'Cancel',act:'modal-close'},{label:'Mark shipped',act:'ship-go',kind:'primary'}]};},
+  recon(m){const r=RECON.find(x=>x.id===m.id),d=r.detail,diff=d.ledger-d.ct;return{title:'1 mismatch in the 09:00 run',body:`<div class="cost num"><div class="row-between"><span class="muted">Order</span><b>${d.order}</b></div><div class="row-between"><span class="muted">Ledger capture</span><span>${money(d.ledger,true)}</span></div><div class="row-between"><span class="muted">Payment in commercetools</span><span>${money(d.ct,true)}</span></div><div class="row-between total"><span>Difference</span><span>${money(diff,true)}</span></div></div>
+    <p class="muted">The vendor lowered the price after the gift was chosen, so the order was paid at ${money(d.ct,true)}. The ledger captured ${money(d.ledger,true)}. Posting an adjustment returns ${money(diff,true)} to Lumen Labs · People. The original entry stays as it is.</p>`,
+    actions:[{label:'Not now',act:'modal-close'},{label:`Post ${money(diff,true)} adjustment`,act:'recon-go',kind:'primary'}]};},
+};
+function renderModal(){
+  const root=$('#modal-root');if(!S.modal){root.innerHTML='';return;}
+  const focusId=document.activeElement&&root.contains(document.activeElement)?document.activeElement.id:null;
+  const m=MODALS[S.modal.kind](S.modal);
+  root.innerHTML=`<div class="scrim" data-act="modal-scrim"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="m-title"><div class="modal-head"><h2 id="m-title">${esc(m.title)}</h2><button type="button" class="icon-btn" data-act="modal-close" aria-label="Close">${ic('x',18)}</button></div>${m.body}
+    <div class="modal-actions">${m.actions.map(a=>`<button type="button" class="btn ${a.kind||''}" data-act="${a.act}" ${attrs(a.data)} ${a.disabled?'disabled':''}>${a.label}</button>`).join('')}</div></div></div>`;
+  if(focusId&&$('#'+focusId)){const el=$('#'+focusId);el.focus();if(el.setSelectionRange&&el.value!=null)el.setSelectionRange(el.value.length,el.value.length);}
+}
+const openModal=(kind,data={})=>{S.modal={kind,...data};renderModal();const f=$('#modal-root .modal input, #modal-root .modal button');f&&f.focus();};
+const closeModal=()=>{S.modal=null;renderModal();};
+
+/* ---------- Toast ---------- */
+function toast(msg){const t=document.createElement('div');t.className='toast';t.textContent=msg;$('#toasts').appendChild(t);setTimeout(()=>t.remove(),3600);}
+
+/* ---------- Actions ---------- */
+const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const scrollTop=()=>window.scrollTo({top:0});
+const ACT={
+  app(d){S.app=d.app;S.modal=null;render();scrollTop();},
+  go(d){S.app='sender';S.page=d.page;S.campaign=null;if(d.page==='send'&&(!S.send||S.send.done))S.send=freshSend();render();scrollTop();},
+  'new-send'(d){const pre={};if(d.sku){pre.mode='single';pre.sku=d.sku;}if(d.collection){pre.collection=d.collection;pre.budget=coll(d.collection).budget;}S.send=freshSend(pre);S.modal=null;S.app='sender';S.page='send';S.campaign=null;render();scrollTop();},
+  soon(d){toast(d.msg);},
+  'pick-team'(d){S.team=d.k;render();},
+  topup(){openModal('topup',{amount:500000,method:'card'});},
+  'topup-go'(){const m=S.modal,inv=m.method==='invoice';LEDGER[S.team].push({at:fmtDate(TODAY),type:'top-up',ref:inv?`Invoice INV-${1043+Math.floor(Math.random()*50)} (net 30, credit line)`:'Card top-up (test mode)',amount:m.amount});
+    closeModal();render();toast(inv?`Invoice for ${money(m.amount)} sent. Funds are available on the credit line.`:`${money(m.amount)} added to ${team().name}.`);},
+  'b-budget'(d){S.browse.budget=+d.v;render();},
+  'b-occ'(d){S.browse.occ=d.v;render();},
+  'b-cat'(d){S.browse.cat=d.v;render();},
+  'browse-clear'(){S.browse={budget:0,occ:'all',cat:'all',q:''};render();},
+  product(d){openModal('product',{sku:d.sku});},
+  'coll-preview'(d){openModal('collPreview',{id:d.id});},
+  'new-collection'(){openModal('collection',{name:'',budget:5000,tags:['home']});},
+  'm-set'(d){S.modal[d.k]=isNaN(+d.v)?d.v:+d.v;renderModal();},
+  'm-tag'(d){const t=S.modal.tags;const i=t.indexOf(d.v);i<0?t.push(d.v):t.splice(i,1);renderModal();},
+  'coll-save'(){const m=S.modal;COLLECTIONS.push({id:'col-'+rand(5).toLowerCase(),name:m.name.trim(),budget:m.budget,tags:m.tags.length?[...m.tags]:null});closeModal();render();toast(`${m.name.trim()} saved.`);},
+  'send-step'(d){S.send.step=+d.i;S.send.done=null;render();scrollTop();},
+  'send-back'(){S.send.step--;render();scrollTop();},
+  'send-next'(){const s=S.send;if(!stepValid(s.step))return;if(s.step<3){s.step++;render();scrollTop();}else{submitSend();render();scrollTop();}},
+  'send-mode'(d){S.send.mode=d.v;if(d.v==='single'&&!S.send.sku)S.send.sku=null;render();},
+  'send-budget'(d){S.send.budget=+d.v;render();},
+  'send-col'(d){S.send.collection=d.id;render();},
+  'send-sku'(d){S.send.sku=d.sku;render();},
+  'send-occ'(d){const s=S.send,prev=occ(s.occasion);s.occasion=d.v;if(!s.title||s.title===prev.title)s.title=occ(d.v).title;render();},
+  'send-cover'(d){S.send.cover=d.v;render();},
+  'send-rec'(d){const r=S.send.recipients,i=r.indexOf(d.id);i<0?r.push(d.id):r.splice(i,1);refreshRecipients();},
+  'send-all'(){const s=S.send;s.recipients=s.recipients.length===DIRECTORY.length?[]:DIRECTORY.map(p=>p.id);refreshRecipients();},
+  'send-csv'(){const start=DIRECTORY.length;for(let i=0;i<5;i++){const n=personName(start+i+20);DIRECTORY.push({id:'p'+(start+i),name:n,email:emailOf(n),dept:'Imported'});S.send.recipients.push('p'+(start+i));}render();toast('Imported 5 people from sample.csv and selected them.');},
+  'add-email'(){addEmail();},
+  'send-chan'(d){const c=S.send.channels,i=c.indexOf(d.v);i<0?c.push(d.v):c.splice(i,1);render();},
+  'send-when'(d){S.send.when=d.v;render();},
+  'send-rem'(){S.send.reminders=!S.send.reminders;render();},
+  copy(){const t=$('#glink').textContent;const done=()=>toast('Link copied.');try{navigator.clipboard.writeText(t).then(done,()=>{selectText($('#glink'));toast('Press Ctrl+C to copy the selected link.');});}catch(e){selectText($('#glink'));}},
+  'open-campaign'(d){S.app='sender';S.page='campaigns';S.campaign=d.id;const c=CAMPAIGNS.find(x=>x.id===d.id);if(c)S.team=c.team;render();scrollTop();},
+  'back-campaigns'(){S.campaign=null;render();},
+  'camp-filter'(d){S.campFilter=d.v;render();},
+  'g-remind'(d){const g=curGift(d.id);toast(`Reminder sent to ${g.name} by ${CHANNELS.find(c=>c.key===g.channel).label.toLowerCase()}.`);},
+  'g-extend'(d){const g=curGift(d.id);if(g.status==='expired')g.status='sent';render();toast(`${g.name}'s gift now expires on ${fmtDate(addDays(30))}.`);},
+  'g-cancel'(d){openModal('cancelGift',{id:d.id});},
+  'g-cancel-go'(){const c=CAMPAIGNS.find(x=>x.id===S.campaign),g=c.gifts.find(x=>x.id===S.modal.id);g.status='cancelled';LEDGER[c.team].push({at:fmtDate(TODAY),type:'release',ref:`${c.name} · ${g.name} cancelled`,amount:c.budget});closeModal();render();toast(`Cancelled. ${money(c.budget)} is back in the budget.`);},
+  'camp-approve'(){const c=CAMPAIGNS.find(x=>x.id===S.campaign),n=c.gifts.length,hold=n*c.budget;if(hold>bal(c.team).available){toast('Not enough in the budget to approve this send.');return;}
+    c.status='active';c.gifts.forEach(g=>g.status='sent');LEDGER[c.team].push({at:fmtDate(TODAY),type:'hold',ref:`${c.name} · ${n} × ${money(c.budget)}`,amount:-hold});render();toast(`Approved. ${n} gifts sent and ${money(hold)} held.`);},
+  'camp-decline'(){const c=CAMPAIGNS.find(x=>x.id===S.campaign);c.status='declined';c.gifts.forEach(g=>g.status='cancelled');render();toast('Declined. The sender has been told. Nothing was held.');},
+  export(){toast('CSV export arrives with reporting (M6).');},
+  'auto-toggle'(d){const a=AUTOMATIONS.find(x=>x.key===d.k);a.on=!a.on;render();toast(`${a.label} ${a.on?'on':'paused'}.`);},
+  'rec-jump'(d){const r=S.rec,i=+d.i,list=recItems();
+    if(i>=1)r.opened=true;
+    if(i>=2&&!r.sku&&list[0]){r.sku=list[0].sku;r.variant=list[0].variants?list[0].variants[0]:null;}
+    if(i>=2&&!r.sku)return;
+    if(i===3&&!r.order){if(!r.addr.name)r.addr={name:'Jordan Lee',line1:'240 Elm Street',line2:'',city:'Columbus',region:'OH',postal:'43215',country:'US'};placeOrder();}
+    if(i===3&&r.order)r.step=3;else r.step=i;r.placing=false;render();},
+  'rec-reset'(){S.rec=freshRec();render();},
+  'rec-open'(){const b=$('#gbox');if(reduced||!b){S.rec.opened=true;render();return;}b.classList.add('open');setTimeout(()=>{S.rec.opened=true;render();},700);},
+  'rec-goto'(d){const r=S.rec,i=+d.i;if(i===2){const p=prod(r.sku);if(p.variants&&!r.variant)return;}r.step=i;render();},
+  'rec-item'(d){S.rec.sku=d.sku;S.rec.variant=null;render();},
+  'rec-unpick'(){S.rec.sku=null;S.rec.variant=null;render();},
+  'rec-variant'(d){S.rec.variant=d.v;render();},
+  'rec-submit'(){const r=S.rec,a=r.addr,e={};
+    if(!a.name.trim())e.name='Add the name for the parcel.';if(!a.line1.trim())e.line1='Add a street address.';if(!a.city.trim())e.city='Add a city.';if(!a.region.trim())e.region='Add a state.';
+    if(!/^(\d{5}(-\d{4})?|[A-Za-z]\d[A-Za-z] ?\d[A-Za-z]\d)$/.test(a.postal.trim()))e.postal=a.country==='CA'?'Use a postal code like M5R 2A5.':'Use a 5-digit ZIP code.';
+    r.errors=e;if(Object.keys(e).length){render();const k=Object.keys(e)[0];$('#ra-'+k).focus();return;}
+    r.placing=true;render();setTimeout(()=>{placeOrder();render();toast('Order placed. The vendor has it now.');},reduced?0:900);},
+  'to-vendor'(d){S.vendor=d.k;S.vendorTab='open';S.app='vendor';render();scrollTop();},
+  'vendor-tab'(d){S.vendorTab=d.v;render();},
+  ship(d){openModal('ship',{no:d.no,carrier:'',tracking:'',err:false});},
+  'ship-go'(){const m=S.modal;if(!m.carrier.trim()||!m.tracking.trim()){m.err=true;renderModal();return;}
+    const o=ORDERS.find(x=>x.no===m.no);o.status='shipped';o.carrier=m.carrier.trim();o.tracking=m.tracking.trim();o.shippedAt=fmtDate(TODAY);
+    for(const c of CAMPAIGNS){const g=c.gifts.find(x=>x.order===o.no);if(g)g.status='shipped';}
+    closeModal();render();toast(`${o.no} marked shipped.${o.fromRec?' The recipient’s tracker now says Shipped.':''}`);},
+  'ops-tab'(d){S.opsTab=d.v;render();},
+  'ops-vendor'(d){const v=vendorOf(d.k);v.active=!v.active;render();toast(v.active?`${v.name} is back. Its items return to every collection.`:`${v.name} paused. Its ${PRODUCTS.filter(p=>p.vendor===v.key).length} items left every collection.`);},
+  recon(d){openModal('recon',{id:d.id});},
+  'recon-go'(){const r=RECON.find(x=>x.id===S.modal.id);const diff=r.detail.ledger-r.detail.ct;r.status='resolved';r.ct=r.ledger;LEDGER[P].push({at:fmtDate(TODAY),type:'adjustment',ref:`${r.detail.order} price change refund`,amount:diff});closeModal();render();toast(`Adjustment posted. ${money(diff,true)} returned to People.`);},
+  'modal-close'(){closeModal();},
+  'modal-scrim'(d,el,e){if(e.target===el)closeModal();},
+};
+const curGift=id=>CAMPAIGNS.find(x=>x.id===S.campaign).gifts.find(g=>g.id===id);
+function selectText(el){const r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r);}
+function refreshRecipients(){const y=$('#people').scrollTop;render();const p=$('#people');if(p)p.scrollTop=y;}
+function addEmail(){const inp=$('#f-add'),err=$('#add-err'),v=inp.value.trim().toLowerCase();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)){err.textContent='Enter an email address like name@company.example.';err.hidden=false;inp.setAttribute('aria-invalid','true');inp.focus();return;}
+  let p=DIRECTORY.find(x=>x.email===v);if(!p){p={id:'p'+DIRECTORY.length,name:v.split('@')[0].replace(/[._-]+/g,' ').replace(/\b\w/g,c=>c.toUpperCase()),email:v,dept:'Added'};DIRECTORY.push(p);}
+  if(!S.send.recipients.includes(p.id))S.send.recipients.push(p.id);render();toast(`${p.name} added.`);const n=$('#f-add');n&&n.focus();}
+
+/* ---------- Inputs ---------- */
+const IN={
+  'b-search'(el){S.browse.q=el.value;$('#bgrid').innerHTML=browseResults();$('#bcount').textContent=browseList().length+' gifts';},
+  'send-text'(el){S.send[el.dataset.k]=el.value;if(el.dataset.k==='message')$('#msg-count').textContent=el.value.length+' / 500';$('#send-summary').innerHTML=sendSummary();
+    const nb=$('[data-act="send-next"]');if(nb)nb.disabled=!stepValid(S.send.step);},
+  'r-search'(el){S.rsearch=el.value;$('#people').innerHTML=peopleList();},
+  'rec-addr'(el){S.rec.addr[el.dataset.k]=el.value;if(S.rec.errors[el.dataset.k]){delete S.rec.errors[el.dataset.k];el.removeAttribute('aria-invalid');const e=$('#re-'+el.dataset.k);e&&e.remove();}},
+  'm-name'(el){S.modal.name=el.value;renderModal();},
+  'm-field'(el){S.modal[el.dataset.k]=el.value;},
+};
+const CH={
+  team(el){S.team=el.value;S.campaign=null;render();},
+  vendor(el){S.vendor=el.value;render();},
+  'send-date'(el){S.send.date=el.value;render();},
+  'send-expiry'(el){S.send.expiry=+el.value;render();},
+  'rec-country'(el){S.rec.addr.country=el.value;},
+};
+document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el||el.disabled)return;const fn=ACT[el.dataset.act];if(fn)fn(el.dataset,el,e);});
+document.addEventListener('input',e=>{const el=e.target.closest('[data-in]');if(el&&IN[el.dataset.in])IN[el.dataset.in](el,e);});
+document.addEventListener('change',e=>{const el=e.target.closest('[data-ch]');if(el&&CH[el.dataset.ch])CH[el.dataset.ch](el,e);});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&S.modal){closeModal();return;}
+  if(e.key==='Enter'&&e.target.dataset&&e.target.dataset.enter==='add-email'){e.preventDefault();addEmail();}
+  if(e.key==='Enter'&&e.target.closest&&e.target.closest('tr.click')){e.target.closest('tr.click').click();}
+});
+addEventListener('resize',()=>document.documentElement.style.setProperty('--bar-h',$('#proto-bar').offsetHeight+'px'));
+
+/* ---------- Boot ---------- */
+CAMPAIGNS=[
+  seedCampaign({id:'cmp-q4-thanks',name:'Q4 thank-you',team:P,type:'One-time',collection:'col-treats',budget:5000,channels:['email','slack'],created:'6 Oct',status:'active'},{sent:40,opened:34,redeemed:26,shipped:20,delivered:14,expired:0},20),
+  seedCampaign({id:'cmp-newhire',name:'New hire welcome',team:P,type:'Automated · first day',collection:'col-outdoor',budget:10000,channels:['email','teams'],created:'1 Oct',status:'active'},{sent:8,opened:7,redeemed:5,shipped:4,delivered:3,expired:0},60),
+  seedCampaign({id:'cmp-anniv',name:'Work anniversaries',team:P,type:'Automated · anniversary',collection:'col-cozy',budget:7500,channels:['slack'],created:'1 Oct',status:'active'},{sent:12,opened:10,redeemed:6,shipped:5,delivered:4,expired:1},68),
+  seedCampaign({id:'cmp-holiday',name:'Holiday 2026',team:P,type:'Scheduled · 10 Dec',collection:'col-holiday',budget:7500,channels:['email','sms'],created:'22 Oct',status:'scheduled'},{scheduled:24},80),
+  seedCampaign({id:'cmp-renewal',name:'Renewal thank-you',team:SL,type:'One-time',collection:'col-holiday',budget:7500,channels:['email','link'],created:'25 Oct',status:'pending approval'},{pending:40},180),
+  seedCampaign({id:'cmp-partner',name:'Partner thank-you',team:SL,type:'One-time',collection:'col-treats',budget:5000,channels:['email'],created:'8 Oct',status:'active'},{sent:12,opened:11,redeemed:7,shipped:7,delivered:6,expired:0},230),
+];
+(function boot(){
+  let h='';try{h=location.hash.slice(1);}catch(e){}
+  const pages=NAV.map(n=>n[0]);
+  if(pages.includes(h)){S.page=h;if(h==='send')S.send=freshSend();}
+  else if(['recipient','vendor','ops'].includes(h))S.app=h;
+  render();
+})();
+</script>

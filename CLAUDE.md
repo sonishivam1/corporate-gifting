@@ -1,0 +1,240 @@
+# Gifting Marketplace: guide for coding agents
+
+The Gifting Marketplace is a Snappy-style corporate gifting platform on
+commercetools. Companies fund team budgets and send gifts through email, SMS,
+Slack, Teams, links or QR codes. Recipients choose from a multi-brand budget
+collection, and the vendor that owns the item ships it. It is our
+commercetools practice's gifting accelerator, built first as an 8-week POC.
+Keep every company, vendor, brand, person and figure in demo data fictional
+(see "Demo data").
+
+Read this file before changing anything. Product and architecture detail lives
+in [`docs/`](docs/README.md); this file is the short list of what every change
+must respect.
+
+## Where we are (27 Oct 2026)
+
+- **Agreed:** architecture v2, the multi-brand marketplace
+  ([overview](docs/architecture/overview.md),
+  [decisions](docs/architecture/decisions/README.md)). Scope is the 16 POC
+  capabilities in the [feature inventory](docs/product/features.md), built in
+  eight weekly milestones ([POC plan](docs/plans/poc-plan.md)).
+- **Built (M0 scaffold):** the monorepo. It has four Next.js apps, the
+  Fastify API with `/health` and `/v1/meta`, the worker shell, and the shared
+  packages. The pure rules in `@gifting/domain` and `@gifting/ledger` (gift
+  state machine, money, balances) have tests. The repo also has CI,
+  commercetools setup drafts and fictional seed data
+  ([M0 plan](docs/plans/m0-foundations.md)).
+- **Next:** the week-1 [spikes](docs/plans/spikes.md). Spike 1, the
+  company-balance order, gates everything in M4. After the spikes comes M1:
+  accounts and money.
+- The live plan is [`docs/product/roadmap.md`](docs/product/roadmap.md).
+
+## Commands
+
+Node 24 and pnpm 10. On Windows with fnm, prefix commands with
+`fnm exec --using=24 --` and call `pnpm.cmd`.
+
+| Command | What it does |
+| --- | --- |
+| `pnpm dev` | Every app and the API in watch mode (ports below) |
+| `pnpm lint` | ESLint in every package |
+| `pnpm typecheck` | `tsc --noEmit` in every package (`next typegen` first in apps) |
+| `pnpm test` | Unit tests in every package (no database, no network) |
+| `pnpm build` | Production build of every app and service; must never need a database or commercetools |
+| `pnpm db:up` / `pnpm db:down` | Local MongoDB (Atlas Local) and Mailpit in Docker |
+| `pnpm db:indexes` | Create the MongoDB indexes (`packages/db`) |
+| `pnpm ct:plan` | Print the commercetools setup drafts (store, channels, types); no calls |
+| `pnpm ct:apply` | Create the missing ones in the sandbox project from `.env` (spike and M0 only; not yet run against a real project) |
+| `pnpm worker` | Start the worker (today: lists the registered jobs) |
+
+| App or service | Port |
+| --- | --- |
+| `apps/sender` | 3000 |
+| `apps/recipient` | 3001 |
+| `apps/vendor` | 3002 |
+| `apps/ops` | 3003 |
+| `services/api` | 4000 |
+
+CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs lint,
+typecheck, tests and the build on every push and pull request. Keep it green.
+
+## Layout
+
+```
+apps/<sender|recipient|vendor|ops>/   Next.js apps; talk only to the Gifting API
+  app/                                 routes (App Router)
+  lib/api.ts                           typed calls to the Gifting API
+services/api/src/
+  app.ts                               buildApp(): Fastify, error shape, routes
+  http/route.ts                        defineRoute(): Zod in and out, /v1 only
+  http/errors.ts                       ApiError, errorBody()
+  modules/index.ts                     the ten modules; each gets modules/<module>/ when built
+services/worker/src/
+  jobs/index.ts                        job registry; each job moves to its own file when built
+scripts/build-service.mjs              bundles a service; fails on undeclared dependencies
+packages/domain/src/                   Zod models and pure rules: money, gift states, keys
+packages/ledger/src/                   ledger entry builders and the balance rule (pure)
+packages/db/src/                       MongoDB client, collections, indexes, test-db guard
+packages/ct/src/                       commercetools client and helpers (server only)
+packages/channels/src/                 Channel interface, registry, adapters
+packages/logger/src/                   createLogger() with redaction
+packages/ui/src/components/            every shadcn/ui component, plus app-shell, gift-status-badge, theme-provider
+packages/ui/src/styles/globals.css     the one stylesheet: Tailwind, shadcn tokens, light and dark
+infra/ct-setup/                        drafts and scripts for the commercetools project
+infra/seed/                            fictional vendors and products
+docs/                                  product, architecture, engineering, plans, technical
+docs/engineering/build-log.md          history of every change, newest first
+```
+
+API modules: `accounts`, `ledger`, `catalog`, `campaigns`, `recipients`,
+`gifts`, `fulfillment`, `channels`, `integrations`, `reporting`. A module owns
+its routes, services and collections. It calls another module only through
+that module's exported service, never its collections.
+
+## Rules every change follows
+
+**commercetools owns commerce** ([ADR 0001](docs/architecture/decisions/0001-commerce-in-commercetools.md))
+- Products, prices, stock, carts, orders, payments, tax, shipments,
+  companies and teams (Business Units) and vendors (supply Channels) live in
+  commercetools. Never copy them into MongoDB. Keep the key (`companyKey`,
+  `teamKey`, `vendorKey`, `ctOrderNumber`) and read the rest live.
+- Only `services/api`, `services/worker` and `infra/*` import `@gifting/ct`.
+  Apps never call commercetools, and no commercetools credential reaches a
+  browser.
+- Each concern gets its own scoped API client (API, import, event consumer).
+  Scopes are listed in [commercetools design](docs/architecture/commercetools.md).
+
+**MongoDB holds only what commercetools can't** ([ADR 0002](docs/architecture/decisions/0002-mongodb-for-platform-data.md))
+- Eight collections: `accounts`, `ledgerEntries`, `collections`,
+  `recipients`, `campaigns`, `gifts`, `integrations`, `processedEvents`. A new
+  collection needs a decision record.
+- Shapes are Zod schemas in `packages/domain`; indexes are in
+  `packages/db/src/indexes.ts`. Indexes for member lookups (lists, filters)
+  start with `companyKey` or `teamKey`; the unique indexes are the
+  exactly-once guards and must stay unique (a test checks).
+
+**Money** ([ADR 0005](docs/architecture/decisions/0005-company-balance-payment.md), [ADR 0007](docs/architecture/decisions/0007-append-only-ledger.md))
+- Amounts are integer cents (`amountCents`) with a currency, never floats.
+  Use the helpers in `@gifting/domain` (`money.ts`).
+- The ledger is append-only. Never update or delete an entry; correct with an
+  `adjustment`. Balances are computed by `@gifting/ledger`, never stored.
+- Every entry has a deterministic idempotency key from `ledgerKeys` (for
+  example `capture:<giftId>:<holdNo>`), and a unique index enforces it. A retry
+  writes nothing new.
+- A gift's status change and its ledger entries are written in one MongoDB
+  transaction.
+- Redemption orders carry real totals and are paid by a `company-balance`
+  Payment. Never use a 100% discount to zero an order (that was v1).
+
+**Redemption is exactly once**
+- Claim with one `findOneAndUpdate` that moves the gift from `sent` or `opened`
+  to `redeeming`; a `null` result means someone else got there first.
+- The commercetools order number is `GFT-<giftId>`, so a replay cannot
+  create a second order.
+- The server re-reads the SKU, price, stock, country and budget. Nothing about
+  price comes from the browser.
+- Gift status changes go through `canTransition()` in `@gifting/domain`.
+
+**Scope and access**
+- Every API call works inside the caller's company and team, taken from the
+  session, never from the request body. Something outside that scope is
+  "not found", never "forbidden".
+- Vendors see only orders routed to their channel, and only shipping fields.
+- Recipient links are 32 random bytes, stored only as a SHA-256 hash.
+  Short codes are rate-limited.
+
+**Events and jobs**
+- commercetools Subscription messages are at least once. Record each message
+  id in `processedEvents` before acting, and skip duplicates.
+- Jobs are idempotent: running one twice changes nothing the second time.
+
+**Channels and integrations** ([ADR 0008](docs/architecture/decisions/0008-channel-adapters.md))
+- Every delivery channel implements `Channel` from `@gifting/channels`.
+  Campaigns and gifts never import a provider SDK.
+- Provider secrets live in a secrets manager. `integrations` stores only a
+  `secretRef`.
+
+**HTTP API** ([ADR 0010](docs/architecture/decisions/0010-api-versioning.md))
+- Routes live under `/v1/…`, built with `defineRoute()` with Zod schemas
+  for input and output. Only `/health` is unversioned. Within v1, changes
+  are additive.
+- Errors are `{ error: { code, message } }`. Raise expected failures with
+  `ApiError(status, code, message)`.
+
+**Logging**
+- Use `@gifting/logger` in server code, workers and scripts, never `console`.
+- Never log recipient names, emails, phones, birthdays or addresses. Never
+  log gift tokens, codes, keys or connection strings. Log ids and codes as
+  fields, and errors as `{ err }`.
+
+**UI** ([ADR 0012](docs/architecture/decisions/0012-shadcn-ui.md), [design system](docs/design/design-system.md))
+- Build every screen from shadcn/ui components in `@gifting/ui`
+  (`import { Button } from "@gifting/ui/components/button"`). Use a
+  shadcn component if one exists; otherwise compose one in
+  `packages/ui/src/components`. No app defines its own colours, fonts or
+  component styles; use the token classes (`bg-primary`,
+  `text-muted-foreground`), never raw colours.
+- Add or refresh components with the CLI from an app folder
+  (`cd apps/sender && pnpm dlx shadcn@4.23.0 add <name>`), then move any new
+  dependencies and hooks it put in the app into `packages/ui`.
+- Prefer wrapping a shadcn component to editing it; edits are lost on a
+  refresh with `-o`.
+- The POC look is minimal; the recipient page takes the company's colours
+  (`--primary`) and logo.
+- Apps import `@gifting/domain` for types and pure rules only, never
+  `@gifting/db`, `@gifting/ct` or `@gifting/channels`.
+
+**Demo data**
+- `infra/seed` holds fictional vendors, brands, products and companies, with
+  `.example` domains only. Use no real companies, people or brands, and no
+  customer figures.
+
+## Definition of done for a milestone step
+
+0. Write the step's plan in `docs/plans/` from the template, and agree it
+   before building.
+1. Models in `packages/domain`, indexes in `packages/db`, seed data in
+   `infra/seed` where needed.
+2. Pure rules with unit tests. Then API routes and services in the module,
+   with tests through `app.inject()`.
+3. App pages that call the API.
+4. Tests for what must be refused: another company, another team, a second
+   claim, a retried ledger write, an over-budget item.
+5. Break what a test guards (drop the scope filter, say), watch the test
+   fail, then restore it.
+6. `pnpm lint`, `pnpm typecheck`, `pnpm test` and `pnpm build` pass.
+7. Update the docs in the same change: `docs/product/features.md`,
+   `docs/architecture/data-model.md`, `docs/technical/api.md`, the README
+   progress table, and `docs/product/roadmap.md` ("Last updated").
+8. Record it: an entry in `docs/engineering/build-log.md`, the plan's **As
+   built** section, and a line in `CHANGELOG.md` if users would notice.
+
+## Safety
+
+- Never print, log or commit a connection string, commercetools client
+  secret, Stripe key or provider token. They live only in gitignored `.env`
+  files.
+- Tests never touch a shared database. Database tests use throwaway
+  `gifting_test_*` databases, and `assertTestDb()` guards them.
+- `pnpm ct:apply` targets only the sandbox project named in `.env` and
+  refuses a project key without `sandbox` or `dev` in it.
+- Commit and push only when asked. Before committing, scan the diff for
+  secrets. Use Conventional Commits: `feat(gifts): …`, `fix(ledger): …`,
+  `docs: …`.
+- Files are UTF-8 with LF line endings and no BOM.
+
+## Gotchas
+
+| Symptom | Cause and fix |
+| --- | --- |
+| `Error parsing package.json` at character 1 | A BOM (PowerShell `Set-Content -Encoding utf8` adds one). Re-save without BOM |
+| `Cannot find name 'PageProps'` in an app | Run `pnpm typecheck` (it runs `next typegen`) |
+| Wrong Node version errors | Run through `fnm exec --using=24 --`; the machine default may be Node 20 |
+| Files gain CRLF on Windows | Write with `newline=""` in Python, or use the editor tools; `.gitattributes` normalises on commit |
+| A `findOneAndUpdate` claim "works twice" in a test | The filter is missing `status: { $in: ["sent", "opened"] }`; the lock lives in the filter |
+| A transaction fails locally | MongoDB must run as a replica set; use `pnpm db:up` (Atlas Local), not a plain `mongo` image |
+| `build-service: the bundle imports packages missing from package.json` | A workspace package the service uses imports a third-party package; add it to the service's own `dependencies` (the bundle keeps third-party code external) |
+| After `shadcn add`, an app's `package.json` gained packages, or a component imports `@/hooks/…` | The CLI writes dependencies and hooks into the app it runs from. Move them to `packages/ui` (`package.json`, `src/hooks`, `src/lib`) and import `@gifting/ui/hooks/…` |
+| A Tailwind class used in an app or `packages/ui` has no style | `@source` in `packages/ui/src/styles/globals.css` must cover the file; it scans `apps/**` and `packages/ui/src/**` |
+| Zod's message for a missing env var says "expected string, received undefined" | Zod 4 only uses `.min()` messages when a value is present; pass `{ error: "X is not set." }` to `z.string()` |

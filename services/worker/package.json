@@ -1,0 +1,22 @@
+{
+  "name": "@gifting/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node ../../scripts/build-service.mjs src/main.ts dist/main.js",
+    "start": "tsx --env-file-if-exists=../../.env src/main.ts",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@gifting/channels": "workspace:*",
+    "@gifting/ct": "workspace:*",
+    "@gifting/db": "workspace:*",
+    "@gifting/domain": "workspace:*",
+    "@gifting/ledger": "workspace:*",
+    "@gifting/logger": "workspace:*",
+    "pino": "10.4.0"
+  }
+}
