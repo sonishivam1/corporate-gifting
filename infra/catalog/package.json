@@ -1,0 +1,22 @@
+{
+  "name": "@gifting/catalog",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "extract": "tsx --env-file-if-exists=../../.env scripts/extract-christie.ts",
+    "import": "tsx --env-file-if-exists=../../.env scripts/import.ts",
+    "remove": "tsx --env-file-if-exists=../../.env scripts/remove.ts",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@commercetools/importapi-sdk": "7.1.2",
+    "@commercetools/platform-sdk": "9.7.0",
+    "@gifting/ct": "workspace:*",
+    "@gifting/ct-setup": "workspace:*",
+    "@gifting/logger": "workspace:*",
+    "zod": "4.6.7"
+  }
+}

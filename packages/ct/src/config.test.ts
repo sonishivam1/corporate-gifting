@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isSandboxProject, loadCtConfig } from "./config";
+import { isSandboxProject, loadCtConfig, maySetUpProject } from "./config";
 
 const env = {
   CTP_PROJECT_KEY: "gifting-sandbox",
@@ -16,6 +16,8 @@ describe("commercetools config", () => {
     const config = loadCtConfig(env);
     expect(config.scopes).toEqual(["manage_orders:gifting-sandbox", "view_products:gifting-sandbox"]);
     expect(config.storeKey).toBe("gifting");
+    expect(config.importUrl).toBe("https://import.europe-west1.gcp.commercetools.com");
+    expect(config.setupProjectKey).toBeUndefined();
   });
 
   it("names missing variables without echoing any value", () => {
@@ -37,5 +39,19 @@ describe("sandbox guard", () => {
     expect(isSandboxProject("gifting")).toBe(false);
     expect(isSandboxProject("gifting-prod")).toBe(false);
     expect(isSandboxProject("developer-gifting")).toBe(false);
+  });
+});
+
+describe("setup permission", () => {
+  it("allows sandbox projects and the one project named for setup", () => {
+    expect(maySetUpProject({ projectKey: "gifting-sandbox" })).toBe(true);
+    expect(maySetUpProject({ projectKey: "corporate-gifting" })).toBe(false);
+    expect(maySetUpProject({ projectKey: "corporate-gifting", setupProjectKey: "corporate-gifting" })).toBe(true);
+    expect(maySetUpProject({ projectKey: "corporate-gifting-prod", setupProjectKey: "corporate-gifting" })).toBe(false);
+  });
+
+  it("reads the named project from CTP_SETUP_PROJECT_KEY", () => {
+    const config = loadCtConfig({ ...env, CTP_PROJECT_KEY: "corporate-gifting", CTP_SETUP_PROJECT_KEY: "corporate-gifting" });
+    expect(maySetUpProject(config)).toBe(true);
   });
 });

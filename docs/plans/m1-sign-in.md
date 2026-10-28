@@ -1,7 +1,7 @@
 # M1: Sign-in, invitations and member access
 
-**Status:** Proposed (to agree before building)
-**Proposed:** 28 Oct 2026 · **Built:** —
+**Status:** Agreed; building phase A
+**Agreed:** 28 Oct 2026 · **Built:** —
 
 ## Goal
 

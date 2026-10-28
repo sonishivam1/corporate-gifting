@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { demoCompany, products, vendors } from "./index";
+import { demoCompanies, products, vendors } from "./index";
 
 describe("seed data", () => {
   it("has 3 to 5 vendors, each with products", () => {
@@ -33,8 +33,14 @@ describe("seed data", () => {
   });
 
   it("uses commercetools-safe keys", () => {
-    for (const key of [...vendors.map((v) => v.key), demoCompany.key, ...demoCompany.teams.map((t) => t.key)]) {
+    for (const key of [...vendors.map((v) => v.key), ...demoCompanies.flatMap((c) => [c.key, ...c.teams.map((t) => t.key)])]) {
       expect(key).toMatch(/^[a-z0-9-]{2,256}$/);
     }
+  });
+
+  it("has unique company and team keys, with .example domains", () => {
+    const keys = demoCompanies.flatMap((c) => [c.key, ...c.teams.map((t) => t.key)]);
+    expect(new Set(keys).size).toBe(keys.length);
+    for (const company of demoCompanies) expect(company.domain, company.key).toMatch(/\.example$/);
   });
 });

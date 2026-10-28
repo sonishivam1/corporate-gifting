@@ -17,13 +17,15 @@ Zod at start-up and fails fast with the variable's name (never its value).
 | `API_PORT` | api | no (`4000`) | `4000` | |
 | `API_PUBLIC_URL` | apps (server side) | no (`http://localhost:4000`) | `http://localhost:4000` | Where apps call the API |
 | `RECIPIENT_PUBLIC_URL` | api, worker | no (`http://localhost:3001`) | `https://gift.example` | Base of gift links |
-| `CTP_PROJECT_KEY` | api, worker, infra | from spikes | `gifting-sandbox` | `ct:apply` refuses a key without `sandbox` or `dev` |
+| `CTP_PROJECT_KEY` | api, worker, infra | from spikes | `corporate-gifting` | `ct:apply` and `seed` refuse a key without `sandbox` or `dev`, unless `CTP_SETUP_PROJECT_KEY` names it |
 | `CTP_CLIENT_ID` | api, worker, infra | from spikes | — | Secret |
 | `CTP_CLIENT_SECRET` | api, worker, infra | from spikes | — | Secret, never logged |
 | `CTP_SCOPES` | api, worker, infra | from spikes | `manage_orders:gifting-sandbox …` | Space-separated |
 | `CTP_AUTH_URL` | api, worker, infra | from spikes | `https://auth.europe-west1.gcp.commercetools.com` | Region-specific |
 | `CTP_API_URL` | api, worker, infra | from spikes | `https://api.europe-west1.gcp.commercetools.com` | Region-specific |
 | `CTP_STORE_KEY` | api | no (`gifting`) | `gifting` | |
+| `CTP_IMPORT_URL` | infra (seed) | no (from `CTP_API_URL`, `api.` → `import.`) | `https://import.us-central1.gcp.commercetools.com` | Import API host |
+| `CTP_SETUP_PROJECT_KEY` | infra | no | `corporate-gifting` | Lets `ct:apply` and `seed` write to this exact project although its key has no `sandbox` or `dev`. Only for the POC project; never a client's live project |
 | `SMTP_URL` | worker | no (`smtp://localhost:1025`) | `smtp://localhost:1025` | Mailpit locally |
 | `DEV_AUTH` | api, apps | development only | `1` | Development sign-in switch; ignored when `NODE_ENV=production` |
 
