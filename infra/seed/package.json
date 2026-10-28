@@ -13,6 +13,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@commercetools/importapi-sdk": "7.1.2",
+    "@gifting/ct": "workspace:*",
     "@gifting/domain": "workspace:*",
     "@gifting/logger": "workspace:*"
   }

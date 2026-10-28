@@ -39,19 +39,29 @@ pnpm dev          # all apps and the API
 Run one app: `pnpm --filter @gifting/sender dev`. Run the API only:
 `pnpm --filter @gifting/api dev`.
 
-## commercetools sandbox
+## commercetools
 
-From the spikes on, add the sandbox credentials to `.env` (see
+The POC project is `corporate-gifting` (region us-central1, GCP). Ask Shivam
+for credentials, and add them to `.env` (see
 [configuration](../technical/configuration.md)), then:
 
 ```bash
 pnpm ct:plan    # prints the store, channels and types it would create; no calls
-pnpm ct:apply   # creates the missing ones in the sandbox project
-pnpm seed       # imports fictional vendors and products (M0 package 0.3, not built yet)
+pnpm ct:apply   # creates the missing ones in the project, skipping any that exist
+pnpm seed       # imports the fictional vendors' products and stock, and 250 demo customers (Import API)
+pnpm catalog:extract  # reads the Christie Cookie storefront into .data/ (gitignored); about 30 minutes
+pnpm catalog:import   # imports that snapshot: vendor channel, categories, products with images, stock
 ```
 
-`ct:apply` refuses a project key without `sandbox` or `dev` in it. It has not
-yet been run against a real project; the first run is part of spike 4.
+The Christie Cookie snapshot isn't in git. Ask Shivam for
+`.data/catalogs/christie-cookie.json`, or run `catalog:extract`; its
+`--retry-skipped` flag re-reads only the pages the last run skipped.
+`pnpm catalog:remove` deletes everything the import created.
+
+`ct:apply` and `seed` refuse a project key without `sandbox` or `dev` in it.
+The POC project's key has neither, so `.env` names it in
+`CTP_SETUP_PROJECT_KEY`. Both scripts are safe to re-run: `ct:apply` skips
+what exists, and `seed` updates the same products (keys are SKUs).
 
 ## The worker
 

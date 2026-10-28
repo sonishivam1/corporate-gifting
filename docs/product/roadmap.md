@@ -8,7 +8,7 @@ commitments. Owners are suggestions to confirm.
 **This file is updated with every milestone step**, together with
 [features.md](features.md) and the README progress table.
 
-_Last updated: 27 Oct 2026 (architecture v2 agreed; docs and scaffold in place)._
+_Last updated: 28 Oct 2026 (commercetools POC project set up and seeded; Christie Cookie catalog and 250 demo customers imported)._
 
 ## Where we are
 

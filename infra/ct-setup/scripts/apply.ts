@@ -1,10 +1,11 @@
 // pnpm ct:apply — creates the store, custom types, product type and vendor
-// channels in the sandbox project from .env, skipping any that exist.
-// Refuses any project key without "sandbox" or "dev" in it.
-import { createCtApi, isNotFound, isSandboxProject, loadCtConfig } from "@gifting/ct";
+// channels in the project from .env, skipping any that exist. Refuses any
+// project key without "sandbox" or "dev" in it, unless CTP_SETUP_PROJECT_KEY
+// names that exact project.
+import { createCtApi, isNotFound, loadCtConfig, maySetUpProject, NOT_SETUP_PROJECT_MESSAGE } from "@gifting/ct";
 import { AppError, createLogger } from "@gifting/logger";
 
-import { channelDrafts, productTypeDraft, storeDraft, typeDrafts } from "../src/drafts";
+import { channelDrafts, productTypeDrafts, storeDraft, typeDrafts } from "../src/drafts";
 
 const log = createLogger("ct:apply");
 
@@ -21,9 +22,7 @@ async function ensure(kind: string, key: string, exists: () => Promise<unknown>,
 
 try {
   const config = loadCtConfig();
-  if (!isSandboxProject(config.projectKey)) {
-    throw new AppError("not_sandbox", "Refusing to set up a project whose key doesn't contain 'sandbox' or 'dev'.");
-  }
+  if (!maySetUpProject(config)) throw new AppError("not_sandbox", NOT_SETUP_PROJECT_MESSAGE);
   const api = createCtApi(config);
 
   for (const draft of typeDrafts) {
@@ -34,12 +33,14 @@ try {
       () => api.types().post({ body: draft }).execute(),
     );
   }
-  await ensure(
-    "product-type",
-    productTypeDraft.key!,
-    () => api.productTypes().withKey({ key: productTypeDraft.key! }).get().execute(),
-    () => api.productTypes().post({ body: productTypeDraft }).execute(),
-  );
+  for (const draft of productTypeDrafts) {
+    await ensure(
+      "product-type",
+      draft.key!,
+      () => api.productTypes().withKey({ key: draft.key! }).get().execute(),
+      () => api.productTypes().post({ body: draft }).execute(),
+    );
+  }
   for (const draft of channelDrafts) {
     await ensure(
       "channel",

@@ -6,9 +6,20 @@ Redemption orders carry real totals and are paid by a custom company-balance
 Payment ([ADR 0005](decisions/0005-company-balance-payment.md),
 [ADR 0006](decisions/0006-vendors-as-supply-channels.md)).
 
-**Status:** drafts for the store, channels and custom types are scaffolded
-in `infra/ct-setup` (`pnpm ct:plan`). Spikes 1, 2 and 4 prove the rest in
-week 1.
+**Status:** the POC project `corporate-gifting` (us-central1) has the
+`gifting` store, the four custom types, the `gift-item` product type and the
+four fictional vendor channels (`pnpm ct:apply`). It holds:
+- 12 fictional seed products and 250 fictional demo customers (`pnpm seed`,
+  Import API);
+- the client's own catalog under the `vendor-christie-cookie` channel
+  (`pnpm catalog:import`). That is 249 `cookie-tin` products, 441 variants
+  with 1,369 images, 51 categories under `christie-cookie`, and stock for
+  every variant
+  ([Christie Cookie catalog import](../plans/christie-catalog-import.md)).
+
+Tax, shipping, Business Units, product search indexing and the subscription
+come with the spikes. The demo customers aren't linked to Business Units
+yet. Gift recipients stay in MongoDB, not commerce customers (ADR 0002).
 
 ## Project layout
 
@@ -18,7 +29,7 @@ week 1.
 | Companies and teams | Business Units: one Company per customer, one Division per team. Associates and Associate Roles for owner, admin, sender and approver |
 | Vendors | One supply Channel per vendor (role `InventorySupply`), custom type `vendor`: contacts, fulfilment method, SLA |
 | Products | Every variant has `brand`, `vendorKey` and `tags` attributes; stock per vendor channel; one price per country in USD for the POC |
-| Catalog import | Vendor feeds or CSV into the Import API; seed 3 to 5 vendors and 50 to 100 products |
+| Catalog import | Vendor feeds, CSV or a storefront snapshot into the Import API (`infra/catalog`, `infra/seed`); product types `gift-item` and `cookie-tin` share the `brand`, `vendorKey` and `tags` attributes |
 | Collections | Rules resolved with product search: tags, brands, SKUs, price range, country, in stock at the vendor channel |
 | Cart | Created only by the API in the gifting store: one line item, quantity 1, with the vendor's supply channel, the recipient's address, the marketplace shipping method, `inventoryMode: ReserveOnOrder` |
 | Tax | On the recipient's address. POC: platform tax with rates for the seeded states. Production: External tax mode with a tax provider (spike 3) |

@@ -1,19 +1,21 @@
 /**
  * The commercetools resources the platform needs, as drafts
  * (docs/architecture/commercetools.md). `pnpm ct:plan` prints them;
- * `pnpm ct:apply` creates the missing ones in the sandbox project.
+ * `pnpm ct:apply` creates the missing ones in the project from `.env`.
  * The subscription (to SQS) is added in M4, when the queue exists.
  */
 import type {
+  AttributeDefinitionDraft,
   ChannelDraft,
   FieldDefinition,
   ProductTypeDraft,
   StoreDraft,
   TypeDraft,
 } from "@commercetools/platform-sdk";
+import { CT_LOCALE } from "@gifting/ct";
 import { vendors, type SeedVendor } from "@gifting/seed";
 
-const en = (text: string) => ({ en: text });
+const en = (text: string) => ({ [CT_LOCALE]: text });
 
 const stringField = (name: string, label: string, required = false): FieldDefinition => ({
   name,
@@ -40,7 +42,7 @@ const booleanField = (name: string, label: string): FieldDefinition => ({
 export const storeDraft: StoreDraft = {
   key: "gifting",
   name: en("Gifting Marketplace"),
-  languages: ["en-US"],
+  languages: [CT_LOCALE],
   countries: [{ code: "US" }],
 };
 
@@ -86,26 +88,52 @@ export const typeDrafts: TypeDraft[] = [
   },
 ];
 
+const attribute = (name: string, label: string, type: AttributeDefinitionDraft["type"], isRequired = false): AttributeDefinitionDraft => ({
+  name,
+  label: en(label),
+  isRequired,
+  isSearchable: true,
+  type,
+  attributeConstraint: "None",
+  inputHint: "SingleLine",
+});
+
+/**
+ * Every product type carries these, so collections select across all of
+ * them. An attribute name must have the same type in every product type.
+ */
+const marketplaceAttributes: AttributeDefinitionDraft[] = [
+  attribute("brand", "Brand", { name: "text" }, true),
+  attribute("vendorKey", "Vendor key", { name: "text" }, true),
+  attribute("tags", "Tags", { name: "set", elementType: { name: "text" } }),
+];
+
 export const productTypeDraft: ProductTypeDraft = {
   key: "gift-item",
   name: "Gift item",
   description: "A product a recipient can choose in a collection",
+  attributes: marketplaceAttributes,
+};
+
+/** Cookie and treat tins: the marketplace attributes plus what describes a tin. */
+export const cookieTinProductTypeDraft: ProductTypeDraft = {
+  key: "cookie-tin",
+  name: "Cookie tin",
+  description: "A tin of cookies or treats, in a size, flavour assortment and tin colour",
   attributes: [
-    { name: "brand", label: en("Brand"), isRequired: true, isSearchable: true, type: { name: "text" }, attributeConstraint: "None", inputHint: "SingleLine" },
-    { name: "vendorKey", label: en("Vendor key"), isRequired: true, isSearchable: true, type: { name: "text" }, attributeConstraint: "None", inputHint: "SingleLine" },
-    {
-      name: "tags",
-      label: en("Tags"),
-      isRequired: false,
-      isSearchable: true,
-      type: { name: "set", elementType: { name: "text" } },
-      attributeConstraint: "None",
-      inputHint: "SingleLine",
-    },
+    ...marketplaceAttributes,
+    attribute("cookieFlavor", "Flavour or assortment", { name: "text" }),
+    attribute("cookieCount", "Number of pieces", { name: "number" }),
+    attribute("tinColor", "Tin colour", { name: "text" }),
+    attribute("itemType", "Vendor item type", { name: "text" }),
+    attribute("corporateTin", "Corporate tin", { name: "boolean" }),
   ],
 };
 
-export function vendorChannelDraft(vendor: SeedVendor): ChannelDraft {
+export const productTypeDrafts: ProductTypeDraft[] = [productTypeDraft, cookieTinProductTypeDraft];
+
+/** A vendor's supply channel. Takes any vendor with these fields, seeded or imported. */
+export function vendorChannelDraft(vendor: Pick<SeedVendor, "key" | "name" | "contactEmail" | "fulfilmentMethod" | "slaDays">): ChannelDraft {
   return {
     key: vendor.key,
     name: en(vendor.name),
