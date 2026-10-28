@@ -75,10 +75,16 @@ differences:
   external. The first smoke test found the API bundle needed `pino` (used only
   by `@gifting/logger`) without declaring it. The script now fails the build
   and names any undeclared package.
-- **Seed import and `ct:apply`:** `pnpm seed` reports the data and stops
-  (import is package 0.3). `pnpm ct:apply` is written against the SDK types
-  but has not yet run against a real project; its first run is part of
-  spike 4.
+- **Seed import and `ct:apply`:** at first `pnpm seed` reported the data and
+  stopped. On 28 Oct 2026 both ran against the POC project
+  `corporate-gifting`: `ct:apply` created the store, 4 types, the product
+  type and 4 vendor channels, and `seed` imported 12 products and 12 stock
+  entries through the Import API (all 24 operations imported). Later the
+  same day the seed gained 250 fictional demo customers, and the client's
+  own catalog (249 products) came in through `infra/catalog`, which covers
+  the 50 to 100 products package 0.3 asked for. The project key
+  has no `sandbox` or `dev`, so the guard gained an explicit opt-in,
+  `CTP_SETUP_PROJECT_KEY`.
 - **Zod 4 messages:** a missing env var gives Zod's generic message unless
   `z.string({ error })` is used; config schemas now do this, so errors name
   the variable.

@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "exports": {
+    ".": "./src/drafts.ts"
+  },
   "scripts": {
     "plan": "tsx scripts/plan.ts",
     "apply": "tsx --env-file-if-exists=../../.env scripts/apply.ts",
