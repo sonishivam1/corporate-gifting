@@ -15,11 +15,11 @@ another service to run locally, in CI and in the cloud.
 | --- | --- | --- |
 | Agenda on MongoDB | No new infrastructure; jobs live next to the data | Lower throughput; fewer features than BullMQ |
 | BullMQ on Redis | High throughput, rate limits, good tooling | Redis to run and secure |
-| Cloud scheduler + SQS | Managed | More cloud wiring for a POC |
+| Cloud Scheduler + Pub/Sub | Managed | More cloud wiring for a POC |
 
 ## Proposed decision
 
-Agenda on MongoDB for scheduled jobs; commercetools events read from SQS
+Agenda on MongoDB for scheduled jobs; commercetools events read from Pub/Sub
 by the worker. Every job is idempotent, so switching to BullMQ later is a
 change of runner, not of job code. Switch if job volume or rate-limited
 sending (SMS, Slack) needs it.

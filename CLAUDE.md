@@ -219,8 +219,10 @@ that module's exported service, never its collections.
   `gifting_test_*` databases, and `assertTestDb()` guards them.
 - `pnpm ct:apply` targets only the sandbox project named in `.env` and
   refuses a project key without `sandbox` or `dev` in it.
-- Commit and push only when asked. Before committing, scan the diff for
-  secrets. Use Conventional Commits: `feat(gifts): …`, `fix(ledger): …`,
+- Commit and push only when asked. Work branches start from `develop` and
+  return to it by pull request; `develop` → `qa` → `main` are promotions
+  ([git workflow](docs/engineering/git-workflow.md)). Before committing, scan
+  the diff for secrets. Use Conventional Commits: `feat(gifts): …`, `fix(ledger): …`,
   `docs: …`.
 - Files are UTF-8 with LF line endings and no BOM.
 

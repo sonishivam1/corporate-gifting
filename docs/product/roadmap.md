@@ -74,7 +74,7 @@ gantt
 | Who operates the marketplace and contracts with vendors | Vendor onboarding beyond seed data, payouts | [Open questions](../business/open-questions.md) |
 | Platform fee model | The `fee` entry amount (M4) | [Open questions](../business/open-questions.md) |
 | Who pays shipping and tax | The hold formula (M3) | [Open questions](../business/open-questions.md) |
-| Identity provider (Auth0 or Cognito) | M1 | [ADR 0009](../architecture/decisions/0009-identity-provider.md) |
+| Identity provider (Auth0 or Google Cloud Identity Platform) | M1 | [ADR 0009](../architecture/decisions/0009-identity-provider.md) |
 | Which HR system first | M5 | [Open questions](../business/open-questions.md) |
 
 ## If a milestone slips

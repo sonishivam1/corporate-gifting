@@ -29,7 +29,7 @@ message id and is stored on the gift's `notifications`.
 
 | Channel | POC provider | Notes | Milestone |
 | --- | --- | --- | --- |
-| Email | Amazon SES or SendGrid; Mailpit locally | Branded template per company; SPF, DKIM and DMARC on the sending domain; bounce webhooks | M3 |
+| Email | SendGrid; Mailpit locally | Branded template per company; SPF, DKIM and DMARC on the sending domain; bounce webhooks | M3 |
 | Links | Generated CSV | For senders who hand out links themselves; no reminders | M3 |
 | QR codes | Generated PNG and SVG per gift link | For printed cards and events; no reminders | M3 |
 | SMS | Twilio | Short fixed template with the link. US sending needs A2P 10DLC registration, which takes weeks: start in week 1 | M5 |
@@ -46,14 +46,14 @@ redemption.
 | --- | --- | --- |
 | HR systems (birthdays, anniversaries, start dates) | CSV upload, plus one HR system through a unified HR API (for example Merge or Finch) with a nightly sync | More systems through the same adapter |
 | Payments | Stripe test mode: card and ACH top-ups, invoices for invoice-billed accounts | Live mode, purchase orders, multi-currency |
-| Identity | Hosted identity provider (Auth0 or Cognito, [ADR 0009](decisions/0009-identity-provider.md)) with email and password or magic link | SSO with SAML or OIDC per company |
+| Identity | Hosted identity provider (Auth0 or Google Cloud Identity Platform, [ADR 0009](decisions/0009-identity-provider.md)) with email and password or magic link | SSO with SAML or OIDC per company |
 | Vendors | Vendor portal-lite plus email notification | Vendor API, EDI or 3PL connectors |
 | Tracking | Vendor enters carrier and tracking number | Tracking aggregator for automatic delivered status |
 
 ## Secrets
 
 Slack and Teams install tokens, HR API keys and Stripe keys live in a secrets
-manager (AWS Secrets Manager in the POC cloud; `.env` locally).
+manager (Google Secret Manager in the POC cloud; `.env` locally).
 `integrations` stores only `secretRef`, `status` and `lastSyncAt`.
 
 ## External lead times

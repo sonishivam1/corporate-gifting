@@ -60,7 +60,7 @@ Each package gets its own step plan in this folder when it starts.
 | 3.1 | One-time and scheduled campaigns; estimate | Estimate matches the hold formula |
 | 3.2 | Approvals above threshold (approver ≠ sender) | Large campaign waits for approval |
 | 3.3 | Holds on approval; fail fast when short | An approved campaign holds funds |
-| 3.4 | Email channel (Mailpit locally, SES or SendGrid in cloud), links CSV, QR codes | Links emailed; CSV and QR downloadable |
+| 3.4 | Email channel (Mailpit locally, SendGrid in cloud), links CSV, QR codes | Links emailed; CSV and QR downloadable |
 | 3.5 | Gift tokens and short codes; reminders | Token hashed; reminders stop at redemption |
 
 ### M4 Redemption and fulfilment (week 5) — Chetan
@@ -97,7 +97,7 @@ Each package gets its own step plan in this folder when it starts.
 | --- | --- | --- |
 | 7.1 | Concurrency and ledger property tests | 50 parallel claims → one order, one capture |
 | 7.2 | Security pass ([security](../architecture/security.md)) | Findings fixed or recorded |
-| 7.3 | Cloud environment (App Runner or ECS, Atlas, SQS) | Deployed from `main` |
+| 7.3 | Google Cloud environment (Cloud Run, Atlas on GCP, Pub/Sub, Secret Manager; [ADR 0014](../architecture/decisions/0014-google-cloud.md)) | Deployed from `main` |
 | 7.4 | Demo script and fictional demo data | End-to-end demo in the cloud environment |
 
 ## Decisions
