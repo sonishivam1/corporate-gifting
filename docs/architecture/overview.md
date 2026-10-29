@@ -170,7 +170,10 @@ reads another module's collections.
 | `@gifting/domain` | Zod models for the 8 collections, money helpers, gift state machine, idempotency keys | everything |
 | `@gifting/ledger` | Ledger entry builders and the balance rule (pure) | api, worker |
 | `@gifting/db` | MongoDB client, typed collections, indexes, test-database guard | api, worker, infra |
-| `@gifting/ct` | commercetools client, order number and draft helpers | api, worker, infra |
+| `@gifting/commerce` | The commerce connector contract and its conformance suite ([ADR 0013](decisions/0013-commerce-adapters.md)) | api, connectors |
+| `@gifting/commerce-commercetools` | The commercetools connector: customer accounts today | api (loaded by `COMMERCE_CONNECTOR`) |
+| `@gifting/commerce-memory` | A platform in memory, for tests and local work | api tests, api (dev) |
+| `@gifting/ct` | commercetools client and helpers | the commercetools connector, infra |
 | `@gifting/channels` | `Channel` interface, registry, adapters | api, worker |
 | `@gifting/logger` | Structured logger with redaction | servers, scripts |
 | `@gifting/ui` | Every shadcn/ui component, our composed ones, and the shared stylesheet ([ADR 0012](decisions/0012-shadcn-ui.md)) | apps |

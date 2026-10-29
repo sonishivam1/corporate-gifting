@@ -13,6 +13,39 @@ how it was verified, and any lesson worth keeping.
 
 ## 29 Oct 2026
 
+### Commerce connectors: the platform is a plug-in
+- **What:**
+  - The commerce platform became a connector
+    ([ADR 0013](../architecture/decisions/0013-commerce-adapters.md),
+    accepted; [plan](../plans/commerce-connectors.md)).
+  - `@gifting/commerce` holds the contract and a conformance suite.
+    `@gifting/commerce-commercetools` (moved out of the API) and
+    `@gifting/commerce-memory` implement it.
+  - `COMMERCE_CONNECTOR` picks one per deployment, from a list generated out
+    of the API's dependencies.
+  - The API now issues its own sessions and verification links; a
+    platform's tokens travel sealed inside them.
+  - A second sign-in mode, `hosted`, for platforms with their own sign-in
+    page. `GET /v1/auth/options` tells the app which mode applies.
+  - A lint rule keeps platform code inside connector packages.
+- **Why:** the product will be sold to clients on Shopify, BigCommerce and
+  others, and Shivam asked for plug and play from today: a new platform is a
+  new connector and configuration, never a change to the product.
+- **Verified:**
+  - The conformance suite on memory (three modes) and on the real
+    commercetools project.
+  - 37 API tests, guard checks on sign-out, the newest link and the import
+    rule.
+  - Lint, typecheck, 190 tests and the build.
+  - The hosted flow end to end in the browser, and the running API on
+    commercetools.
+- **Lessons:**
+  - A Next.js server action redirecting to a URL on the same site is handled
+    inside the app, so cookies set at the destination never reach the
+    browser. Hand over to another page with a full page load.
+  - A page that depends on the API's answer must render per request, or a
+    build made while the API was down freezes it.
+
 ### Register and sign in with commercetools customer accounts (B2C)
 - **What:**
   - Auth0 is replaced

@@ -3,9 +3,9 @@ import "server-only";
 import { EncryptJWT, jwtDecrypt } from "jose";
 
 /**
- * The signed-in session (ADR 0015): commercetools' access and refresh tokens,
- * encrypted (A256GCM) into one http-only cookie with this app's
- * SESSION_SECRET. The browser holds only ciphertext it can't read or change;
+ * The signed-in session (ADR 0015): the Gifting API's own access and refresh
+ * tokens (the same on every commerce platform), encrypted (A256GCM) into one
+ * http-only cookie with this app's SESSION_SECRET. The browser holds only ciphertext it can't read or change;
  * only this app's server decrypts it, to call the Gifting API.
  */
 export const SESSION_COOKIE = "gifting_session";

@@ -21,7 +21,8 @@
     "member:add": "pnpm --filter @gifting/seed run add-member",
     "catalog:extract": "pnpm --filter @gifting/catalog run extract",
     "catalog:import": "pnpm --filter @gifting/catalog run import",
-    "catalog:remove": "pnpm --filter @gifting/catalog run remove"
+    "catalog:remove": "pnpm --filter @gifting/catalog run remove",
+    "test:conformance": "pnpm --filter @gifting/commerce-commercetools run test:conformance"
   },
   "devDependencies": {
     "@eslint/js": "^9",

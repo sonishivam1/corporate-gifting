@@ -14,6 +14,9 @@ affected docs.
 | 6 | Which HR system to integrate first? | The HR adapter and sandbox account | M5 | — | — |
 | 7 | Identity provider: Auth0 or Google Cloud Identity Platform? ([ADR 0009](../architecture/decisions/0009-identity-provider.md)) | Sign-in, member invites | M1 | Neither: commercetools customer accounts with its OAuth password flow. B2C, open registration with email verification ([ADR 0015](../architecture/decisions/0015-commerce-customer-accounts.md)). Auth0 was chosen on 28 Oct and replaced on 29 Oct | 29 Oct 2026, Shivam |
 | 8 | Which commercetools project and region for the POC? | `CTP_*` settings, data residency | Week 1 | — | — |
+| 9 | Which other commerce platforms must the product support, and in what order? ([ADR 0013](../architecture/decisions/0013-commerce-adapters.md)) | The commerce interface, connector priority | Before M1 | commercetools only in the POC. Shopify and BigCommerce are likely next, each built as a connector when a client needs it | 28 Oct 2026, Shivam |
+| 10 | One commerce platform per deployment, or vendors on different platforms in one marketplace? | Commerce connections, vendor onboarding | Before M1 | One per deployment: the client's own platform. The data model leaves room for more | 28 Oct 2026, Shivam |
+| 11 | Is a second commerce connector (for example a Shopify development store) in the POC scope? | POC plan, M7 demo | Before M1 | No | 28 Oct 2026, Shivam |
 
 ## Working assumptions until answered
 

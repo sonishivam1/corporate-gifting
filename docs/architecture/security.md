@@ -35,9 +35,21 @@ money moving twice. Both are blocked in the database, not only in code.
   `manage_my_profile`.**
   - The API refuses to start if that client holds admin scopes. With the
     admin client, every customer token would carry full project access.
-- **The API checks every signed-in call.** It introspects the token (active,
-  and which customer), caching the result for 60 seconds. The person comes
-  from the token, never from the request.
+- **Sessions are the API's own** (ADR 0013 section 6), the same on every
+  commerce platform:
+  - encrypted tokens (A256GCM with `API_SESSION_SECRET`), each with a kind,
+    so a refresh token or a link can't stand in for an access token;
+  - access tokens last 15 minutes, a session at most 7 days;
+  - sign-out stops the session at once and ends the platform's own session
+    (commercetools' tokens are revoked);
+  - the list of ended sessions is kept in memory (one API instance in the
+    POC) and moves to MongoDB before there's more than one.
+- **The API checks every signed-in call** by opening its own token, then
+  reads the customer from the platform at most once a minute per session.
+  The person comes from the token, never from the request.
+- **A platform's own sign-in page** (hosted mode): the API issues a state
+  that expires in 10 minutes, the app keeps it in a cookie and checks it on
+  return, and each code works once.
 - **What answers reveal:**
   - Register says when an email is taken (`409`, a product decision on 29
     Oct 2026). That lets someone check whether an email has an account.

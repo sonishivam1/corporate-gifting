@@ -4,7 +4,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { openSession, sealSession, SESSION_COOKIE, sessionCookieOptions } from "./lib/session";
 
 /** Pages anyone may open. Everything else needs a session. */
-const PUBLIC_PATHS = new Set(["/sign-in", "/register", "/register/check-email", "/verify-email"]);
+const PUBLIC_PATHS = new Set(["/sign-in", "/register", "/register/check-email", "/verify-email", "/auth/callback"]);
 /** Pages a signed-in person is sent past. */
 const SIGNED_OUT_ONLY = new Set(["/sign-in", "/register"]);
 /** Renew the access token when it has less than this left. */
@@ -33,7 +33,7 @@ export async function proxy(request: NextRequest) {
   if (SIGNED_OUT_ONLY.has(pathname)) return NextResponse.redirect(new URL("/", request.url));
   if (session.accessExpiresAt - Date.now() > RENEW_BEFORE_MS) return NextResponse.next();
 
-  // Renew the access token; the refresh token stays the same.
+  // Renew the access token; the API may hand back a new refresh token too.
   const renewed = await fetch(`${API_URL}/v1/auth/refresh`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -47,7 +47,12 @@ export async function proxy(request: NextRequest) {
     response.cookies.delete(SESSION_COOKIE);
     return response;
   }
-  const value = await sealSession({ ...session, accessToken: renewed.data.accessToken, accessExpiresAt: renewed.data.expiresAt });
+  const value = await sealSession({
+    ...session,
+    accessToken: renewed.data.accessToken,
+    refreshToken: renewed.data.refreshToken ?? session.refreshToken,
+    accessExpiresAt: renewed.data.expiresAt,
+  });
   // Pages rendered for this same request read the renewed cookie too.
   request.cookies.set(SESSION_COOKIE, value);
   const response = NextResponse.next({ request: { headers: request.headers } });

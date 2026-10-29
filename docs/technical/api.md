@@ -32,13 +32,21 @@ Every route declares who may call it, in `defineRoute({ auth })`
 | --- | --- | --- | --- |
 | GET | `/health` | public | `{ status: "ok" }` |
 | GET | `/v1/meta` | public | `{ name, version, modules[] }` |
+| GET | `/v1/auth/options` | public | `{ signIn: "password" \| "hosted" }`: how this deployment signs people in (its commerce connector's capability) |
 | POST | `/v1/auth/register` | public | `202 { status: "check_email" }` for a new email (or a taken one not yet verified, which gets a fresh link); `409 email_taken` for an existing account. Body: `firstName, lastName, email, password, companyName?, acceptTerms: true`. Password: 10 to 128 characters, with uppercase, lowercase, a number and a special character, and not containing the email name |
 | POST | `/v1/auth/verify-email` | public | `{ status: "verified" }`, or `400 invalid_token` |
 | POST | `/v1/auth/resend-verification` | public | `202 { status: "check_email" }`, always |
 | POST | `/v1/auth/sign-in` | public | `{ accessToken, refreshToken, expiresAt, account }`; `401 invalid_credentials`, `403 email_not_verified`, `429 too_many_attempts` |
-| POST | `/v1/auth/refresh` | public | `{ accessToken, expiresAt }`, or `401` |
-| POST | `/v1/auth/sign-out` | public | `{ status: "signed_out" }`; revokes the given tokens |
+| POST | `/v1/auth/hosted/start` | public | `{ url, state }`: the platform's sign-in page and the state to check on return. Body: `loginHint?` (an email). Hosted platforms only |
+| POST | `/v1/auth/hosted/finish` | public | Like sign-in. Body: `code, state`. `400 invalid_state`, `401 sign_in_failed`, `403 email_not_verified` |
+| POST | `/v1/auth/refresh` | public | `{ accessToken, refreshToken, expiresAt }`, or `401` |
+| POST | `/v1/auth/sign-out` | public | `{ status: "signed_out" }`; ends the session at once, and the platform's own session |
 | GET | `/v1/me` | account | `AccountView`: `id, email, firstName, lastName, companyName` (`@gifting/domain`) |
+
+The password routes (register, verify, resend, sign-in) answer
+`400 not_supported` on a platform with its own sign-in page, and the hosted
+routes do on a password platform. Tokens are the API's own (encrypted,
+15-minute access, 7-day session), the same on every commerce platform.
 
 ## Planned
 

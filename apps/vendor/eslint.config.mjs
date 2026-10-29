@@ -10,7 +10,7 @@ export default defineConfig([
       // Apps never reach the database, commercetools or providers directly (CLAUDE.md).
       "no-restricted-imports": [
         "error",
-        { patterns: ["@gifting/db", "@gifting/ct", "@gifting/channels", "@gifting/ledger", "@gifting/logger", "mongodb", "@commercetools/*"] },
+        { patterns: ["@gifting/db", "@gifting/ct", "@gifting/channels", "@gifting/commerce", "@gifting/commerce-*", "@gifting/ledger", "@gifting/logger", "mongodb", "@commercetools/*"] },
       ],
     },
   },

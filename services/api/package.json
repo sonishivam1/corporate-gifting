@@ -4,23 +4,27 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch --env-file-if-exists=../../.env src/server.ts",
-    "build": "node ../../scripts/build-service.mjs src/server.ts dist/server.js",
+    "connectors": "node scripts/connectors.mjs",
+    "dev": "node scripts/connectors.mjs && tsx watch --env-file-if-exists=../../.env src/server.ts",
+    "build": "node scripts/connectors.mjs && node ../../scripts/build-service.mjs src/server.ts dist/server.js",
     "start": "node --env-file-if-exists=../../.env --enable-source-maps dist/server.js",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "typecheck": "node scripts/connectors.mjs && tsc --noEmit",
+    "test": "node scripts/connectors.mjs && vitest run"
   },
   "dependencies": {
     "@commercetools/platform-sdk": "9.7.0",
     "@commercetools/ts-client": "5.1.1",
     "@gifting/channels": "workspace:*",
-    "@gifting/ct": "workspace:*",
+    "@gifting/commerce": "workspace:*",
+    "@gifting/commerce-commercetools": "workspace:*",
+    "@gifting/commerce-memory": "workspace:*",
     "@gifting/db": "workspace:*",
     "@gifting/domain": "workspace:*",
     "@gifting/ledger": "workspace:*",
     "@gifting/logger": "workspace:*",
     "fastify": "5.12.7",
+    "jose": "6.2.12",
     "nodemailer": "10.1.1",
     "pino": "10.4.0",
     "zod": "4.6.7"

@@ -8,7 +8,7 @@ commitments. Owners are suggestions to confirm.
 **This file is updated with every milestone step**, together with
 [features.md](features.md) and the README progress table.
 
-_Last updated: 28 Oct 2026 (commercetools POC project set up and seeded; Christie Cookie catalog and 250 demo customers imported)._
+_Last updated: 29 Oct 2026 (register and sign-in built on commercetools customer accounts; commerce made a plug-in, ADR 0013 accepted)._
 
 ## Where we are
 
@@ -22,6 +22,8 @@ app). Then M1 starts.
 | --- | --- | --- |
 | ✅ Done | Architecture v2 and the docs set | M0 |
 | ✅ Done | Monorepo scaffold: apps, API, worker, packages, CI, seed data, commercetools drafts | M0 |
+| ✅ Done | Register, verify and sign in (B2C, commercetools customer accounts, real email) | M1 |
+| ✅ Done | Commerce connectors: the contract, conformance suite, commercetools and memory connectors (accounts) | M1 |
 | Planned | Spikes 1 to 6 written up ([spikes](../plans/spikes.md)) | M0 |
 | Planned | A2P 10DLC registration, Slack app and Teams bot submitted | M0 |
 | Planned | Companies and teams as Business Units, identity, budget accounts, ledger, Stripe test top-ups | M1 |
@@ -74,7 +76,6 @@ gantt
 | Who operates the marketplace and contracts with vendors | Vendor onboarding beyond seed data, payouts | [Open questions](../business/open-questions.md) |
 | Platform fee model | The `fee` entry amount (M4) | [Open questions](../business/open-questions.md) |
 | Who pays shipping and tax | The hold formula (M3) | [Open questions](../business/open-questions.md) |
-| Accounts: commercetools customers, register with email verification, password sign-in | M1 | [ADR 0015](../architecture/decisions/0015-commerce-customer-accounts.md) |
 | Which HR system first | M5 | [Open questions](../business/open-questions.md) |
 
 ## If a milestone slips

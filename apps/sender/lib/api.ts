@@ -28,6 +28,24 @@ export async function getApiMeta(): Promise<ApiMeta | null> {
   }
 }
 
+export type SignInMode = "password" | "hosted";
+
+/**
+ * How this deployment signs people in: with our password forms, or on the
+ * commerce platform's own page (its connector's capability). Password when
+ * the API can't be reached, so the page still renders and explains.
+ */
+export async function getSignInMode(): Promise<SignInMode> {
+  try {
+    // Read per request: a page built while the API was down must not freeze in one mode.
+    const res = await fetch(`${API_URL}/v1/auth/options`, { cache: "no-store", signal: AbortSignal.timeout(2000) });
+    if (res.ok && ((await res.json()) as { signIn?: string }).signIn === "hosted") return "hosted";
+  } catch {
+    // Unreachable: fall through to the password forms, which report it on submit.
+  }
+  return "password";
+}
+
 export type ApiResult<T> = { ok: true; status: number; data: T } | { ok: false; status: number; code: string; message: string };
 
 /** POST to the API; never throws for an API error or an unreachable API. */

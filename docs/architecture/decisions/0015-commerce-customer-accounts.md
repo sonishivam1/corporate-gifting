@@ -3,6 +3,19 @@
 **Status:** Accepted (29 Oct 2026, Shivam). Replaces
 [0009](0009-identity-provider.md) (Auth0).
 
+**Amended the same day** by the commerce connectors
+([ADR 0013](0013-commerce-adapters.md) section 6,
+[plan](../../plans/commerce-connectors.md)):
+- the API issues its own session tokens and verification links, the same
+  on every platform;
+- commercetools' OAuth tokens are the commercetools connector's
+  `platformSession`, sealed inside our session;
+- each request is checked by opening our own token, without commercetools
+  introspection;
+- the commercetools code lives in `@gifting/commerce-commercetools`.
+
+Points 2 to 4 below describe the first version, before the amendment.
+
 ## Context
 
 On 29 Oct 2026 the product owner changed three things:

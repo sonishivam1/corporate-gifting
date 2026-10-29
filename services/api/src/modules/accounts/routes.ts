@@ -6,11 +6,14 @@ import { ApiError } from "../../http/errors";
 import { defineRoute } from "../../http/route";
 
 /**
- * Register and sign in (ADR 0015). Register answers 409 `email_taken` for an
- * account that already exists; sign-in and resend never reveal one.
- * The auth routes are public, but only the
- * sender app's server calls them: it keeps the tokens they return in an
- * encrypted cookie, so the browser never sees one.
+ * Register and sign in (ADR 0015), on any commerce platform (plan:
+ * commerce-connectors.md). `GET /v1/auth/options` says how this deployment
+ * signs people in: with a password (register, verify, sign-in) or on the
+ * platform's own page (hosted start and finish). Register answers 409
+ * `email_taken` for an account that already exists; sign-in and resend never
+ * reveal one. The auth routes are public, but only the sender app's server
+ * calls them: it keeps the tokens they return in an encrypted cookie, so the
+ * browser never sees one.
  */
 const service = (request: FastifyRequest) => {
   const accounts = request.server.accounts;
@@ -19,6 +22,17 @@ const service = (request: FastifyRequest) => {
 };
 
 const accepted = z.object({ status: z.literal("check_email") });
+const signedIn = sessionTokens.extend({ account: accountView });
+/** Our tokens are encrypted JWTs: a few hundred characters, never more than this. */
+const token = z.string().min(1).max(4000);
+
+export const authOptions = defineRoute({
+  method: "GET",
+  url: "/v1/auth/options",
+  auth: "public",
+  schema: { response: z.object({ signIn: z.enum(["password", "hosted"]) }) },
+  handler: async ({ request }) => service(request).options(),
+});
 
 export const register = defineRoute({
   method: "POST",
@@ -36,7 +50,7 @@ export const verifyEmail = defineRoute({
   method: "POST",
   url: "/v1/auth/verify-email",
   auth: "public",
-  schema: { body: z.object({ token: z.string().min(1).max(200) }), response: z.object({ status: z.literal("verified") }) },
+  schema: { body: z.object({ token }), response: z.object({ status: z.literal("verified") }) },
   handler: async ({ body, request }) => {
     await service(request).verifyEmail(body.token);
     return { status: "verified" as const };
@@ -59,15 +73,32 @@ export const signIn = defineRoute({
   method: "POST",
   url: "/v1/auth/sign-in",
   auth: "public",
-  schema: { body: signInInput, response: sessionTokens.extend({ account: accountView }) },
+  schema: { body: signInInput, response: signedIn },
   handler: async ({ body, request }) => service(request).signIn(body.email, body.password),
+});
+
+/** Hosted mode: where to send the person, and the state the app keeps in a cookie to check on return. */
+export const hostedStart = defineRoute({
+  method: "POST",
+  url: "/v1/auth/hosted/start",
+  auth: "public",
+  schema: { body: z.object({ loginHint: emailInput.shape.email.optional() }), response: z.object({ url: z.url(), state: z.string() }) },
+  handler: async ({ body, request }) => service(request).startHostedSignIn(body.loginHint),
+});
+
+export const hostedFinish = defineRoute({
+  method: "POST",
+  url: "/v1/auth/hosted/finish",
+  auth: "public",
+  schema: { body: z.object({ code: z.string().min(1).max(4000), state: token }), response: signedIn },
+  handler: async ({ body, request }) => service(request).finishHostedSignIn(body.code, body.state),
 });
 
 export const refresh = defineRoute({
   method: "POST",
   url: "/v1/auth/refresh",
   auth: "public",
-  schema: { body: z.object({ refreshToken: z.string().min(1) }), response: sessionTokens },
+  schema: { body: z.object({ refreshToken: token }), response: sessionTokens },
   handler: async ({ body, request }) => service(request).refresh(body.refreshToken),
 });
 
@@ -75,7 +106,7 @@ export const signOut = defineRoute({
   method: "POST",
   url: "/v1/auth/sign-out",
   auth: "public",
-  schema: { body: z.object({ accessToken: z.string().min(1).optional(), refreshToken: z.string().min(1).optional() }), response: z.object({ status: z.literal("signed_out") }) },
+  schema: { body: z.object({ accessToken: token.optional(), refreshToken: token.optional() }), response: z.object({ status: z.literal("signed_out") }) },
   handler: async ({ body, request }) => {
     await service(request).signOut(body);
     return { status: "signed_out" as const };
@@ -90,4 +121,4 @@ export const me = defineRoute({
   handler: async ({ account }) => account,
 });
 
-export const accountsRoutes = [register, verifyEmail, resendVerification, signIn, refresh, signOut, me];
+export const accountsRoutes = [authOptions, register, verifyEmail, resendVerification, signIn, hostedStart, hostedFinish, refresh, signOut, me];

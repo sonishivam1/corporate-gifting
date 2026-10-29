@@ -51,6 +51,7 @@ Node 24 and pnpm 10. On Windows with fnm, prefix commands with
 | `pnpm catalog:extract` | Read the Christie Cookie storefront into `.data/catalogs/christie-cookie.json` (gitignored; with the client's permission) |
 | `pnpm catalog:import` / `pnpm catalog:remove` | Import that snapshot into the project (vendor channel, categories, products with images, stock), or delete it all again |
 | `pnpm worker` | Start the worker (today: lists the registered jobs) |
+| `pnpm test:conformance` | The connector conformance suite against the commercetools project in `.env` (creates and deletes `.example` test customers; never in CI) |
 
 | App or service | Port |
 | --- | --- |
@@ -80,7 +81,9 @@ scripts/build-service.mjs              bundles a service; fails on undeclared de
 packages/domain/src/                   Zod models and pure rules: money, gift states, keys
 packages/ledger/src/                   ledger entry builders and the balance rule (pure)
 packages/db/src/                       MongoDB client, collections, indexes, test-db guard
-packages/ct/src/                       commercetools client and helpers (server only)
+packages/commerce/src/                 the connector contract and conformance suite
+packages/commerce-<platform>/src/      one connector per platform (commercetools, memory)
+packages/ct/src/                       commercetools client and helpers (connector and infra only)
 packages/channels/src/                 Channel interface, registry, adapters
 packages/logger/src/                   createLogger() with redaction
 packages/ui/src/components/            every shadcn/ui component, plus app-shell, gift-status-badge, theme-provider
@@ -99,13 +102,22 @@ that module's exported service, never its collections.
 
 ## Rules every change follows
 
-**commercetools owns commerce** ([ADR 0001](docs/architecture/decisions/0001-commerce-in-commercetools.md))
-- Products, prices, stock, carts, orders, payments, tax, shipments,
-  companies and teams (Business Units) and vendors (supply Channels) live in
-  commercetools. Never copy them into MongoDB. Keep the key (`companyKey`,
-  `teamKey`, `vendorKey`, `ctOrderNumber`) and read the rest live.
-- Only `services/api`, `services/worker` and `infra/*` import `@gifting/ct`.
-  Apps never call commercetools, and no commercetools credential reaches a
+**Commerce goes through connectors** ([ADR 0013](docs/architecture/decisions/0013-commerce-adapters.md), [plan](docs/plans/commerce-connectors.md))
+- The commerce platform is a plug-in. The product talks to it only through
+  the contract in `@gifting/commerce`. Each platform is a package,
+  `packages/commerce-<platform>`, and `COMMERCE_CONNECTOR` picks one per
+  deployment. Taking on a platform means writing its connector, never
+  changing the product ([writing a connector](docs/engineering/writing-a-connector.md)).
+- Only connector packages and `infra/*` import `@gifting/ct` or a platform
+  SDK; ESLint enforces it. Tests stand in a platform with
+  `@gifting/commerce-memory`. A connector is done when it passes the
+  conformance suite (`@gifting/commerce/conformance`).
+- Differences between platforms are `capabilities` (today: `signIn` is
+  `password` or `hosted`). Check those, never a platform's name.
+- Products, prices, stock, carts, orders, payments, tax and shipments live
+  in the platform. Never copy them into MongoDB. Keep the reference
+  (`{ connection, id }`) and read the rest live.
+- Apps never call a commerce platform, and no platform credential reaches a
   browser.
 - Each concern gets its own scoped API client (API, import, event consumer).
   Scopes are listed in [commercetools design](docs/architecture/commercetools.md).
@@ -262,4 +274,5 @@ that module's exported service, never its collections.
 | `pnpm --filter <pkg> import` runs pnpm's own import command | Call scripts named like pnpm commands with `pnpm --filter <pkg> run <script>` |
 | Re-importing a team unit fails: "Store mode does not allow editing stores" | The Import API can't update a Division that inherits stores; `pnpm seed` creates missing teams and leaves existing ones |
 | Brevo accepts an account email (API answers 202, nothing in `.data/outbox`) but it never arrives | `MAIL_FROM`'s domain isn't authenticated in Brevo and has a strict DMARC policy (royalcyber.com does), so the receiver quarantines it. Use a personal verified sender, or authenticate the domain |
+| `COMMERCE_CONNECTOR=<name> is not installed` | Add `@gifting/commerce-<name>` to `services/api/package.json`; `src/commerce/installed.ts` is regenerated before dev, build, typecheck and test |
 | Zod's message for a missing env var says "expected string, received undefined" | Zod 4 only uses `.min()` messages when a value is present; pass `{ error: "X is not set." }` to `z.string()` |

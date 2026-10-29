@@ -93,7 +93,15 @@ corporate-gifting-marketplace/
 │   │   │   ├── db.test.ts
 │   │   │   └── index.ts
 │   │   └── scripts/indexes.ts               pnpm db:indexes
-│   ├── ct/src/                              commercetools client (server only)
+│   ├── commerce/src/                        The connector contract (ADR 0013)
+│   │   ├── contract.ts     (+ test)         CommerceConnector, capabilities, connectorProblem
+│   │   └── conformance.ts                   describeConnectorConformance(): what plug and play means
+│   ├── commerce-commercetools/src/          commercetools connector: customer accounts
+│   │   ├── accounts.ts     (+ test)
+│   │   ├── conformance.sandbox.test.ts      pnpm test:conformance (real project)
+│   │   └── index.ts                         the ConnectorFactory
+│   ├── commerce-memory/src/                 in-memory connector for tests and local work
+│   ├── ct/src/                              commercetools client (connectors and infra only)
 │   │   ├── client.ts
 │   │   ├── config.ts       (+ test)
 │   │   └── index.ts

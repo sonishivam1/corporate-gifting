@@ -1,68 +1,132 @@
 /**
- * Register, verify, sign in and out (ADR 0015). The rules live here, not in
- * the identity provider, so every commerce platform gets the same behaviour:
+ * Register, verify, sign in and out (ADR 0015), the same on every commerce
+ * platform (plan: commerce-connectors.md). The platform is a connector; the
+ * rules, the sessions, the verification links and the emails are ours:
  * - registering a taken email says so (a product decision, 29 Oct 2026), but
  *   sign-in and resend never reveal whether an email has an account;
- * - sign-in needs a verified email (the platform would let anyone in);
+ * - sign-in needs a verified email (platforms would let anyone in);
  * - failed sign-ins and emails are rate-limited per address;
- * - a signed-in request's account comes from its access token only.
+ * - a signed-in request's account comes from our own access token only.
+ *
+ * Sign-out and "only the newest link works" are kept in memory, like the
+ * rate limits: they fit the POC's single API instance and move to MongoDB
+ * before there's more than one.
  */
-import { createHash } from "node:crypto";
+import { randomUUID } from "node:crypto";
 
+import type { CommerceConnector, Customer, PlatformSignIn, SignInMode } from "@gifting/commerce";
 import type { AccountView, RegisterInput, SessionTokens } from "@gifting/domain";
 import type { Logger } from "@gifting/logger";
 
 import { ApiError } from "../../http/errors";
 import type { Mailer } from "../../mail/mailer";
 import { verificationEmail } from "./emails";
-import type { Account, IdentityProvider } from "./identity";
 import { createRateLimiter } from "./rate-limit";
+import { ACCESS_TTL_MS, createTokens, SESSION_MAX_MS, STATE_TTL_MS, VERIFY_TTL_MS } from "./tokens";
 
-/** Verification links work for an hour (commercetools guidance: 1 to 2 hours). */
-export const EMAIL_TOKEN_TTL_MINUTES = 60;
 const MINUTE = 60_000;
 
 export type AccountsService = ReturnType<typeof createAccountsService>;
 
+const unauthenticated = () => new ApiError(401, "unauthenticated", "Sign in to continue.");
+const invalidCredentials = () => new ApiError(401, "invalid_credentials", "The email or password is incorrect.");
+const notVerified = () => new ApiError(403, "email_not_verified", "Verify your email address first. We can send you a new link.");
+const invalidLink = () => new ApiError(400, "invalid_token", "This link is invalid or has expired. Ask for a new one.");
+
 export function createAccountsService(options: {
-  identity: IdentityProvider;
+  connector: CommerceConnector;
   mailer: Mailer;
-  /** The sender app's public URL, for links in emails. */
+  /** The sender app's public URL, for links in emails and the hosted sign-in return. */
   appUrl: string;
   log: Logger;
+  /** 32 bytes in hex: encrypts our sessions, links and sign-in state. */
+  sessionSecret: string;
   /** Verified emails of platform operators (ops routes). */
   opsEmails?: readonly string[];
   now?: () => number;
 }) {
-  const { identity, mailer, log } = options;
+  const { connector, mailer, log } = options;
+  const { accounts } = connector;
+  const con = connector.id;
   const now = options.now ?? Date.now;
+  const tokens = createTokens(options.sessionSecret, now);
   const failedSignIns = createRateLimiter({ limit: 5, windowMs: 15 * MINUTE, now });
   const emailsSent = createRateLimiter({ limit: 3, windowMs: 60 * MINUTE, now });
-  const tokenCache = new Map<string, { account: AccountView; expires: number }>();
+  /** Ended sessions, until they would have expired anyway. */
+  const revoked = new Map<string, number>();
+  /** When each customer's newest verification link was made; older links stop working. */
+  const newestLink = new Map<string, number>();
+  const accountCache = new Map<string, { account: AccountView; expires: number }>();
   const opsEmails = new Set(options.opsEmails ?? []);
-  const hash = (token: string) => createHash("sha256").update(token).digest("hex");
+  const callbackUrl = `${options.appUrl}/auth/callback`;
 
-  const view = (a: Account): AccountView => ({ id: a.id, email: a.email, firstName: a.firstName, lastName: a.lastName, companyName: a.companyName });
+  const view = (c: Customer): AccountView => ({ id: c.id, email: c.email, firstName: c.firstName, lastName: c.lastName, companyName: c.companyName });
+
+  function requireMode(mode: SignInMode) {
+    if (connector.capabilities.signIn !== mode) {
+      throw new ApiError(400, "not_supported", mode === "password" ? "This service signs people in on its commerce platform's page." : "This service signs people in with a password.");
+    }
+  }
+
+  function isRevoked(sid: string) {
+    const until = revoked.get(sid);
+    return until !== undefined && until > now();
+  }
+
+  function revoke(sid: string, until: number) {
+    revoked.set(sid, until);
+    accountCache.delete(sid);
+    if (revoked.size > 10_000) for (const [k, v] of revoked) if (v <= now()) revoked.delete(k);
+  }
+
+  async function issueSession(customerId: string, platformSession: string | undefined, sid: string = randomUUID(), start = now()): Promise<SessionTokens> {
+    const expiresAt = Math.min(now() + ACCESS_TTL_MS, start + SESSION_MAX_MS);
+    return {
+      accessToken: await tokens.seal({ typ: "access", sid, sub: customerId, con }, expiresAt),
+      refreshToken: await tokens.seal({ typ: "refresh", sid, sub: customerId, con, start, ...(platformSession ? { ps: platformSession } : {}) }, start + SESSION_MAX_MS),
+      expiresAt,
+    };
+  }
+
+  /** A signed-in person: verified, or we end the platform's session and refuse. */
+  async function completeSignIn(result: PlatformSignIn): Promise<SessionTokens & { account: AccountView }> {
+    const customer = await accounts.get(result.customerId);
+    if (!customer || !customer.emailVerified) {
+      if (result.platformSession) await accounts.endPlatformSession?.(result.platformSession);
+      if (!customer) throw invalidCredentials();
+      throw notVerified();
+    }
+    log.info({ accountId: customer.id, connection: con }, "signed in");
+    return { ...(await issueSession(customer.id, result.platformSession)), account: view(customer) };
+  }
 
   /** Sends a verification email, but never more than 3 an hour per address, and never fails the request. */
-  async function sendVerification(account: Account) {
-    const key = `email:${account.email}`;
+  async function sendVerification(customer: Customer) {
+    const key = `email:${customer.email}`;
     if (emailsSent.retryAfter(key) > 0) {
-      log.warn({ accountId: account.id }, "verification email skipped: too many for this address");
+      log.warn({ accountId: customer.id }, "verification email skipped: too many for this address");
       return;
     }
     emailsSent.hit(key);
     try {
-      const token = await identity.createEmailToken(account.id, EMAIL_TOKEN_TTL_MINUTES);
+      // Strictly later than the last link, so two links never share a stamp.
+      const at = Math.max(now(), (newestLink.get(customer.id) ?? 0) + 1);
+      const token = await tokens.seal({ typ: "verify", sub: customer.id, con, email: customer.email, at }, at + VERIFY_TTL_MS);
+      newestLink.set(customer.id, at);
       const link = `${options.appUrl}/verify-email?token=${encodeURIComponent(token)}`;
-      await mailer.send(verificationEmail(account.email, account.firstName, link, EMAIL_TOKEN_TTL_MINUTES));
-      log.info({ accountId: account.id }, "verification email sent");
+      await mailer.send(verificationEmail(customer.email, customer.firstName, link, VERIFY_TTL_MS / MINUTE));
+      log.info({ accountId: customer.id }, "verification email sent");
     } catch (err) {
-      log.error({ err, accountId: account.id }, "verification email failed");
+      log.error({ err, accountId: customer.id }, "verification email failed");
     }
   }
 
   return {
+    /** How this deployment signs people in, from its connector's capabilities. */
+    options(): { signIn: SignInMode } {
+      return { signIn: connector.capabilities.signIn };
+    },
+
     /**
      * Creates the account and emails a verification link. An email that is
      * taken but not yet verified gets a fresh link instead (the person may
@@ -70,19 +134,20 @@ export function createAccountsService(options: {
      * without a password, is refused with 409 `email_taken`.
      */
     async register(input: RegisterInput): Promise<void> {
-      const result = await identity.register({
+      requireMode("password");
+      const result = await accounts.register!({
         email: input.email,
         password: input.password,
         firstName: input.firstName,
         lastName: input.lastName,
         ...(input.companyName ? { companyName: input.companyName } : {}),
       });
-      if ("account" in result) {
-        log.info({ accountId: result.account.id }, "account registered");
-        await sendVerification(result.account);
+      if ("customer" in result) {
+        log.info({ accountId: result.customer.id, connection: con }, "account registered");
+        await sendVerification(result.customer);
         return;
       }
-      const existing = await identity.findByEmail(input.email);
+      const existing = await accounts.findByEmail(input.email);
       if (existing && existing.hasPassword && !existing.emailVerified) {
         await sendVerification(existing);
         return;
@@ -90,68 +155,97 @@ export function createAccountsService(options: {
       throw new ApiError(409, "email_taken", "An account with this email already exists. Sign in instead.");
     },
 
+    /** Works once, within the hour, and only for the newest link this API instance knows of. */
     async verifyEmail(token: string): Promise<void> {
-      const account = await identity.confirmEmail(token);
-      if (!account) throw new ApiError(400, "invalid_token", "This link is invalid or has expired. Ask for a new one.");
-      log.info({ accountId: account.id }, "email verified");
+      const claims = await tokens.open(token, "verify");
+      const newest = claims ? newestLink.get(claims.sub) : undefined;
+      if (!claims || claims.con !== con || (newest !== undefined && newest !== claims.at)) throw invalidLink();
+      const customer = await accounts.get(claims.sub);
+      if (!customer || customer.email !== claims.email || customer.emailVerified) throw invalidLink();
+      await accounts.markEmailVerified(customer.id);
+      newestLink.delete(customer.id);
+      log.info({ accountId: customer.id }, "email verified");
     },
 
     /** Always the same answer; only an unverified account gets an email. */
     async resendVerification(email: string): Promise<void> {
-      const account = await identity.findByEmail(email);
-      if (account && account.hasPassword && !account.emailVerified) await sendVerification(account);
+      requireMode("password");
+      const customer = await accounts.findByEmail(email);
+      if (customer && customer.hasPassword && !customer.emailVerified) await sendVerification(customer);
     },
 
     async signIn(email: string, password: string): Promise<SessionTokens & { account: AccountView }> {
+      requireMode("password");
       const key = `sign-in:${email}`;
       const wait = failedSignIns.retryAfter(key);
       if (wait > 0) throw new ApiError(429, "too_many_attempts", `Too many attempts. Try again in ${Math.ceil(wait / 60)} minutes.`);
 
-      const result = await identity.signIn(email, password);
+      const result = await accounts.signInWithPassword!(email, password);
       if (!result) {
         failedSignIns.hit(key);
-        throw new ApiError(401, "invalid_credentials", "The email or password is incorrect.");
+        throw invalidCredentials();
       }
-      const account = await identity.getAccount(result.accountId);
-      if (!account || !account.emailVerified) {
-        // The platform signs in unverified accounts; we don't. Throw the tokens away.
-        await identity.signOut(result.tokens);
-        if (!account) throw new ApiError(401, "invalid_credentials", "The email or password is incorrect.");
-        throw new ApiError(403, "email_not_verified", "Verify your email address first. We can send you a new link.");
-      }
+      const session = await completeSignIn(result);
       failedSignIns.reset(key);
-      log.info({ accountId: account.id }, "signed in");
-      return { ...result.tokens, account: view(account) };
+      return session;
     },
 
+    /** The platform's sign-in page to send the person to, and the state the app must check on return. */
+    async startHostedSignIn(loginHint?: string): Promise<{ url: string; state: string }> {
+      requireMode("hosted");
+      const state = await tokens.seal({ typ: "state", nonce: randomUUID(), con }, now() + STATE_TTL_MS);
+      const url = await accounts.hostedSignIn!.start({ state, redirectUri: callbackUrl, ...(loginHint ? { loginHint } : {}) });
+      return { url, state };
+    },
+
+    async finishHostedSignIn(code: string, state: string): Promise<SessionTokens & { account: AccountView }> {
+      requireMode("hosted");
+      const claims = await tokens.open(state, "state");
+      if (!claims || claims.con !== con) throw new ApiError(400, "invalid_state", "This sign-in took too long or didn't start here. Try again.");
+      const result = await accounts.hostedSignIn!.finish({ code, redirectUri: callbackUrl });
+      if (!result) throw new ApiError(401, "sign_in_failed", "Sign-in didn't complete. Try again.");
+      return completeSignIn(result);
+    },
+
+    /** New tokens for a live session; the platform's own session is renewed with it. */
     async refresh(refreshToken: string): Promise<SessionTokens> {
-      const tokens = await identity.refresh(refreshToken);
-      if (!tokens) throw new ApiError(401, "unauthenticated", "Sign in to continue.");
-      return tokens;
+      const claims = await tokens.open(refreshToken, "refresh");
+      if (!claims || claims.con !== con || isRevoked(claims.sid)) throw unauthenticated();
+      const customer = await accounts.get(claims.sub);
+      if (!customer || !customer.emailVerified) throw unauthenticated();
+      let platformSession = claims.ps;
+      if (platformSession && accounts.renewPlatformSession) {
+        const renewed = await accounts.renewPlatformSession(platformSession);
+        if (!renewed) {
+          revoke(claims.sid, claims.start + SESSION_MAX_MS);
+          throw unauthenticated();
+        }
+        platformSession = renewed;
+      }
+      return issueSession(customer.id, platformSession, claims.sid, claims.start);
     },
 
-    async signOut(tokens: { accessToken?: string; refreshToken?: string }): Promise<void> {
-      if (tokens.accessToken) tokenCache.delete(hash(tokens.accessToken));
-      await identity.signOut(tokens);
+    /** Ends the session: our tokens stop working at once, and the platform's session is ended. */
+    async signOut(given: { accessToken?: string; refreshToken?: string }): Promise<void> {
+      const refresh = given.refreshToken ? await tokens.open(given.refreshToken, "refresh") : null;
+      const access = given.accessToken ? await tokens.open(given.accessToken, "access") : null;
+      const sid = refresh?.sid ?? access?.sid;
+      if (sid) revoke(sid, (refresh?.start ?? now()) + SESSION_MAX_MS);
+      if (refresh?.ps) await accounts.endPlatformSession?.(refresh.ps);
     },
 
-    /**
-     * The account an access token belongs to. Checked with the platform and
-     * cached for a minute; a revoked token may work until then, except here,
-     * where sign-out clears it.
-     */
+    /** The account an access token belongs to. The customer is read from the platform at most once a minute per session. */
     async authenticate(accessToken: string): Promise<AccountView> {
-      const key = hash(accessToken);
-      const cached = tokenCache.get(key);
+      const claims = await tokens.open(accessToken, "access");
+      if (!claims || claims.con !== con || isRevoked(claims.sid)) throw unauthenticated();
+      const cached = accountCache.get(claims.sid);
       if (cached && cached.expires > now()) return cached.account;
-      const verified = await identity.verifyAccessToken(accessToken);
-      if (!verified) throw new ApiError(401, "unauthenticated", "Sign in to continue.");
-      const account = await identity.getAccount(verified.accountId);
-      if (!account || !account.emailVerified) throw new ApiError(401, "unauthenticated", "Sign in to continue.");
-      const result = view(account);
-      tokenCache.set(key, { account: result, expires: now() + MINUTE });
-      if (tokenCache.size > 10_000) for (const [k, v] of tokenCache) if (v.expires <= now()) tokenCache.delete(k);
-      return result;
+      const customer = await accounts.get(claims.sub);
+      if (!customer || !customer.emailVerified) throw unauthenticated();
+      const account = view(customer);
+      accountCache.set(claims.sid, { account, expires: now() + MINUTE });
+      if (accountCache.size > 10_000) for (const [k, v] of accountCache) if (v.expires <= now()) accountCache.delete(k);
+      return account;
     },
 
     isOps(account: AccountView): boolean {
