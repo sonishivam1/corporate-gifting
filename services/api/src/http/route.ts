@@ -15,7 +15,11 @@ import { ApiError } from "./errors";
  *   handler gets `account`, taken from the access token, never from the request;
  * - "ops": platform operators. Anyone else gets 404, so the route's
  *   existence doesn't leak;
- * - "public": no sign-in (health, meta, register and sign-in themselves).
+ * - "public": no sign-in (health, meta, register and sign-in themselves);
+ * - "workspace": the dashboard's company and team scope, from the
+ *   development session (http/session.ts) until the B2C workspace model is
+ *   decided. Handlers call `requireSession(request)`. Refused unless
+ *   DEV_AUTH=1 outside production.
  */
 export type RouteSchema = {
   params?: z.ZodType;
@@ -24,7 +28,7 @@ export type RouteSchema = {
   response?: z.ZodType;
 };
 
-export type RouteAuth = "account" | "ops" | "public";
+export type RouteAuth = "account" | "ops" | "public" | "workspace";
 
 type Infer<T> = T extends z.ZodType ? z.infer<T> : undefined;
 
@@ -32,8 +36,8 @@ export type RouteContext<S extends RouteSchema, A extends RouteAuth = "account">
   params: Infer<S["params"]>;
   query: Infer<S["query"]>;
   body: Infer<S["body"]>;
-  /** The signed-in person; undefined on public routes. */
-  account: A extends "public" ? undefined : AccountView;
+  /** The signed-in person; undefined on public and workspace routes. */
+  account: A extends "public" | "workspace" ? undefined : AccountView;
   request: FastifyRequest;
   reply: FastifyReply;
 };
@@ -47,6 +51,10 @@ export type RouteDefinition<S extends RouteSchema = RouteSchema, A extends Route
 };
 
 declare module "fastify" {
+  interface FastifyContextConfig {
+    /** The route is a "workspace" route: the development session hook scopes it. */
+    workspace?: boolean;
+  }
   interface FastifyInstance {
     /** Accounts and sign-in. Null until the sign-in client is configured. */
     accounts: AccountsService | null;
@@ -69,7 +77,7 @@ export function bearerToken(header: string | undefined): string | null {
 const parse = (schema: z.ZodType | undefined, value: unknown) => (schema ? schema.parse(value) : undefined);
 
 async function authenticate(request: FastifyRequest, auth: RouteAuth): Promise<AccountView | undefined> {
-  if (auth === "public") return undefined;
+  if (auth === "public" || auth === "workspace") return undefined;
   const accounts = request.server.accounts;
   if (!accounts) throw new ApiError(503, "auth_not_configured", "Sign-in is not configured on this server.");
   const token = bearerToken(request.headers.authorization);
@@ -84,6 +92,7 @@ export function registerRoutes(app: FastifyInstance, routes: readonly RouteDefin
     app.route({
       method: route.method,
       url: route.url,
+      config: { workspace: route.auth === "workspace" },
       handler: async (request, reply) => {
         const account = await authenticate(request, route.auth ?? "account");
         const result = await route.handler({

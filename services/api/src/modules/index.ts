@@ -1,10 +1,22 @@
+import type { AppDeps } from "../deps";
 import type { RouteAuth, RouteDefinition, RouteSchema } from "../http/route";
 import { accountsRoutes } from "./accounts/routes";
+import { workspaceRoutes } from "./accounts/workspace";
+import { campaignsRoutes } from "./campaigns/routes";
+import { createCampaignsService } from "./campaigns/service";
+import { catalogRoutes } from "./catalog/routes";
+import { createCatalogService } from "./catalog/service";
+import { giftsRoutes } from "./gifts/routes";
+import { createGiftsService } from "./gifts/service";
+import { ledgerRoutes } from "./ledger/routes";
+import { createLedgerService } from "./ledger/service";
+import { recipientsRoutes } from "./recipients/routes";
+import { createRecipientsService } from "./recipients/service";
 
 /**
- * The ten modules (docs/architecture/overview.md). Each gets its own folder
- * with routes.ts, service.ts and repo.ts as it is built; a module calls
- * another only through that module's service.
+ * The ten modules (docs/architecture/overview.md). Each has its own folder
+ * with routes.ts and service.ts as it is built; a module calls another only
+ * through that module's service, never its collections.
  */
 export type ApiModule = {
   name: string;
@@ -12,15 +24,23 @@ export type ApiModule = {
   routes: readonly RouteDefinition<RouteSchema, RouteAuth>[];
 };
 
-export const MODULES: readonly ApiModule[] = [
-  { name: "accounts", milestone: "M1", routes: accountsRoutes },
-  { name: "ledger", milestone: "M1", routes: [] },
-  { name: "catalog", milestone: "M2", routes: [] },
-  { name: "campaigns", milestone: "M3", routes: [] },
-  { name: "recipients", milestone: "M5", routes: [] },
-  { name: "gifts", milestone: "M3", routes: [] },
-  { name: "fulfillment", milestone: "M4", routes: [] },
-  { name: "channels", milestone: "M3", routes: [] },
-  { name: "integrations", milestone: "M1", routes: [] },
-  { name: "reporting", milestone: "M6", routes: [] },
-];
+export function buildModules(deps: AppDeps): ApiModule[] {
+  const ledger = createLedgerService(deps);
+  const catalog = createCatalogService(deps);
+  const recipients = createRecipientsService(deps);
+  const gifts = createGiftsService(deps, { recipients });
+  const campaigns = createCampaignsService(deps, { catalog, ledger, recipients, gifts });
+
+  return [
+    { name: "accounts", milestone: "M1", routes: [...accountsRoutes, ...workspaceRoutes(deps)] },
+    { name: "ledger", milestone: "M1", routes: ledgerRoutes(ledger) },
+    { name: "catalog", milestone: "M2", routes: catalogRoutes(catalog) },
+    { name: "campaigns", milestone: "M3", routes: campaignsRoutes(campaigns) },
+    { name: "recipients", milestone: "M5", routes: recipientsRoutes(recipients) },
+    { name: "gifts", milestone: "M3", routes: giftsRoutes(gifts, campaigns) },
+    { name: "fulfillment", milestone: "M4", routes: [] },
+    { name: "channels", milestone: "M3", routes: [] },
+    { name: "integrations", milestone: "M1", routes: [] },
+    { name: "reporting", milestone: "M6", routes: [] },
+  ];
+}

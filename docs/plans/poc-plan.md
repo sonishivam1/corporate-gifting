@@ -125,7 +125,7 @@ Each package updates features, roadmap, data model, API and the build log
 
 | # | Date | Change | Why | Agreed by |
 | --- | --- | --- | --- | --- |
-| — | — | — | — | — |
+| 1 | 28 Oct 2026 | [Sender dashboard](sender-dashboard.md) built ahead of the spikes and M1: thin slices of balance (M1), catalog read (M2) and campaign create, estimate, submit and approve (M3), with a dev-only session instead of sign-in and a MongoDB service in CI | A working sender path to demo early, built on the real module boundaries so it carries over | Bhuvaneshwari |
 
 ## As built
 

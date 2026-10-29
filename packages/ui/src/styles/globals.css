@@ -29,10 +29,23 @@
     --color-chart-2: var(--chart-2);
     --color-chart-1: var(--chart-1);
     --color-ring: var(--ring);
+    --color-success: var(--success);
+    --color-success-soft: var(--success-soft);
+    --color-warning: var(--warning);
+    --color-warning-soft: var(--warning-soft);
+    --color-info: var(--info);
+    --color-info-soft: var(--info-soft);
+    --color-tile-food: var(--tile-food);
+    --color-tile-food-foreground: var(--tile-food-foreground);
+    --color-tile-home: var(--tile-home);
+    --color-tile-home-foreground: var(--tile-home-foreground);
+    --color-tile-drink: var(--tile-drink);
+    --color-tile-drink-foreground: var(--tile-drink-foreground);
+    --color-tile-outdoors: var(--tile-outdoors);
+    --color-tile-outdoors-foreground: var(--tile-outdoors-foreground);
     --color-input: var(--input);
     --color-border: var(--border);
     --color-destructive: var(--destructive);
-    --color-success: var(--success);
     --color-accent-foreground: var(--accent-foreground);
     --color-accent: var(--accent);
     --color-muted-foreground: var(--muted-foreground);
@@ -64,6 +77,7 @@
      * come from next/font (lib/fonts.ts); the system stack is the fallback.
      */
     --font-sans: var(--font-body), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    /* Palette from the prototype (docs/design/gifting-prototype.html): navy ink, blue actions. */
     --background: #ffffff;
     --foreground: #012754;
     --card: #ffffff;
@@ -72,23 +86,37 @@
     --popover-foreground: #012754;
     --primary: #2570c5;
     --primary-foreground: #ffffff;
-    --secondary: #f5f8fc;
-    --secondary-foreground: #012754;
+    --secondary: #eef3f8;
+    --secondary-foreground: #3a5273;
     --muted: #f5f8fc;
     --muted-foreground: #59728f;
     --accent: #eaf2fb;
     --accent-foreground: #1c5ca6;
     --destructive: #b42840;
-    /* The prototype's "ok" green: rules met, things done. */
-    --success: #147a55;
     --border: #e2e9f2;
-    --input: #e2e9f2;
+    --input: #cfdae7;
     --ring: #2570c5;
+    /* Status tones (badges, alerts): text on a soft background. */
+    --success: #147a55;
+    --success-soft: #e6f4ee;
+    --warning: #8a5300;
+    --warning-soft: #fbf1de;
+    --info: #2570c5;
+    --info-soft: #eaf2fb;
+    /* Product art tiles, one per catalog category. */
+    --tile-food: #faf4ee;
+    --tile-food-foreground: #9a5a2e;
+    --tile-home: #f5f3fa;
+    --tile-home-foreground: #5e4e96;
+    --tile-drink: #f0f6f3;
+    --tile-drink-foreground: #2d6b53;
+    --tile-outdoors: #f0f4f9;
+    --tile-outdoors-foreground: #2f5b8a;
     --chart-1: #2570c5;
-    --chart-2: #147a55;
-    --chart-3: #8a5300;
-    --chart-4: #5e4e96;
-    --chart-5: #59728f;
+    --chart-2: #0e7c74;
+    --chart-3: #59728f;
+    --chart-4: #8a5300;
+    --chart-5: #b42840;
     --radius: 0.75rem;
     --sidebar: #f5f8fc;
     --sidebar-foreground: #012754;
@@ -100,40 +128,53 @@
     --sidebar-ring: #2570c5;
 }
 
-/* Dark: the prototype's "night" navy, with a lighter blue for contrast. */
+/* The prototype is light only; this is the same palette on navy. */
 .dark {
-    --background: #0a1f3d;
-    --foreground: #f2f6fb;
-    --card: #10294d;
-    --card-foreground: #f2f6fb;
-    --popover: #10294d;
-    --popover-foreground: #f2f6fb;
-    --primary: #6fa8e8;
-    --primary-foreground: #0a1f3d;
-    --secondary: #16325a;
-    --secondary-foreground: #f2f6fb;
-    --muted: #16325a;
-    --muted-foreground: #a9bbd0;
-    --accent: #1b3a66;
-    --accent-foreground: #f2f6fb;
-    --destructive: #f07a8c;
-    --success: #5cc59a;
-    --border: rgb(255 255 255 / 12%);
+    --background: #0b1a2e;
+    --foreground: #e6eef7;
+    --card: #11233b;
+    --card-foreground: #e6eef7;
+    --popover: #11233b;
+    --popover-foreground: #e6eef7;
+    --primary: #5b9be3;
+    --primary-foreground: #06162b;
+    --secondary: #1a2f4a;
+    --secondary-foreground: #c9d6e5;
+    --muted: #16283f;
+    --muted-foreground: #93a7bf;
+    --accent: #1a3556;
+    --accent-foreground: #cfe2f7;
+    --destructive: #e5677b;
+    --border: rgb(255 255 255 / 10%);
     --input: rgb(255 255 255 / 16%);
-    --ring: #6fa8e8;
-    --chart-1: #6fa8e8;
-    --chart-2: #5cc59a;
-    --chart-3: #e3b25c;
-    --chart-4: #a99be0;
-    --chart-5: #a9bbd0;
-    --sidebar: #10294d;
-    --sidebar-foreground: #f2f6fb;
-    --sidebar-primary: #6fa8e8;
-    --sidebar-primary-foreground: #0a1f3d;
-    --sidebar-accent: #1b3a66;
-    --sidebar-accent-foreground: #f2f6fb;
-    --sidebar-border: rgb(255 255 255 / 12%);
-    --sidebar-ring: #6fa8e8;
+    --ring: #5b9be3;
+    --success: #6fd3a8;
+    --success-soft: #12372b;
+    --warning: #f0c069;
+    --warning-soft: #3a2a0c;
+    --info: #8dbcf0;
+    --info-soft: #14304f;
+    --tile-food: #2c2118;
+    --tile-food-foreground: #e3b08a;
+    --tile-home: #231f33;
+    --tile-home-foreground: #b9aae6;
+    --tile-drink: #16291f;
+    --tile-drink-foreground: #8fd0b3;
+    --tile-outdoors: #15253a;
+    --tile-outdoors-foreground: #9cc0e6;
+    --chart-1: #5b9be3;
+    --chart-2: #4cb8ae;
+    --chart-3: #93a7bf;
+    --chart-4: #f0c069;
+    --chart-5: #e5677b;
+    --sidebar: #0e1f35;
+    --sidebar-foreground: #e6eef7;
+    --sidebar-primary: #5b9be3;
+    --sidebar-primary-foreground: #06162b;
+    --sidebar-accent: #1a3556;
+    --sidebar-accent-foreground: #cfe2f7;
+    --sidebar-border: rgb(255 255 255 / 10%);
+    --sidebar-ring: #5b9be3;
 }
 
 @layer base {

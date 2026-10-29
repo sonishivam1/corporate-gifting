@@ -10,7 +10,8 @@
     "start": "node --env-file-if-exists=../../.env --enable-source-maps dist/server.js",
     "lint": "eslint .",
     "typecheck": "node scripts/connectors.mjs && tsc --noEmit",
-    "test": "node scripts/connectors.mjs && vitest run"
+    "test": "node scripts/connectors.mjs && vitest run",
+    "test:integration": "node scripts/connectors.mjs && vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
     "@commercetools/platform-sdk": "9.7.0",
@@ -23,8 +24,10 @@
     "@gifting/domain": "workspace:*",
     "@gifting/ledger": "workspace:*",
     "@gifting/logger": "workspace:*",
+    "@gifting/seed": "workspace:*",
     "fastify": "5.12.7",
     "jose": "6.2.12",
+    "mongodb": "7.7.0",
     "nodemailer": "10.1.1",
     "pino": "10.4.0",
     "zod": "4.6.7"

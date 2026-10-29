@@ -19,7 +19,14 @@ const currency = z.enum(CURRENCIES);
 const monthDay = z.string().regex(/^\d{2}-\d{2}$/, "MM-DD");
 
 export const CHANNEL_KINDS = ["email", "sms", "slack", "teams", "link", "qr"] as const;
+export type ChannelKind = (typeof CHANNEL_KINDS)[number];
 export const channelKind = z.enum(CHANNEL_KINDS);
+
+export const OCCASIONS = ["holiday", "anniversary", "birthday", "thanks", "newhire", "appreciation"] as const;
+export type Occasion = (typeof OCCASIONS)[number];
+
+export const CARD_COVERS = ["confetti", "ribbon", "evergreen", "brand"] as const;
+export type CardCover = (typeof CARD_COVERS)[number];
 
 // accounts: one budget account per team. The balance is computed from the ledger, never stored.
 export const budgetAccount = z.object({
@@ -30,6 +37,9 @@ export const budgetAccount = z.object({
   billingMethod: z.enum(["prepaid", "invoice"]),
   creditLimitCents: centsField,
   stripeCustomerId: z.string().nullable(),
+  // Touched by every transaction that places holds, so two concurrent holds on
+  // one account conflict and the second retries against the new balance.
+  holdsUpdatedAt: z.date().nullable(),
   createdAt: z.date(),
 });
 export type BudgetAccount = z.infer<typeof budgetAccount>;
@@ -96,6 +106,7 @@ export type Recipient = z.infer<typeof recipient>;
 
 export const CAMPAIGN_TYPES = ["one-time", "scheduled", "automated"] as const;
 export const CAMPAIGN_STATUSES = ["draft", "pending_approval", "approved", "sending", "active", "completed", "cancelled"] as const;
+export type CampaignStatus = (typeof CAMPAIGN_STATUSES)[number];
 
 export const campaign = z.object({
   _id: id,
@@ -109,7 +120,16 @@ export const campaign = z.object({
   budgetCents: centsField,
   channels: z.array(channelKind).min(1),
   branding: z.object({ brandColor: z.string().nullable(), logoUrl: z.string().url().nullable() }),
+  greeting: z.object({
+    occasion: z.enum(OCCASIONS),
+    cover: z.enum(CARD_COVERS),
+    headline: z.string().min(1).max(40),
+    fromName: z.string().min(1).max(40),
+  }),
   message: z.string().max(2000),
+  // The people a one-time or scheduled campaign goes to; gifts are created from them at submit.
+  recipientIds: z.array(id).max(500),
+  reminders: z.boolean(),
   expiresInDays: z.number().int().min(1).max(365),
   sendAt: z.date().nullable(),
   approval: z

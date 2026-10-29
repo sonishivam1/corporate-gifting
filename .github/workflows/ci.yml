@@ -1,6 +1,8 @@
 # Every push to main, qa and develop, and every pull request: lint, typecheck,
-# unit tests and a production build. No secrets: CI never connects to a
-# database, never calls commercetools and never sends a message.
+# unit tests, integration tests and a production build. No secrets: CI never
+# calls commercetools and never sends a message. The only database is a
+# throwaway MongoDB container that lives for this job; each integration test
+# file uses its own gifting_test_* database on it.
 # Branch flow: docs/engineering/git-workflow.md.
 name: CI
 
@@ -20,7 +22,18 @@ jobs:
   checks:
     name: Lint, typecheck, test, build
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    services:
+      # The same image as pnpm db:up: a single-node replica set, so transactions work.
+      mongo:
+        image: mongodb/mongodb-atlas-local:8.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ ping: 1 }).ok'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4 # version from package.json "packageManager"
@@ -32,6 +45,10 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      - name: Integration tests
+        run: pnpm test:integration
+        env:
+          MONGODB_URI: mongodb://localhost:27017/?directConnection=true
       - name: Production build
         run: pnpm build
         env:

@@ -5,13 +5,18 @@ services:
   mongo:
     image: mongodb/mongodb-atlas-local:8.0
     container_name: gifting-mongo
+    # The replica set config stores the hostname. Without a fixed one, a
+    # recreated container comes back as a ghost member with no primary.
+    hostname: gifting-mongo
     ports:
       - "27017:27017"
     volumes:
       - gifting-mongo-data:/data/db
       - gifting-mongo-config:/data/configdb
+    # Healthy only once the replica set has a primary: it answers pings
+    # earlier, but writes fail until then.
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ ping: 1 }).ok"]
+      test: ["CMD", "mongosh", "--quiet", "--eval", "quit(db.hello().isWritablePrimary ? 0 : 1)"]
       interval: 10s
       timeout: 5s
       retries: 12

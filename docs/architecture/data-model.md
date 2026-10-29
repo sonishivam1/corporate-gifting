@@ -51,14 +51,32 @@ erDiagram
 
 | Collection | Holds | Key indexes |
 | --- | --- | --- |
-| `accounts` | `companyKey`, `teamKey`, `currency`, `billingMethod` (prepaid or invoice), `creditLimitCents`, `stripeCustomerId` | unique `teamKey` |
+| `accounts` | `companyKey`, `teamKey`, `currency`, `billingMethod` (prepaid or invoice), `creditLimitCents`, `stripeCustomerId`, `holdsUpdatedAt` (touched by every hold transaction so concurrent holds on one account conflict and retry) | unique `teamKey` |
 | `ledgerEntries` | `accountId`, `type`, `amountCents`, `currency`, `giftId`, `campaignId`, `idempotencyKey`, `reason`, `createdAt`, `createdBy` | unique `idempotencyKey`; `{accountId, createdAt}`; `{giftId}` |
 | `collections` | `owner` (`platform` or a `companyKey`), `name`, `rules` (tags, brands, SKUs, pinned), `countries`, `budgetBandCents` | `{owner, name}` |
 | `recipients` | `companyKey`, `teamKey`, `name`, `email`, `emailLower`, `phone`, `slackId`, `teamsId`, `birthdayMonthDay`, `startDate`, `startMonthDay`, `source`, `externalId` | unique `{companyKey, emailLower}`; `{companyKey, birthdayMonthDay}`; `{companyKey, startMonthDay}` |
-| `campaigns` | `companyKey`, `teamKey`, `type`, `status`, `collectionId` or `sku`, `budgetCents`, `channels`, `branding`, `message`, `expiresInDays`, `approval`, `trigger`, `sendAt` | `{teamKey, status}`; `{type, status}` |
+| `campaigns` | `companyKey`, `teamKey`, `type`, `status`, `collectionId` or `sku`, `budgetCents`, `channels`, `branding`, `greeting` (`occasion`, `cover`, `headline`, `fromName`), `message`, `recipientIds`, `reminders`, `expiresInDays`, `approval`, `trigger`, `sendAt`, `createdBy` | `{teamKey, status}`; `{type, status}` |
 | `gifts` | `companyKey`, `teamKey`, `campaignId`, `recipientId`, `occurrence`, `budgetCents`, `holdCents`, `tokenHash`, `codeHash`, `status`, `version`, `expiresAt`, `claim`, `notifications`, `ctOrderNumber` | unique `tokenHash`; unique `codeHash`; unique `{campaignId, recipientId, occurrence}`; `{status, expiresAt}`; `{teamKey, status}` |
 | `integrations` | `companyKey`, `type` (hris, slack, teams), `status`, `secretRef`, `lastSyncAt` | unique `{companyKey, type}` |
 | `processedEvents` | `_id` = commercetools message id, `receivedAt` | TTL 30 days on `receivedAt` |
+
+## Campaign statuses
+
+A one-time or scheduled campaign is saved as `draft`, then submitted:
+
+| Status | Means | Gifts |
+| --- | --- | --- |
+| `draft` | Saved, not submitted (or submit was refused, for example short of funds) | none |
+| `pending_approval` | Over the team's threshold; waiting for an approver who isn't the sender | `pending_approval`, no holds |
+| `approved` | Held and waiting for its send date; the app shows it as "Scheduled" | `scheduled`, held |
+| `active` | Sent | `sent` onwards, held |
+| `cancelled` | Declined by the approver | `cancelled` |
+
+`sending` and `completed` are reserved for the send worker (M3.4) and
+expiry (M6). The move out of `draft` or `pending_approval` is a
+`findOneAndUpdate` with the expected status in the filter, in the same
+transaction as the gifts and their holds, so a repeated submit or approval
+changes nothing.
 
 ## Gift statuses
 

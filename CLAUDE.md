@@ -25,6 +25,17 @@ must respect.
   state machine, money, balances) have tests. The repo also has CI,
   commercetools setup drafts and fictional seed data
   ([M0 plan](docs/plans/m0-foundations.md)).
+- **Built ahead of plan (28 Oct):** the [sender dashboard](docs/plans/sender-dashboard.md):
+  Home, Browse gifts, Campaigns and the send flow, on real API routes and
+  MongoDB. Products and the demo company come from `infra/seed` until
+  commercetools is set up.
+- **Built (29 Oct):** real register and sign-in (B2C, commercetools customer
+  accounts, [ADR 0015](docs/architecture/decisions/0015-commerce-customer-accounts.md))
+  behind plug-in commerce connectors
+  ([ADR 0013](docs/architecture/decisions/0013-commerce-adapters.md)). The
+  dashboard sits behind that sign-in; its company and team still come from
+  the development session (`DEV_AUTH=1`, "workspace" routes) until the B2C
+  workspace model is decided.
 - **Next:** the week-1 [spikes](docs/plans/spikes.md). Spike 1, the
   company-balance order, gates everything in M4. After the spikes comes M1:
   accounts and money.
@@ -38,12 +49,15 @@ Node 24 and pnpm 10. On Windows with fnm, prefix commands with
 | Command | What it does |
 | --- | --- |
 | `pnpm dev` | Every app and the API in watch mode (ports below) |
+| `pnpm dev:all` | `db:up`, `seed:demo` (which also ensures indexes), then `dev`: everything in one command |
 | `pnpm lint` | ESLint in every package |
 | `pnpm typecheck` | `tsc --noEmit` in every package (`next typegen` first in apps) |
 | `pnpm test` | Unit tests in every package (no database, no network) |
+| `pnpm test:integration` | API tests against throwaway `gifting_test_*` databases (needs `pnpm db:up`) |
 | `pnpm build` | Production build of every app and service; must never need a database or commercetools |
-| `pnpm db:up` / `pnpm db:down` | Local MongoDB (Atlas Local) and Mailpit in Docker |
+| `pnpm db:up` / `pnpm db:down` | Local MongoDB (Atlas Local) and Mailpit in Docker; `db:up` waits until MongoDB accepts writes |
 | `pnpm db:indexes` | Create the MongoDB indexes (`packages/db`) |
+| `pnpm seed:demo` | Write the demo company's accounts, top-ups, collections and directory to MongoDB; safe to repeat |
 | `pnpm ct:plan` | Print the commercetools setup drafts (store, channels, types); no calls |
 | `pnpm ct:apply` | Set up the project from `.env`: types, product types, tax, zone and shipping, channels, store, associate roles, gift categories. Creates what's missing and adds missing fields and attributes; safe to re-run |
 | `pnpm seed` | Import the fictional products and stock, 250 demo customers, and 5 demo companies with 10 teams (Business Units) through the Import API (run `ct:apply` first) |
@@ -62,7 +76,8 @@ Node 24 and pnpm 10. On Windows with fnm, prefix commands with
 | `services/api` | 4000 |
 
 CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs lint,
-typecheck, tests and the build on every push and pull request. Keep it green.
+typecheck, unit tests, integration tests (against a MongoDB service
+container) and the build on every push and pull request. Keep it green.
 
 ## Layout
 
@@ -275,4 +290,7 @@ that module's exported service, never its collections.
 | Re-importing a team unit fails: "Store mode does not allow editing stores" | The Import API can't update a Division that inherits stores; `pnpm seed` creates missing teams and leaves existing ones |
 | Brevo accepts an account email (API answers 202, nothing in `.data/outbox`) but it never arrives | `MAIL_FROM`'s domain isn't authenticated in Brevo and has a strict DMARC policy (royalcyber.com does), so the receiver quarantines it. Use a personal verified sender, or authenticate the domain |
 | `COMMERCE_CONNECTOR=<name> is not installed` | Add `@gifting/commerce-<name>` to `services/api/package.json`; `src/commerce/installed.ts` is regenerated before dev, build, typecheck and test |
+| `gifting-mongo` exits with `ReplicaSetNoPrimary` / `RSGhost` | The replica set config stores the container hostname. `docker-compose.yml` now pins `hostname: gifting-mongo`; a volume created before that needs resetting once (`docker compose down -v`, then `pnpm dev:all`) |
+| A write fails with code 10107 (not primary) | Atlas Local answers pings before it elects a primary. `pnpm db:up` now waits for a writable primary (`--wait` and the compose healthcheck); a plain `docker compose up -d` doesn't |
+| `next build` tries to prerender a page and fails calling the API | Something caught the error `cookies()` throws to mark a page dynamic. Read cookies outside `try`, and catch only `ApiCallError` |
 | Zod's message for a missing env var says "expected string, received undefined" | Zod 4 only uses `.min()` messages when a value is present; pass `{ error: "X is not set." }` to `z.string()` |

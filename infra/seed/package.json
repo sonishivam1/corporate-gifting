@@ -12,13 +12,17 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "add-member": "tsx --env-file-if-exists=../../.env scripts/add-member.ts"
+    "add-member": "tsx --env-file-if-exists=../../.env scripts/add-member.ts",
+    "seed:demo": "tsx --env-file-if-exists=../../.env scripts/seed-demo.ts"
   },
   "dependencies": {
     "@commercetools/importapi-sdk": "7.1.2",
     "@gifting/ct": "workspace:*",
+    "@gifting/db": "workspace:*",
     "@gifting/domain": "workspace:*",
+    "@gifting/ledger": "workspace:*",
     "@gifting/logger": "workspace:*",
+    "mongodb": "7.7.0",
     "zod": "4.6.7"
   }
 }

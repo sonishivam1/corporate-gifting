@@ -104,10 +104,12 @@ Ours, built on them:
   `packages/ui/src/styles/globals.css`, with a `.dark` set. Use the Tailwind
   names (`bg-background`, `text-muted-foreground`, `bg-primary`), never raw
   colours.
-- The prototype's look ([gifting-prototype.html](gifting-prototype.html)):
-  navy ink `#012754` on white, one blue accent `#2570C5` (`--primary`),
-  soft borders `#E2E9F2`, a 12px radius. Dark mode uses the prototype's
-  night navy `#0A1F3D`.
+- The palette is the prototype's (28 Oct 2026): navy text `#012754`, blue
+  actions `#2570C5`, soft blue-grey surfaces, with a derived navy set for
+  dark mode. Beyond shadcn's tokens there are status tones (`success`,
+  `warning`, `info`, each with a `-soft` background) used by the status
+  badges, and one `tile-<category>` pair per catalog category for product
+  art.
 - DM Sans for text (`font-sans`) and Sora for headings (`font-heading`,
   applied to `h1` to `h3`). Both are self-hosted by `next/font`
   (`@gifting/ui/lib/fonts`). Each app's root layout puts `fontVariables` on
@@ -121,9 +123,8 @@ Ours, built on them:
   - `UserMenu`: sign-out is a form post;
   - the `Wordmark`.
 
-  `AppShell` takes header `actions`.
-- A `success` token (the prototype's "ok" green, `#147A55`; `#5CC59A` in
-  dark mode) marks things that are met or done.
+  `AppShell` and `SidebarShell` take header `actions` (the dashboard puts
+  the `UserMenu` there).
 - The recipient app sets `--primary` (and `--primary-foreground`) from the
   company's `brandColor` (Business Unit `company-settings`) and shows its
   `logoUrl` in the header. If the brand colour fails contrast, the default
