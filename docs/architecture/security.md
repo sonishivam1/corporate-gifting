@@ -50,6 +50,7 @@ money moving twice. Both are blocked in the database, not only in code.
 
 ## Secrets
 
-- Locally in gitignored `.env` files; in the cloud in AWS Secrets Manager.
+- Locally in gitignored `.env` files; in the cloud in Google Secret Manager, each
+  Cloud Run service reading only its own secrets.
 - `integrations` stores only a reference.
 - Rotate any secret that appears in git, logs, screenshots or chat.

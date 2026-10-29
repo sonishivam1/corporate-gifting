@@ -11,7 +11,95 @@ how it was verified, and any lesson worth keeping.
 
 ---
 
+## 29 Oct 2026
+
+### Sender dashboard merged with the commercetools catalog import
+- **What:** `develop` (commercetools setup, Christie Cookie catalog, five
+  demo companies) merged into the sender dashboard branch. In
+  `infra/seed/src/index.ts` the products keep develop's descriptions and
+  `perishable`, plus the dashboard's `category` and `occasions`.
+  `demoCompanies` is develop's list of five; `demoCompany` is its first
+  entry (Lumen Labs) with the dashboard's team thresholds, approvers and
+  members added.
+- **Why:** both branches changed the seed products and the demo company.
+- **Verified:** lint, typecheck and unit tests after the merge; a new seed
+  test checks that `demoCompany` keeps the same teams as `demoCompanies[0]`.
+
+---
+
 ## 28 Oct 2026
+
+### Prototype palette and single-gift sends
+- **What:** the theme tokens in `packages/ui/src/styles/globals.css` now use
+  the prototype's palette (light, plus a derived dark set), with new
+  `success`, `warning`, `info` and `tile-<category>` tokens. The status
+  badges use them instead of raw Tailwind colours. In the sender app, "Let
+  them choose" and the Home collections strip are hidden behind
+  `LET_THEM_CHOOSE` in `apps/sender/lib/features.ts`.
+- **Why:** review feedback: the neutral shadcn theme read as black and
+  white, and sends should offer one specific gift for now.
+- **Verified:** lint and typecheck for `packages/ui` and `apps/sender`; the
+  served CSS carries the new tokens; the running app no longer shows the
+  hidden option.
+
+### Sender dashboard: Home, Browse gifts, Campaigns and the send flow
+- **What:** the first working screens, built ahead of M1 to M3 as agreed in
+  the [sender dashboard plan](../plans/sender-dashboard.md) (POC plan
+  change 1).
+  - `@gifting/domain`: campaign `greeting`, `recipientIds` and `reminders`;
+    account `holdsUpdatedAt`; pure rules for the estimate, approval,
+    delivery channel, funnel and collection matching; API view schemas
+    shared with the apps.
+  - API modules `accounts`, `ledger`, `catalog`, `recipients`, `gifts` and
+    `campaigns` with 15 routes. Development sign-in from headers. Submit
+    and approve run in one MongoDB transaction with holds.
+  - `infra/seed`: categories, occasions and descriptions on products; the
+    demo company's thresholds, approvers and members; collections;
+    directory; opening top-ups. `pnpm seed:demo` writes them.
+  - `@gifting/ui`: `sidebar-shell`, `choice-card`, `greeting-card`,
+    `campaign-status-badge`, `qr-code` (with `qrcode`), `lib/toast`.
+  - `apps/sender`: Home, Browse gifts, Campaigns, campaign detail with
+    approve and decline, and the four-step send flow with a Done screen.
+  - `pnpm dev:all`, an API startup check for MongoDB, integration tests
+    with a MongoDB service container in CI.
+- **Why:** a demoable sender path early, on the real module boundaries.
+- **Verified:** lint, typecheck, unit tests and build pass. 29 integration
+  tests pass. Break and restore: dropping the team filter, the account
+  lock or the balance check each fails a test. The balance check first
+  failed nothing, which exposed an untested path (approving after the
+  budget ran down); that test was added. Pages render against the seeded
+  demo data.
+- **Learned:**
+  - Break and restore earns its keep: a guard can pass every test because
+    another guard covers the tested path, and still be the only guard on
+    an untested one.
+  - Atlas Local stores the container hostname in its replica set config;
+    pin `hostname` or a recreated container comes back with no primary.
+  - It also answers pings before it elects a primary, so wait for
+    `isWritablePrimary` before writing.
+  - In Next.js, never call `cookies()` inside a `try` whose `catch` swallows
+    everything: it hides the signal that marks a page dynamic, and the
+    build then tries to prerender it.
+  - Gift links can be shown only once when only their hashes are stored,
+    so `links.csv` as a later download doesn't fit; the Done screen offers
+    the CSV instead.
+
+### Cloud environment moves from AWS to Google Cloud (ADR 0014)
+- **What:** the planned POC cloud is now Google Cloud in `us-central1`, the
+  same region as the commercetools project
+  ([ADR 0014](../architecture/decisions/0014-google-cloud.md)):
+  - Cloud Run for the apps, API and worker;
+  - a load balancer with Cloud CDN and Cloud Armor;
+  - Pub/Sub for commercetools events, with a dead-letter topic;
+  - Secret Manager, Artifact Registry, and Workload Identity Federation
+    for CI;
+  - MongoDB Atlas on GCP;
+  - SendGrid for email.
+
+  ADR 0009 now offers Google Cloud Identity Platform instead of Cognito.
+  Deployment, configuration, operations, security, integrations, the
+  overview and the POC plan are updated.
+- **Why:** we have paid Google Cloud capacity. No code depended on AWS.
 
 ### commercetools holds everything the gifting flows need, except the subscription
 - **What:**
@@ -125,6 +213,8 @@ how it was verified, and any lesson worth keeping.
   M7).
 - **Why:** the team works in parallel from `develop`, and QA tests a stable
   `qa` while new work continues.
+
+---
 
 ## 27 Oct 2026
 

@@ -14,7 +14,7 @@ page is the runbook they will follow.
 | `stuck-claim-reconciler` | Every 5 minutes | A gift stays `redeeming` for more than 15 minutes |
 | `ledger-reconciliation` | Hourly | Any mismatch |
 | `statements` | 1st of the month | A statement fails |
-| `ct-events` | Continuous | Dead-letter queue not empty |
+| `ct-events` | Continuous | Dead-letter topic not empty (Cloud Monitoring alert) |
 | `hr-sync` | Nightly | A sync fails twice in a row |
 
 ## Reconciliation
@@ -40,7 +40,7 @@ writes an `adjustment` with a reason if money must move.
 | Recipient lost the link | Sender uses Resend; the token stays the same. If the link leaked, Cancel and create a new gift. |
 | Balance looks wrong | Run the reconciliation report for the account; read the ledger entries; correct only with an `adjustment`. |
 | Duplicate commercetools events | Expected; `processedEvents` drops them. If the DLQ fills, inspect and replay. |
-| Secret leaked | Rotate it in the provider, update Secrets Manager, redeploy. Record it in the build log. |
+| Secret leaked | Rotate it in the provider, add a new version in Secret Manager, redeploy the Cloud Run services that read it. Record it in the build log. |
 
 ## Logs
 

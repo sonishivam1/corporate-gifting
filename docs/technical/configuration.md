@@ -3,7 +3,7 @@
 Configuration is environment variables only. In development every service
 reads the root `.env` (gitignored), copied from
 [`.env.example`](../../.env.example). In deployed environments they are set
-from AWS Secrets Manager. Each package validates the variables it needs with
+from Google Secret Manager. Each package validates the variables it needs with
 Zod at start-up and fails fast with the variable's name (never its value).
 
 ## Variables
@@ -33,11 +33,11 @@ Planned, as features land:
 
 | Variable | For | Milestone |
 | --- | --- | --- |
-| `AUTH0_*` or `COGNITO_*` | Sign-in (ADR 0009) | M1 |
+| `AUTH0_*` or `GCP_IDENTITY_*` | Sign-in (ADR 0009) | M1 |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Top-ups (test mode) | M1 |
-| `SES_*` or `SENDGRID_API_KEY` | Email in the cloud | M3 |
+| `SENDGRID_API_KEY` | Email in the cloud | M3 |
 | `TOKEN_PEPPER` | Extra secret mixed into gift token hashes | M3 |
-| `SQS_CT_EVENTS_URL` | commercetools subscription queue | M4 |
+| `GCP_PROJECT_ID`, `PUBSUB_CT_EVENTS_SUBSCRIPTION` | The Pub/Sub subscription the worker reads commercetools events from | M4 |
 | `TWILIO_*` | SMS | M5 |
 | `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET`, `SLACK_SIGNING_SECRET` | Slack app | M5 |
 | `TEAMS_APP_ID`, `TEAMS_APP_PASSWORD` | Teams bot | M5 |

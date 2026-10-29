@@ -1,4 +1,4 @@
-# 0009 — A hosted identity provider (Auth0 or Cognito)
+# 0009 — A hosted identity provider (Auth0 or Google Cloud Identity Platform)
 
 **Status:** Proposed (27 Oct 2026). Decide before M1.
 
@@ -14,7 +14,7 @@ is. SSO per company is a "later" feature but should not need a rewrite.
 | Option | For | Against |
 | --- | --- | --- |
 | Auth0 | Fast setup, magic links, organisations, SAML/OIDC later | Cost at scale |
-| Amazon Cognito | Fits an AWS deployment, cheap | Rougher developer experience; SSO setup is more work |
+| Google Cloud Identity Platform | Fits our Google Cloud deployment ([ADR 0014](0014-google-cloud.md)), cheap, SAML and OIDC per tenant | Fewer ready-made B2B features (organisations, invitations) than Auth0 |
 | Build our own | Full control | Security risk, time we don't have |
 
 ## Proposed decision

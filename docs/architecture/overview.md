@@ -49,8 +49,8 @@ flowchart TB
   worker["Worker<br/>jobs and event consumer"]
   db[("MongoDB Atlas")]
   ct["commercetools<br/>Business Units · products · carts<br/>payments · orders · deliveries"]
-  queue["Queue (SQS)<br/>Subscription messages"]
-  idp["Identity provider<br/>Auth0 or Cognito"]
+  queue["Queue (Pub/Sub)<br/>Subscription messages"]
+  idp["Identity provider<br/>Auth0 or Identity Platform"]
   stripe["Stripe (test mode)"]
   chan["Email · SMS · Slack · Teams"]
   hr["Unified HR API"]
@@ -192,6 +192,7 @@ Apps may import only `@gifting/domain` and `@gifting/ui`.
 ## Deployment
 
 Local: Docker Compose (MongoDB Atlas Local, Mailpit) and a commercetools
-sandbox project. POC cloud: one environment, for example AWS App Runner or
-ECS, with MongoDB Atlas and SQS for commercetools subscriptions. See
-[deployment](../technical/deployment.md).
+sandbox project. POC cloud: Google Cloud in `us-central1`
+([ADR 0014](decisions/0014-google-cloud.md)). The apps, API and worker run
+on Cloud Run, with MongoDB Atlas on GCP and Pub/Sub for commercetools
+subscriptions. See [deployment](../technical/deployment.md).
