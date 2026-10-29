@@ -8,7 +8,7 @@ import { connection } from "next/server";
 import type { ReactNode } from "react";
 
 import { Shell } from "@/components/shell";
-import { ApiCallError, getBalance, getMe, getWorkspace } from "@/lib/api";
+import { ApiCallError, getBalance, getCampaigns, getMe, getWorkspace } from "@/lib/api";
 
 import { signOutAction } from "../actions";
 
@@ -18,16 +18,23 @@ async function loadWorkspace() {
     if (err instanceof ApiCallError) return err;
     throw err;
   });
-  if (workspace instanceof ApiCallError) return { workspace: null, balance: null, problem: workspace.message };
+  if (workspace instanceof ApiCallError) return { workspace: null, balance: null, pendingApprovals: 0, problem: workspace.message };
   // The balance is the first read from the database: if that is down, say so here rather than fail every page.
   const balance = await getBalance(workspace.team.key).catch((err: unknown) => {
     if (err instanceof ApiCallError) return err;
     throw err;
   });
   if (balance instanceof ApiCallError) {
-    return { workspace, balance: null, problem: balance.code === "database_unavailable" ? balance.message : null };
+    return { workspace, balance: null, pendingApprovals: 0, problem: balance.code === "database_unavailable" ? balance.message : null };
   }
-  return { workspace, balance, problem: null };
+  // For the bell: a failure here only hides the count.
+  const pendingApprovals = await getCampaigns("pending_approval", 1)
+    .then((list) => list.counts.pending_approval)
+    .catch((err: unknown) => {
+      if (err instanceof ApiCallError) return 0;
+      throw err;
+    });
+  return { workspace, balance, pendingApprovals, problem: null };
 }
 
 /**
@@ -59,10 +66,10 @@ export default async function SignedInLayout({ children }: { children: ReactNode
   }
 
   const { me } = result;
-  const { workspace, balance, problem } = await loadWorkspace();
+  const { workspace, balance, pendingApprovals, problem } = await loadWorkspace();
   const name = [me.firstName, me.lastName].filter(Boolean).join(" ") || me.email;
   return (
-    <Shell me={workspace} balance={balance} account={{ name, email: me.email, detail: me.companyName ?? undefined }} signOut={signOutAction}>
+    <Shell me={workspace} balance={balance} pendingApprovals={pendingApprovals} account={{ name, email: me.email, detail: me.companyName ?? undefined }} signOut={signOutAction}>
       {problem ? (
         <Alert variant="destructive" className="mt-8">
           <CircleAlertIcon />

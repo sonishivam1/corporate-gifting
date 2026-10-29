@@ -1,18 +1,17 @@
-/** The account emails (ADR 0015): plain, short, and in the product's voice. */
+/** The account emails (ADR 0015): short, in the product's voice, in the branded layout (mail/layout.ts). */
+import { brandedEmail } from "../../mail/layout";
 import type { Email } from "../../mail/mailer";
 
-const escape = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
-
-function email(to: string, subject: string, lines: string[], link: { href: string; label: string }): Email {
-  const text = [...lines, "", `${link.label}: ${link.href}`, "", "If you didn't ask for this, you can ignore this email.", "", "Gifting"].join("\n");
-  const html = [
-    ...lines.map((l) => `<p>${escape(l)}</p>`),
-    `<p><a href="${escape(link.href)}" style="display:inline-block;padding:10px 16px;border-radius:8px;background:#2570C5;color:#fff;text-decoration:none">${escape(link.label)}</a></p>`,
-    `<p style="color:#59728F;font-size:13px">If you didn't ask for this, you can ignore this email.</p>`,
-  ].join("\n");
-  return { to, subject, text, html };
-}
-
 export function verificationEmail(to: string, firstName: string | null, link: string, ttlMinutes: number): Email {
-  return email(to, "Verify your email for Gifting", [`Hi${firstName ? ` ${firstName}` : ""},`, `Confirm your email address to finish creating your Gifting account. The link works for ${ttlMinutes} minutes.`], { href: link, label: "Verify my email" });
+  return brandedEmail({
+    to,
+    subject: "Verify your email for Gifting",
+    preheader: "One click to confirm your email and finish setting up your Gifting account.",
+    heading: "Confirm your email address",
+    greeting: `Hi${firstName ? ` ${firstName}` : " there"},`,
+    paragraphs: ["Thanks for signing up for Gifting. Confirm this is your email address to finish creating your account and start sending gifts."],
+    button: { label: "Verify my email", href: link },
+    afterButton: `This link expires in ${ttlMinutes} minutes. If it has expired, you can ask for a new one when you sign in.`,
+    note: "You're receiving this because this address was used to create a Gifting account. If that wasn't you, you can ignore this email: nobody can sign in with this address until it's confirmed.",
+  });
 }

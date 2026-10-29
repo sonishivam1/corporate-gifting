@@ -11,6 +11,7 @@ import {
   type GiftLinkView,
   type GiftRowView,
   type GiftStatus,
+  type OverviewGift,
   type RecipientView,
 } from "@gifting/domain";
 import type { ClientSession } from "mongodb";
@@ -83,6 +84,7 @@ export function createGiftsService(deps: AppDeps, services: { recipients: Recipi
           tokenHash: secret.tokenHash,
           codeHash: secret.codeHash,
           status: input.status,
+          statusAt: { [input.status]: now },
           version: 0,
           expiresAt,
           claim: null,
@@ -117,13 +119,23 @@ export function createGiftsService(deps: AppDeps, services: { recipients: Recipi
       await c().gifts.updateMany(
         { ...filter, _id: { $in: gifts.map((g) => g._id) } },
         {
-          $set: { status: input.to, updatedAt: now, ...(placesHold ? { holdNo: 1 } : {}) },
+          $set: { status: input.to, [`statusAt.${input.to}`]: now, updatedAt: now, ...(placesHold ? { holdNo: 1 } : {}) },
           $inc: { version: 1 },
           ...(input.to === "sent" ? { $push: { notifications: sendNotification(deliveryChannel(input.campaign.channels), now) } } : {}),
         },
         { session: input.session },
       );
       return gifts;
+    },
+
+    /** The team's gifts that went out from `since` on, or are still open: what the Home overview counts. */
+    async forOverview(teamKey: string, since: Date): Promise<OverviewGift[]> {
+      return c()
+        .gifts.find(
+          { teamKey, $or: [{ "statusAt.sent": { $gte: since } }, { createdAt: { $gte: since } }, { status: { $in: ["sent", "opened"] } }] },
+          { projection: { _id: 0, status: 1, statusAt: 1, expiresAt: 1, createdAt: 1 } },
+        )
+        .toArray();
     },
 
     /** Gift statuses per campaign, for funnels. */

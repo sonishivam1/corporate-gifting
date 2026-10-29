@@ -27,6 +27,8 @@ export const INDEXES: Record<CollectionName, IndexDescription[]> = {
   ],
   campaigns: [
     { key: { teamKey: 1, status: 1 }, name: "teamKey_status" },
+    // The Home overview: a team's gifts by when they went out.
+    { key: { teamKey: 1, "statusAt.sent": 1 }, name: "teamKey_statusAt.sent" },
     { key: { type: 1, status: 1 }, name: "type_status" },
   ],
   gifts: [

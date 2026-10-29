@@ -23,6 +23,9 @@ export default async function CampaignsPage({ searchParams }: PageProps<"/campai
   const raw = await searchParams;
   const { status } = campaignListQuery.catch({ status: "all", limit: 100 }).parse({ status: raw.status });
   const [me, list] = await Promise.all([getWorkspace(), getCampaigns(status)]);
+  // The top bar's search: campaign names containing the words, in this team's list.
+  const q = typeof raw.q === "string" ? raw.q.trim().slice(0, 100) : "";
+  const shown = q ? list.campaigns.filter((c) => c.name.toLowerCase().includes(q.toLowerCase())) : list.campaigns;
 
   return (
     <div className="grid gap-6 pt-4">
@@ -66,6 +69,15 @@ export default async function CampaignsPage({ searchParams }: PageProps<"/campai
           ))}
         </nav>
 
+        {q ? (
+          <p className="text-sm text-muted-foreground">
+            {shown.length} {shown.length === 1 ? "campaign matches" : "campaigns match"} &ldquo;{q}&rdquo;.{" "}
+            <Link href={status === "all" ? "/campaigns" : `/campaigns?status=${status}`} className="text-primary underline-offset-4 hover:underline">
+              Clear search
+            </Link>
+          </p>
+        ) : null}
+
         <Card className="py-0">
           <Table>
             <TableHeader>
@@ -80,14 +92,14 @@ export default async function CampaignsPage({ searchParams }: PageProps<"/campai
               </TableRow>
             </TableHeader>
             <TableBody>
-              {list.campaigns.length === 0 ? (
+              {shown.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
-                    No campaigns here yet.
+                    {q ? "No campaigns match your search." : "No campaigns here yet."}
                   </TableCell>
                 </TableRow>
               ) : (
-                list.campaigns.map((c) => (
+                shown.map((c) => (
                   <TableRow key={c.id} className="relative">
                     <TableCell>
                       {/* The link covers the row, so the whole row is clickable. */}
