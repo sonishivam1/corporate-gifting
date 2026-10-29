@@ -25,7 +25,7 @@ week 1.
 | Payment | Method `company-balance`, amount = cart total, one successful `Charge` transaction whose interaction id is the ledger capture key |
 | Order | `orderNumber` `GFT-<giftId>` (unique: no second order per gift); custom type `gift-order`: `giftId`, `campaignId`, `companyKey`, `teamKey`, `vendorKey` |
 | Shipments | Deliveries and Parcels with tracking added by Fulfillment; shipment state set on the order |
-| Subscriptions | `OrderCreated`, `OrderStateChanged`, `OrderShipmentStateChanged`, delivery and parcel messages to SQS; deduplicated by message id |
+| Subscriptions | `OrderCreated`, `OrderStateChanged`, `OrderShipmentStateChanged`, delivery and parcel messages to a Google Cloud Pub/Sub topic; deduplicated by message id |
 
 ## The redemption order
 

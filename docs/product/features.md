@@ -85,7 +85,7 @@ through a unified HR API. Personal fields are encrypted at rest and purged
 after a configurable retention period.
 
 ### Delivery channels — Channel interface scaffolded; Planned (M3, M5)
-Email (SES or SendGrid) and links and QR codes in M3. SMS (Twilio), Slack and
+Email (SendGrid) and links and QR codes in M3. SMS (Twilio), Slack and
 Microsoft Teams come in M5. Every channel implements `send`, `remind` and a
 status webhook. Reminders follow a per-company cadence and stop at
 redemption. Details: [channels and integrations](../architecture/integrations.md).

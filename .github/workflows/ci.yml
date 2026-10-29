@@ -1,13 +1,14 @@
-# Every push to main and every pull request: lint, typecheck, unit tests,
-# integration tests and a production build. No secrets: CI never calls
-# commercetools and never sends a message. The only database is a throwaway
-# MongoDB container that lives for this job; each integration test file uses
-# its own gifting_test_* database on it.
+# Every push to main, qa and develop, and every pull request: lint, typecheck,
+# unit tests, integration tests and a production build. No secrets: CI never
+# calls commercetools and never sends a message. The only database is a
+# throwaway MongoDB container that lives for this job; each integration test
+# file uses its own gifting_test_* database on it.
+# Branch flow: docs/engineering/git-workflow.md.
 name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, qa, develop]
   pull_request:
 
 permissions:
