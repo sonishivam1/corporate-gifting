@@ -29,7 +29,7 @@ colour).
 | `packages/ui/src/components/*.tsx` | Every shadcn component, plus our composed ones |
 | `packages/ui/src/hooks/*.ts` | `use-mobile`, `use-highlighted-code` |
 | `packages/ui/src/lib/` | `utils.ts` (`cn`), `highlighter.tsx` |
-| `packages/ui/src/styles/globals.css` | Tailwind 4, shadcn tokens (light and dark), base styles; `@source` covers every app |
+| `packages/ui/src/styles/globals.css` | Tailwind 4, shadcn tokens (light; a dark set kept but unused), base styles; `@source` covers every app |
 | `apps/*/components.json` | Points the CLI at `packages/ui` |
 | `apps/*/postcss.config.mjs` | Re-exports `@gifting/ui/postcss.config` |
 | `apps/*/app/layout.tsx` | Imports `@gifting/ui/globals.css`; wraps pages in `ThemeProvider` and `TooltipProvider`; renders `Toaster` |
@@ -86,7 +86,7 @@ Ours, built on them:
 | --- | --- |
 | `app-shell` | Page frame: product and app name, title |
 | `gift-status-badge` | A gift's status in the tone below |
-| `theme-provider` | Light and dark mode (next-themes, `class` strategy, follows the system) |
+| `theme-provider` | Light for everyone (next-themes with `forcedTheme="light"`), whatever the device's setting. The dark tokens stay in the stylesheet, turned off |
 
 ## Likely use per app
 

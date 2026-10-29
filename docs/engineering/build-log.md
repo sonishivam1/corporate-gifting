@@ -13,6 +13,15 @@ how it was verified, and any lesson worth keeping.
 
 ## 29 Oct 2026
 
+### Light for everyone
+- **What:** the shared theme provider forces the light theme in every app.
+  Before, it followed each device's light or dark setting.
+- **Why:** teammates on dark-mode machines saw a navy app while others saw
+  the light design. The prototype is light, and demos should look the same
+  everywhere (Shivam). The dark tokens stay in `globals.css`, unused.
+- **Verified:** with the device set to dark, the sign-in page renders light
+  (no `dark` class, white background). Lint, typecheck and the build pass.
+
 ### Sender Home as an overview
 - **What:**
   - Home keeps the prototype's features in the overview look Shivam

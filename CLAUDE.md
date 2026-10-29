@@ -102,7 +102,7 @@ packages/ct/src/                       commercetools client and helpers (connect
 packages/channels/src/                 Channel interface, registry, adapters
 packages/logger/src/                   createLogger() with redaction
 packages/ui/src/components/            every shadcn/ui component, plus app-shell, gift-status-badge, theme-provider
-packages/ui/src/styles/globals.css     the one stylesheet: Tailwind, shadcn tokens, light and dark
+packages/ui/src/styles/globals.css     the one stylesheet: Tailwind, shadcn tokens (every app is light only)
 infra/ct-setup/                        drafts and scripts for the commercetools project
 infra/seed/                            fictional vendors, products and demo customers
 infra/catalog/                         client catalog extract and import (code only; data in .data/, gitignored)
