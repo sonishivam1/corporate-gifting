@@ -18,7 +18,7 @@ import type { ClientSession } from "mongodb";
 import type { AppDeps } from "../../deps";
 import type { RecipientsService } from "../recipients/service";
 
-const sha256 = (value: string) => createHash("sha256").update(value).digest("hex");
+export const sha256 = (value: string) => createHash("sha256").update(value).digest("hex");
 
 // Short codes avoid look-alike characters (no I, L, O, U, 0, 1).
 const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTVWXYZ23456789";

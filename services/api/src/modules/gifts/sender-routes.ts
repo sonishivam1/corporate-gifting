@@ -14,6 +14,7 @@ export function senderGiftRoutes(channels: ChannelsService, actions: GiftActions
       method: "POST",
       auth: "workspace",
       url: "/v1/gifts/:id/resend",
+      rateLimit: { max: 20, timeWindow: "1 minute" },
       schema: { params: id, response: z.object({ result: z.enum(["sent", "failed"]) }) },
       handler: async ({ params, request }) => ({ result: await channels.resend(requireSession(request), params.id) }),
     }),
@@ -21,6 +22,7 @@ export function senderGiftRoutes(channels: ChannelsService, actions: GiftActions
       method: "POST",
       auth: "workspace",
       url: "/v1/gifts/:id/cancel",
+      rateLimit: { max: 20, timeWindow: "1 minute" },
       schema: { params: id, response: z.object({ cancelled: z.literal(true) }) },
       handler: async ({ params, request }) => {
         await actions.cancel(requireSession(request), params.id);

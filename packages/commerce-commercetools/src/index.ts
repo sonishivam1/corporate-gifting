@@ -2,8 +2,10 @@ import { CONTRACT_VERSION, defineConnector } from "@gifting/commerce";
 import { createCtApi, loadCtConfig } from "@gifting/ct";
 
 import { createCtAccounts, loadSignInClientConfig } from "./accounts";
+import { createCtOrderPlacer, orderWritesAllowed } from "./orders";
 
 export { createCtAccounts, loadSignInClientConfig, signInScopeProblem } from "./accounts";
+export { BALANCE_PAYMENT_TYPE_KEY, createCtOrderPlacer, GIFT_ORDER_TYPE_KEY, orderWritesAllowed } from "./orders";
 
 /**
  * COMMERCE_CONNECTOR=commercetools. Settings: the CTP_* variables (the
@@ -18,6 +20,7 @@ export default defineConnector(({ env, log }) => {
     contractVersion: CONTRACT_VERSION,
     capabilities: { signIn: "password" },
     accounts,
+    orders: createCtOrderPlacer(createCtApi(ct), { allowWrites: orderWritesAllowed(ct), storeKey: ct.storeKey, ...(env.CTP_SHIPPING_METHOD_KEY ? { shippingMethodKey: env.CTP_SHIPPING_METHOD_KEY } : {}) }),
     async check() {
       // Refuse to start with an admin sign-in client: its customer tokens would carry full project access.
       await accounts.assertSignInClientScopes();

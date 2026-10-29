@@ -8,6 +8,8 @@ import { createChannelsService } from "./channels/service";
 import { catalogRoutes } from "./catalog/routes";
 import { createCatalogService } from "./catalog/service";
 import { createGiftActions } from "./gifts/actions";
+import { createRedeemService } from "./gifts/redeem";
+import { recipientRoutes } from "./gifts/recipient-routes";
 import { giftsRoutes } from "./gifts/routes";
 import { senderGiftRoutes } from "./gifts/sender-routes";
 import { createGiftsService } from "./gifts/service";
@@ -33,6 +35,7 @@ export function buildModules(deps: AppDeps): ApiModule[] {
   const recipients = createRecipientsService(deps);
   const gifts = createGiftsService(deps, { recipients });
   const channels = createChannelsService(deps, { recipients });
+  const redeem = createRedeemService(deps, { catalog, ledger, recipients });
   const giftActions = createGiftActions(deps, { ledger });
   const campaigns = createCampaignsService(deps, { catalog, ledger, recipients, gifts, channels });
 
@@ -42,7 +45,7 @@ export function buildModules(deps: AppDeps): ApiModule[] {
     { name: "catalog", milestone: "M2", routes: catalogRoutes(catalog) },
     { name: "campaigns", milestone: "M3", routes: campaignsRoutes(campaigns) },
     { name: "recipients", milestone: "M5", routes: recipientsRoutes(recipients) },
-    { name: "gifts", milestone: "M3", routes: [...giftsRoutes(gifts, campaigns), ...senderGiftRoutes(channels, giftActions)] },
+    { name: "gifts", milestone: "M3", routes: [...giftsRoutes(gifts, campaigns), ...senderGiftRoutes(channels, giftActions), ...recipientRoutes(redeem)] },
     { name: "fulfillment", milestone: "M4", routes: [] },
     { name: "channels", milestone: "M3", routes: [] },
     { name: "integrations", milestone: "M1", routes: [] },
