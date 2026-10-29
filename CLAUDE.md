@@ -52,7 +52,10 @@ Node 24 and pnpm 10. On Windows with fnm, prefix commands with
 | `pnpm db:indexes` | Create the MongoDB indexes (`packages/db`) |
 | `pnpm seed:demo` | Write the demo company's accounts, top-ups, collections and directory to MongoDB; safe to repeat |
 | `pnpm ct:plan` | Print the commercetools setup drafts (store, channels, types); no calls |
-| `pnpm ct:apply` | Create the missing ones in the sandbox project from `.env` (spike and M0 only; not yet run against a real project) |
+| `pnpm ct:apply` | Set up the project from `.env`: types, product types, tax, zone and shipping, channels, store, associate roles, gift categories. Creates what's missing and adds missing fields and attributes; safe to re-run |
+| `pnpm seed` | Import the fictional products and stock, 250 demo customers, and 5 demo companies with 10 teams (Business Units) through the Import API (run `ct:apply` first) |
+| `pnpm catalog:extract` | Read the Christie Cookie storefront into `.data/catalogs/christie-cookie.json` (gitignored; with the client's permission) |
+| `pnpm catalog:import` / `pnpm catalog:remove` | Import that snapshot into the project (vendor channel, categories, products with images, stock), or delete it all again |
 | `pnpm worker` | Start the worker (today: lists the registered jobs) |
 
 | App or service | Port |
@@ -90,7 +93,8 @@ packages/logger/src/                   createLogger() with redaction
 packages/ui/src/components/            every shadcn/ui component, plus app-shell, gift-status-badge, theme-provider
 packages/ui/src/styles/globals.css     the one stylesheet: Tailwind, shadcn tokens, light and dark
 infra/ct-setup/                        drafts and scripts for the commercetools project
-infra/seed/                            fictional vendors and products
+infra/seed/                            fictional vendors, products and demo customers
+infra/catalog/                         client catalog extract and import (code only; data in .data/, gitignored)
 docs/                                  product, architecture, engineering, plans, technical
 docs/engineering/build-log.md          history of every change, newest first
 ```
@@ -194,9 +198,14 @@ that module's exported service, never its collections.
   `@gifting/db`, `@gifting/ct` or `@gifting/channels`.
 
 **Demo data**
-- `infra/seed` holds fictional vendors, brands, products and companies, with
-  `.example` domains only. Use no real companies, people or brands, and no
-  customer figures.
+- `infra/seed` holds fictional vendors, brands, products, companies and
+  customers, with `.example` domains only. Use no real companies, people or
+  brands, and no customer figures.
+- The one exception is the client's own catalog (Christie Cookie), used with
+  their written permission. It lives only in `.data/` (gitignored) and in the
+  commercetools project, never in git, tests, docs or screenshots. Its vendor
+  contact address stays a `.example` placeholder, so the POC never emails
+  the real company. Never collect people's data from any site.
 
 ## Definition of done for a milestone step
 
@@ -225,8 +234,10 @@ that module's exported service, never its collections.
   files.
 - Tests never touch a shared database. Database tests use throwaway
   `gifting_test_*` databases, and `assertTestDb()` guards them.
-- `pnpm ct:apply` targets only the sandbox project named in `.env` and
-  refuses a project key without `sandbox` or `dev` in it.
+- `pnpm ct:apply`, `pnpm seed` and `pnpm catalog:*` write only to the project named in `.env`,
+  and refuse a project key without `sandbox` or `dev` in it unless
+  `CTP_SETUP_PROJECT_KEY` names that exact key (the POC project
+  `corporate-gifting`). Never set it for a client's live project.
 - Commit and push only when asked. Work branches start from `develop` and
   return to it by pull request; `develop` → `qa` → `main` are promotions
   ([git workflow](docs/engineering/git-workflow.md)). Before committing, scan

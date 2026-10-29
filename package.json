@@ -20,7 +20,10 @@
     "ct:plan": "pnpm --filter @gifting/ct-setup plan",
     "ct:apply": "pnpm --filter @gifting/ct-setup apply",
     "seed": "pnpm --filter @gifting/seed seed",
-    "seed:demo": "pnpm --filter @gifting/seed seed:demo"
+    "seed:demo": "pnpm --filter @gifting/seed seed:demo",
+    "catalog:extract": "pnpm --filter @gifting/catalog run extract",
+    "catalog:import": "pnpm --filter @gifting/catalog run import",
+    "catalog:remove": "pnpm --filter @gifting/catalog run remove"
   },
   "devDependencies": {
     "@eslint/js": "^9",

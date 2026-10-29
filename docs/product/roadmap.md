@@ -8,7 +8,7 @@ commitments. Owners are suggestions to confirm.
 **This file is updated with every milestone step**, together with
 [features.md](features.md) and the README progress table.
 
-_Last updated: 28 Oct 2026 (sender dashboard built ahead of M1 to M3; see [change 1](../plans/poc-plan.md#changes-after-agreement))._
+_Last updated: 29 Oct 2026 (commercetools POC project set up and seeded, Christie Cookie catalog and 250 demo customers imported; sender dashboard built ahead of M1 to M3, see [change 1](../plans/poc-plan.md#changes-after-agreement))._
 
 ## Where we are
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { demoCollections, demoCompany, demoDirectory, demoTopUps, products, vendors } from "./index";
+import { demoCollections, demoCompanies, demoCompany, demoDirectory, demoTopUps, products, vendors } from "./index";
 
 describe("seed data", () => {
   it("has 3 to 5 vendors, each with products", () => {
@@ -33,13 +33,25 @@ describe("seed data", () => {
   });
 
   it("uses commercetools-safe keys", () => {
-    for (const key of [...vendors.map((v) => v.key), demoCompany.key, ...demoCompany.teams.map((t) => t.key)]) {
+    for (const key of [...vendors.map((v) => v.key), ...demoCompanies.flatMap((c) => [c.key, ...c.teams.map((t) => t.key)])]) {
       expect(key).toMatch(/^[a-z0-9-]{2,256}$/);
     }
+  });
+
+  it("has unique company and team keys, with .example domains", () => {
+    const keys = demoCompanies.flatMap((c) => [c.key, ...c.teams.map((t) => t.key)]);
+    expect(new Set(keys).size).toBe(keys.length);
+    for (const company of demoCompanies) expect(company.domain, company.key).toMatch(/\.example$/);
   });
 });
 
 describe("demo company", () => {
+  it("is the first demo company, with the same teams", () => {
+    const [first] = demoCompanies;
+    expect(demoCompany.key).toBe(first!.key);
+    expect(demoCompany.teams.map((t) => [t.key, t.name])).toEqual(first!.teams.map((t) => [t.key, t.name]));
+  });
+
   it("has an approver on every team who isn't its only sender", () => {
     for (const team of demoCompany.teams) {
       expect(team.approverIds.length, team.key).toBeGreaterThan(0);

@@ -11,6 +11,22 @@ how it was verified, and any lesson worth keeping.
 
 ---
 
+## 29 Oct 2026
+
+### Sender dashboard merged with the commercetools catalog import
+- **What:** `develop` (commercetools setup, Christie Cookie catalog, five
+  demo companies) merged into the sender dashboard branch. In
+  `infra/seed/src/index.ts` the products keep develop's descriptions and
+  `perishable`, plus the dashboard's `category` and `occasions`.
+  `demoCompanies` is develop's list of five; `demoCompany` is its first
+  entry (Lumen Labs) with the dashboard's team thresholds, approvers and
+  members added.
+- **Why:** both branches changed the seed products and the demo company.
+- **Verified:** lint, typecheck and unit tests after the merge; a new seed
+  test checks that `demoCompany` keeps the same teams as `demoCompanies[0]`.
+
+---
+
 ## 28 Oct 2026
 
 ### Prototype palette and single-gift sends
@@ -84,6 +100,106 @@ how it was verified, and any lesson worth keeping.
   Deployment, configuration, operations, security, integrations, the
   overview and the POC plan are updated.
 - **Why:** we have paid Google Cloud capacity. No code depended on AWS.
+
+### commercetools holds everything the gifting flows need, except the subscription
+- **What:**
+  - `ct:apply` now creates more of the project:
+    - the `standard` tax category (demo base rates for the 10 seeded
+      states and a US fallback);
+    - the US zone and a default $8.00 shipping method;
+    - the `company-balance-payment` type;
+    - `approverIds` on `team-settings`;
+    - four gifting attributes on both product types: `perishable`,
+      `shipsTo`, `leadTimeDays`, `minimumAge`;
+    - the owner, admin, approver and sender associate roles;
+    - a `gifts` category tree.
+
+    It also links every vendor channel to the store, and adds missing
+    fields and attributes to existing types instead of skipping them.
+  - `pnpm seed` adds five fictional companies, each with two teams, as
+    Business Units. The 250 demo customers are their associates: an owner
+    and an admin per company, and an approver and senders per team. The
+    fictional products gain descriptions, the tax category, gift
+    categories and the gifting attributes.
+  - `catalog:import` gives Christie Cookie products the tax category, the
+    food-and-treats gift category, and perishable, ships-to-US and lead
+    time.
+- **Why:** so the spikes and M1 to M4 start from a project where a cart can
+  be priced, and the commercetools setup can be handed off.
+- **Verified:**
+  - Import summaries: 289 of 289 operations for the seed and 742 of 742 for
+    the catalog.
+  - Read back: 15 units, 250 associates, 261 published products, every one
+    taxed and in a gift category, and 5 supply channels on the store.
+  - A test cart priced correctly: $57.00 item, $8.00 shipping and 7% TN tax
+    make $69.55. It was deleted afterwards.
+
+### Christie Cookie catalog and demo customers in commercetools
+- **What:**
+  - A new `infra/catalog` package.
+    - `pnpm catalog:extract` reads the Christie Cookie storefront (with
+      their written permission) into `.data/catalogs/christie-cookie.json`.
+      `.data/` is gitignored.
+    - `pnpm catalog:import` imports the snapshot, and `pnpm catalog:remove`
+      deletes it all again.
+  - The project now holds 249 Christie Cookie products (441 variants, 1,369
+    images, USD prices), 51 of their categories under a `christie-cookie`
+    root, and stock at a new `vendor-christie-cookie` channel.
+  - A `cookie-tin` product type adds flavour, piece count, tin colour, item
+    type and a corporate flag to the marketplace attributes.
+  - `pnpm seed` also imports 250 fictional demo customers (`.example`
+    emails, 555-01xx phones, US addresses, `ExternalAuth`).
+  - `runImport` in `@gifting/ct/import` is shared by both imports.
+  - CLAUDE.md now sets out the one exception to fictional demo data: the
+    client's catalog, kept out of git.
+  - Plan and results: [Christie Cookie catalog import](../plans/christie-catalog-import.md).
+- **Why:** the demo shows the client's own tins and enough customers to
+  try campaigns, alongside the fictional vendors.
+- **Verified:**
+  - Import summaries: 742 of 742 (catalog) and 274 of 274 (seed).
+  - The read-back counts match: 249 products, 441 variants, every one with
+    an image and a price, 441 stock entries, 52 categories, 250 customers.
+  - Package tests, lint and typecheck pass.
+- **Lessons:**
+  - The storefront's Next.js flight payload carries the full product
+    record, which is far richer than its schema.org data.
+  - Some images have null alt text, and a strict schema dropped whole
+    products. Make page parsers lenient on optional fields.
+  - The Import API leaves a product `unresolved` until its category
+    exists, so wait while the imported count still grows.
+  - `pnpm import` is one of pnpm's own commands. Call a package script
+    named `import` with `pnpm run import`.
+
+### commercetools project set up and seeded
+- **What:**
+  - The POC project `corporate-gifting` (us-central1) is in use, with its
+    credentials in the gitignored `.env`.
+  - `pnpm ct:apply` created the `gifting` store, the four custom types, the
+    `gift-item` product type and the four fictional vendor channels.
+  - `pnpm seed` now imports through the Import API. It sends 12 products
+    (published, USD price for the US, `brand`, `vendorKey` and `tags`
+    attributes) and 12 stock entries at the vendor channels, then waits for
+    the import summary. The mapping lives in `infra/seed/src/import.ts`, with
+    tests.
+  - `@gifting/ct/import` is a separate entry point for the Import API
+    client, so the services don't bundle the Import SDK.
+  - The drafts write text in `en-US`, the project's language, instead of
+    `en`.
+  - The setup guard accepts a project named exactly in
+    `CTP_SETUP_PROJECT_KEY`, because the POC project's key has no `sandbox`
+    or `dev`.
+  - Proposed: [Christie Cookie catalog import](../plans/christie-catalog-import.md).
+- **Why:** the spikes need a real project with vendors, products and stock.
+- **Verified:**
+  - Package checks: typecheck, lint and tests pass in `ct`, `ct-setup` and
+    `seed`.
+  - The import summary shows 24 of 24 operations imported.
+  - Reading the project back gives 12 published products, prices in cents
+    and 3 stock entries per vendor channel.
+  - A second `ct:apply` skipped all 10 resources.
+- **Lessons:** the project was created with the languages `en-US` and
+  `de-DE`, so text keyed `en` would not match its locales. Check a new
+  project's languages, countries and currencies before writing drafts.
 
 ### On GitHub, with develop, qa and main
 - **What:** the repository is pushed to

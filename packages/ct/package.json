@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./import": "./src/import-client.ts"
   },
   "scripts": {
     "lint": "eslint .",
@@ -12,6 +13,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@commercetools/importapi-sdk": "7.1.2",
     "@commercetools/platform-sdk": "9.7.0",
     "@commercetools/ts-client": "5.1.1",
     "@gifting/domain": "workspace:*",
