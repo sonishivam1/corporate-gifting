@@ -21,7 +21,8 @@ export function dbConfig(source: Record<string, string | undefined> = process.en
 
 /** One client per process. */
 export function getClient(): MongoClient {
-  client ??= new MongoClient(dbConfig().uri, { appName: "corporate-gifting-marketplace" });
+  // Give up on an unreachable server after 5 seconds, not the driver's 30, so a stopped database says so quickly.
+  client ??= new MongoClient(dbConfig().uri, { appName: "corporate-gifting-marketplace", serverSelectionTimeoutMS: 5000 });
   return client;
 }
 

@@ -36,6 +36,11 @@ export async function buildApp(options: { logger?: Logger; deps?: AppDeps; accou
     if (err instanceof ZodError) {
       return reply.status(400).send(errorBody("invalid_request", "The request is not valid."));
     }
+    // The database is down or unreachable: say so, instead of a generic 500.
+    if (/^Mongo(ServerSelection|Network|NotConnected|Topology)/.test((err as Error).name ?? "")) {
+      request.log.warn({ errName: (err as Error).name }, "database unavailable");
+      return reply.status(503).send(errorBody("database_unavailable", "The database isn't reachable. Start it with pnpm db:up."));
+    }
     const status = (err as { statusCode?: number }).statusCode;
     if (status && status >= 400 && status < 500) {
       return reply.status(status).send(errorBody("bad_request", "The request could not be read."));

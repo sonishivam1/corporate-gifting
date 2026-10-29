@@ -19,10 +19,14 @@ async function loadWorkspace() {
     throw err;
   });
   if (workspace instanceof ApiCallError) return { workspace: null, balance: null, problem: workspace.message };
+  // The balance is the first read from the database: if that is down, say so here rather than fail every page.
   const balance = await getBalance(workspace.team.key).catch((err: unknown) => {
-    if (err instanceof ApiCallError) return null;
+    if (err instanceof ApiCallError) return err;
     throw err;
   });
+  if (balance instanceof ApiCallError) {
+    return { workspace, balance: null, problem: balance.code === "database_unavailable" ? balance.message : null };
+  }
   return { workspace, balance, problem: null };
 }
 
