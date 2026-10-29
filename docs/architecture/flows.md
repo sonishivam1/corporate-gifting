@@ -78,7 +78,7 @@ sequenceDiagram
   participant DB as MongoDB
   participant CT as commercetools
   R->>App: open /r/<token>, choose item, enter address
-  App->>API: POST /v1/gifts/redeem {token, sku, address, idempotencyKey}
+  App->>API: POST /v1/r/<token>/redeem {sku, address}, sent by a server action
   API->>DB: find gift by hash(token), check status, expiry, collection
   API->>DB: findOneAndUpdate sent|opened → redeeming (lock + claim)
   API->>CT: create cart: 1 line, vendor supply channel, address, ReserveOnOrder
@@ -91,8 +91,10 @@ sequenceDiagram
 
 - **Step 4** guarantees one order per gift. If it returns `null`, someone else
   is already redeeming, or the gift is redeemed, expired or cancelled.
-- **Step 6** guarantees the company never pays more than it held. If it fails,
-  the item is refused, or the overage is charged to the team where allowed.
+- **Step 6** compares the real total with the hold, which was the budget plus
+  an estimate for shipping and tax. The real cost is always captured. If it is
+  below the hold, the rest is released. If it is above, the part over is debited
+  to the team as an adjustment, and the recipient is never refused over money.
 - **Step 8:** if commercetools returns `OutOfStock`, the gift returns to
   `opened` and the recipient chooses again.
 - **Step 9** writes the gift status and its release, capture and fee entries

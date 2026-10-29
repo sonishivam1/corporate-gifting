@@ -90,7 +90,7 @@ Microsoft Teams come in M5. Every channel implements `send`, `remind` and a
 status webhook. Reminders follow a per-company cadence and stop at
 redemption. Details: [channels and integrations](../architecture/integrations.md).
 
-### Recipient experience and redemption — Planned (M4)
+### Recipient experience and redemption — Built (M4), vendor routing and tracking planned
 The unwrap page shows the greeting in the company's colours and logo. The
 recipient browses the collection with no prices, chooses a variant and enters
 an address. The API locks the gift, builds a commercetools cart, checks the

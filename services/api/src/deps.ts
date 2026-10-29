@@ -25,6 +25,8 @@ export type AppDeps = {
   channels?: ChannelRegistry;
   // Creates the commerce order when a gift is redeemed. Defaults to refusing: order creation is off.
   orders?: OrderPlacer;
+  // Percent of the gift budget held on top, as an estimate for shipping and tax. Defaults to none.
+  giftEstimatePercent?: number;
   // Optional: logs delivery problems. Ids and codes only, never recipient details.
   log?: Logger;
 };
@@ -48,6 +50,15 @@ function defaultChannels(env: Record<string, string | undefined>): ChannelRegist
   return createChannelRegistry([email]);
 }
 
+/** GIFT_ESTIMATE_PERCENT: 0 to 100. A bad value stops the API at start, not at the first send. */
+function estimatePercent(env: Record<string, string | undefined>): number {
+  const raw = env.GIFT_ESTIMATE_PERCENT;
+  if (raw === undefined || raw === "") return 0;
+  const value = Number(raw);
+  if (!(value >= 0 && value <= 100)) throw new Error("GIFT_ESTIMATE_PERCENT must be a number from 0 to 100.");
+  return value;
+}
+
 export function defaultDeps(env: Record<string, string | undefined> = process.env): AppDeps {
   return {
     get client() {
@@ -62,5 +73,6 @@ export function defaultDeps(env: Record<string, string | undefined> = process.en
     recipientBaseUrl: env.RECIPIENT_PUBLIC_URL ?? "http://localhost:3001",
     now: () => new Date(),
     channels: defaultChannels(env),
+    giftEstimatePercent: estimatePercent(env),
   };
 }
