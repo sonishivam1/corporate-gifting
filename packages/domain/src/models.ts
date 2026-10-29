@@ -184,6 +184,8 @@ export const gift = z.object({
   tokenHash: z.string().length(64),
   codeHash: z.string().length(64),
   status: z.enum(GIFT_STATUSES),
+  // When the gift reached each status, written with the change (the overview's dates). Older gifts have none.
+  statusAt: z.partialRecord(z.enum(GIFT_STATUSES), z.date()).optional(),
   version: z.number().int().nonnegative(),
   expiresAt: z.date(),
   claim: giftClaim.nullable(),

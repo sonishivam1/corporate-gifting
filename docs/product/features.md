@@ -27,7 +27,7 @@ Twenty capabilities across ten modules. Sixteen are in the POC.
 | 13 | Branded unwrap page and greeting | Recipient experience | recipient | Yes, theme colours and logo | M4 | Planned |
 | 14 | Reminders, resend, extend, expire | Gifts + Workers | sender | Yes | M3, M6 | Planned |
 | 15 | Vendor order routing and tracking | Fulfillment | vendor | Yes, vendor portal-lite | M4 | Planned |
-| 16 | Tracking dashboard and exports | Reporting | sender | Yes | M6 | Planned |
+| 16 | Tracking dashboard and exports | Reporting | sender | Yes | M6 | Partly built: the Home overview (gifts sent and chosen, expiring soon, daily activity, status breakdown, by 7, 30 or 90 days); exports planned |
 | 17 | Thank-you notes | Gifts | recipient | Later | — | — |
 | 18 | Guaranteed-gift fallback, digital cards, donations | Catalog + Gifts | recipient | Later | — | — |
 | 19 | Public API, webhooks, Zapier | API gateway | — | Later | — | — |
@@ -37,7 +37,7 @@ Twenty capabilities across ten modules. Sixteen are in the POC.
 
 | App | Users | Route root | Status |
 | --- | --- | --- | --- |
-| Sender dashboard | Owner, admin, sender, approver | `apps/sender` (port 3000) | Partly built: Home, Browse gifts, Campaigns, campaign detail and the send flow ([plan](../plans/sender-dashboard.md)) |
+| Sender dashboard | Owner, admin, sender, approver | `apps/sender` (port 3000) | Partly built: Home (overview look, [plan](../plans/sender-home-redesign.md)), Browse gifts, Campaigns with search, campaign detail and the send flow ([plan](../plans/sender-dashboard.md)) |
 | Recipient experience | Recipients (no account) | `apps/recipient` (port 3001), `/r/<token>` | Scaffolded |
 | Vendor portal-lite | Vendor staff | `apps/vendor` (port 3002) | Scaffolded |
 | Ops admin | Platform operator | `apps/ops` (port 3003) | Scaffolded |

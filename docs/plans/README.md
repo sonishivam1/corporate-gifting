@@ -18,6 +18,7 @@ work packages. Each milestone step gets its own plan here when it starts.
 | [M1: sign-in, invitations and member access](m1-sign-in.md) (Auth0) | Accounts | Superseded (29 Oct 2026) |
 | [M1: register and sign in](m1-register-sign-in.md) (B2C, commercetools) | Accounts | Building |
 | [Commerce connectors from day one: accounts first](commerce-connectors.md) | Platform, accounts | ✅ Built (29 Oct 2026) |
+| [Sender Home: the prototype's features, in the overview look](sender-home-redesign.md) | Sender app | ✅ Built (29 Oct 2026) |
 | [Sender dashboard: Home, Browse, Campaigns, send flow](sender-dashboard.md) | Sender app, campaigns | ✅ Built (28 Oct 2026) |
 
 ## Template

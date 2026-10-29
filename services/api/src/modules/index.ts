@@ -15,6 +15,8 @@ import { ledgerRoutes } from "./ledger/routes";
 import { createLedgerService } from "./ledger/service";
 import { recipientsRoutes } from "./recipients/routes";
 import { createRecipientsService } from "./recipients/service";
+import { reportingRoutes } from "./reporting/routes";
+import { createReportingService } from "./reporting/service";
 
 /**
  * The ten modules (docs/architecture/overview.md). Each has its own folder
@@ -35,6 +37,7 @@ export function buildModules(deps: AppDeps): ApiModule[] {
   const channels = createChannelsService(deps, { recipients });
   const giftActions = createGiftActions(deps, { ledger });
   const campaigns = createCampaignsService(deps, { catalog, ledger, recipients, gifts, channels });
+  const reporting = createReportingService(deps, { gifts, ledger, campaigns });
 
   return [
     { name: "accounts", milestone: "M1", routes: [...accountsRoutes, ...workspaceRoutes(deps)] },
@@ -46,6 +49,6 @@ export function buildModules(deps: AppDeps): ApiModule[] {
     { name: "fulfillment", milestone: "M4", routes: [] },
     { name: "channels", milestone: "M3", routes: [] },
     { name: "integrations", milestone: "M1", routes: [] },
-    { name: "reporting", milestone: "M6", routes: [] },
+    { name: "reporting", milestone: "M6", routes: reportingRoutes(reporting) },
   ];
 }

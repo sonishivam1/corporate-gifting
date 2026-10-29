@@ -12,7 +12,7 @@ code and a document disagree, the code is right and the document needs fixing.
 
 | Folder | Read it when you want to know… | Documents |
 | --- | --- | --- |
-| [product/](product/) | what we are building, for whom, and in what order | [Vision](product/vision.md) · [Personas](product/personas.md) · [Features](product/features.md) · [Roadmap](product/roadmap.md) · [Glossary](product/glossary.md) |
+| [product/](product/) | what we are building, for whom, and in what order | [Vision](product/vision.md) · [Personas](product/personas.md) · [Features](product/features.md) · [Roadmap](product/roadmap.md) · [Glossary](product/glossary.md) · [Dashboard research](product/dashboard-research.md) |
 | [architecture/](architecture/) | how the system fits together and why | [Overview](architecture/overview.md) · [Data model](architecture/data-model.md) · [commercetools design](architecture/commercetools.md) · [Money and the ledger](architecture/money-and-ledger.md) · [Key flows](architecture/flows.md) · [Channels and integrations](architecture/integrations.md) · [Security](architecture/security.md) · [Decisions](architecture/decisions/) |
 | [design/](design/) | how the apps look and behave | [Design system](design/design-system.md) |
 | [engineering/](engineering/) | how to work in the codebase | [Getting started](engineering/getting-started.md) · [Conventions](engineering/conventions.md) · [Testing](engineering/testing.md) · [Git workflow](engineering/git-workflow.md) · [Build log](engineering/build-log.md) |
