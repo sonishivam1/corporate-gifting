@@ -13,6 +13,23 @@ how it was verified, and any lesson worth keeping.
 
 ## 29 Oct 2026
 
+### Mailpit and the last of Auth0 removed
+- **What:**
+  - Mailpit is out of `docker-compose.yml`, `.env.example` and the docs.
+    Locally, account emails go to an SMTP provider when one is set, and
+    otherwise to `.data/outbox` (an `.eml` and an `.html` preview). On GCP
+    they go through SendGrid, set as `SMTP_URL` from Secret Manager.
+  - The commercetools `member-profile` type no longer has the
+    `identityIds` field ("Auth0 user ids"). No Auth0 is left in the code;
+    ADR 0009 and the old M1 sign-in plan stay as history.
+- **Why:** neither is used. Sign-in is commercetools customer accounts
+  (ADR 0015), and real emails need a real provider.
+- **Verified:**
+  - `docker compose config` lists only `mongo`;
+  - lint, typecheck, unit tests and the build.
+- **Note:** an existing project keeps its `identityIds` field.
+  `ct:apply` adds missing fields but never removes any, which is harmless.
+
 ### Sender Home as an overview
 - **What:**
   - Home keeps the prototype's features in the overview look Shivam

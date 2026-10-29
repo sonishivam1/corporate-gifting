@@ -60,7 +60,7 @@ Each package gets its own step plan in this folder when it starts.
 | 3.1 | One-time and scheduled campaigns; estimate | Estimate matches the hold formula |
 | 3.2 | Approvals above threshold (approver ≠ sender) | Large campaign waits for approval |
 | 3.3 | Holds on approval; fail fast when short | An approved campaign holds funds |
-| 3.4 | Email channel (Mailpit locally, SendGrid in cloud), links CSV, QR codes | Links emailed; CSV and QR downloadable |
+| 3.4 | Email channel (`.data/outbox` locally, SendGrid in cloud), links CSV, QR codes | Links emailed; CSV and QR downloadable |
 | 3.5 | Gift tokens and short codes; reminders | Token hashed; reminders stop at redemption |
 
 ### M4 Redemption and fulfilment (week 5) — Chetan

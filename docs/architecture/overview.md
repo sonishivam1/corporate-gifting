@@ -194,7 +194,7 @@ Apps may import only `@gifting/domain` and `@gifting/ui`.
 
 ## Deployment
 
-Local: Docker Compose (MongoDB Atlas Local, Mailpit) and a commercetools
+Local: Docker Compose (MongoDB Atlas Local) and a commercetools
 sandbox project. POC cloud: Google Cloud in `us-central1`
 ([ADR 0014](decisions/0014-google-cloud.md)). The apps, API and worker run
 on Cloud Run, with MongoDB Atlas on GCP and Pub/Sub for commercetools

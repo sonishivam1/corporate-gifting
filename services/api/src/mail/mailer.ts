@@ -1,7 +1,7 @@
 /**
  * Account emails (email verification). commercetools doesn't
- * send emails (ADR 0015), so the API does: SMTP to Mailpit locally and
- * SendGrid in the cloud. Outside production, when no SMTP server answers, an
+ * send emails (ADR 0015), so the API does, over SMTP: SendGrid on GCP, or any
+ * provider set in SMTP_URL or SMTP_HOST. Outside production, when no SMTP server answers, an
  * email is written to `.data/outbox` (gitignored) instead, so the flow works
  * without Docker. Emails are never logged: they hold addresses and links.
  */

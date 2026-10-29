@@ -26,7 +26,7 @@ Zod at start-up and fails fast with the variable's name (never its value).
 | `CTP_STORE_KEY` | api | no (`gifting`) | `gifting` | |
 | `CTP_IMPORT_URL` | infra (seed) | no (from `CTP_API_URL`, `api.` → `import.`) | `https://import.us-central1.gcp.commercetools.com` | Import API host |
 | `CTP_SETUP_PROJECT_KEY` | infra | no | `corporate-gifting` | Lets `ct:apply` and `seed` write to this exact project although its key has no `sandbox` or `dev`. Only for the POC project; never a client's live project |
-| `SMTP_URL` | api, worker | no (`smtp://localhost:1025`) | `smtp://localhost:1025` | Mailpit locally. If no SMTP server answers outside production, account emails go to `.data/outbox` |
+| `SMTP_URL` | api, worker | no | `smtp://apikey:<key>@smtp.sendgrid.net:587` | The SMTP provider as one URL (SendGrid on GCP, from Secret Manager). With no SMTP set, or none answering, outside production account emails go to `.data/outbox`. Secret |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` | api | no (port `587`) | `smtp-relay.brevo.com`, `587` | A real email provider, used instead of `SMTP_URL` when `SMTP_HOST` is set. Port 465 is TLS; 587 upgrades with STARTTLS. `SMTP_PASS` is secret |
 | `COMMERCE_CONNECTOR` | api | yes, for sign-in | `commercetools` | The commerce platform: `@gifting/commerce-<name>` must be installed in the API. `memory` keeps customers in memory for local work (refused in production). Unset: register and sign-in answer 503 |
 | `DEV_AUTH` | api | no | `1` | The dashboard's development workspace: "workspace" routes take the demo company's member and team from the `x-dev-user` and `x-dev-team` headers. Never on in production; it never stands in for real sign-in |

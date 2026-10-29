@@ -117,10 +117,10 @@ describe("commercetools drafts", () => {
     for (const customer of demoCustomers()) expect(DEMO_STATE_TAX_RATES[customer.address.state], customer.key).toBeDefined();
   });
 
-  it("give members a profile with their sign-in identities and status, and companies their email domains", () => {
+  it("give members a profile with their access status, and companies their email domains", () => {
     const profile = typeDrafts.find((t) => t.key === "member-profile");
     expect(profile?.resourceTypeIds).toEqual(["customer"]);
-    expect(profile?.fieldDefinitions?.map((f) => f.name)).toEqual(["identityIds", "status", "invitedAt", "invitedBy"]);
+    expect(profile?.fieldDefinitions?.map((f) => f.name)).toEqual(["status", "invitedAt", "invitedBy"]);
     expect(typeDrafts.find((t) => t.key === "company-settings")?.fieldDefinitions?.map((f) => f.name)).toContain("emailDomains");
   });
 });

@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | Node.js | 24 (`.node-version`) | With fnm: `fnm install 24` then `fnm use` in the repo. On Windows you can also run one-off commands with `fnm exec --using=24 -- pnpm.cmd …` |
 | pnpm | 10 | `npm install -g pnpm` (the exact version is in `package.json` `packageManager`) |
-| Docker | Any recent | For local MongoDB (Atlas Local, a replica set) and Mailpit |
+| Docker | Any recent | For local MongoDB (Atlas Local, a replica set) |
 | commercetools | A sandbox project | Only from the spikes on; the scaffold runs without one |
 
 ## First run
@@ -21,7 +21,7 @@ Every service reads the root `.env` (gitignored). The defaults point at local
 Docker and need no accounts.
 
 ```bash
-pnpm db:up        # MongoDB (27017) and Mailpit (8025)
+pnpm db:up        # MongoDB (27017)
 pnpm seed:demo    # the demo company, and 30 days of campaigns and gifts for the Home overview
 pnpm db:indexes   # create the indexes
 pnpm dev          # all apps and the API
@@ -35,7 +35,6 @@ pnpm dev          # all apps and the API
 | http://localhost:3003 | Ops admin |
 | http://localhost:4000/health | API health |
 | http://localhost:4000/v1/meta | API version and modules |
-| http://localhost:8025 | Mailpit (emails sent locally) |
 
 Run one app: `pnpm --filter @gifting/sender dev`. Run the API only:
 `pnpm --filter @gifting/api dev`.
@@ -78,8 +77,8 @@ Accounts are commercetools customers
    `apps/sender/.env.local`, and set `SESSION_SECRET` (`openssl rand -hex 32`).
 3. **Run** `pnpm dev`, open http://localhost:3000/register, and register.
 4. **Find the verification email:**
-   - in Mailpit (http://localhost:8025) when `pnpm db:up` is running;
-   - otherwise in `.data/outbox/` as an `.eml` file;
+   - in `.data/outbox/`: an `.eml` file, and an `.html` preview to open in a
+     browser;
    - or in a real inbox, when `SMTP_HOST` names a provider such as Brevo
      (see [configuration](../technical/configuration.md)). Allow your IP in
      the provider, and use a verified sender whose domain is authenticated

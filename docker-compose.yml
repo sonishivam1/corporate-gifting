@@ -1,6 +1,5 @@
 # Local development only. Atlas Local gives a single-node replica set, so the
-# gift + ledger transactions work exactly as on Atlas. Mailpit catches every
-# email the platform sends (UI at http://localhost:8025).
+# gift + ledger transactions work exactly as on Atlas.
 services:
   mongo:
     image: mongodb/mongodb-atlas-local:8.0
@@ -20,13 +19,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 12
-
-  mailpit:
-    image: axllent/mailpit:v1.27
-    container_name: gifting-mailpit
-    ports:
-      - "1025:1025"
-      - "8025:8025"
 
 volumes:
   gifting-mongo-data:
