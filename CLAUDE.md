@@ -25,6 +25,10 @@ must respect.
   state machine, money, balances) have tests. The repo also has CI,
   commercetools setup drafts and fictional seed data
   ([M0 plan](docs/plans/m0-foundations.md)).
+- **Built ahead of plan (28 Oct):** the [sender dashboard](docs/plans/sender-dashboard.md):
+  Home, Browse gifts, Campaigns and the send flow, on real API routes and
+  MongoDB. Products and the demo company come from `infra/seed` until
+  commercetools is set up; sign-in is development-only (`DEV_AUTH=1`).
 - **Next:** the week-1 [spikes](docs/plans/spikes.md). Spike 1, the
   company-balance order, gates everything in M4. After the spikes comes M1:
   accounts and money.
@@ -38,12 +42,15 @@ Node 24 and pnpm 10. On Windows with fnm, prefix commands with
 | Command | What it does |
 | --- | --- |
 | `pnpm dev` | Every app and the API in watch mode (ports below) |
+| `pnpm dev:all` | `db:up`, `seed:demo` (which also ensures indexes), then `dev`: everything in one command |
 | `pnpm lint` | ESLint in every package |
 | `pnpm typecheck` | `tsc --noEmit` in every package (`next typegen` first in apps) |
 | `pnpm test` | Unit tests in every package (no database, no network) |
+| `pnpm test:integration` | API tests against throwaway `gifting_test_*` databases (needs `pnpm db:up`) |
 | `pnpm build` | Production build of every app and service; must never need a database or commercetools |
-| `pnpm db:up` / `pnpm db:down` | Local MongoDB (Atlas Local) and Mailpit in Docker |
+| `pnpm db:up` / `pnpm db:down` | Local MongoDB (Atlas Local) and Mailpit in Docker; `db:up` waits until MongoDB accepts writes |
 | `pnpm db:indexes` | Create the MongoDB indexes (`packages/db`) |
+| `pnpm seed:demo` | Write the demo company's accounts, top-ups, collections and directory to MongoDB; safe to repeat |
 | `pnpm ct:plan` | Print the commercetools setup drafts (store, channels, types); no calls |
 | `pnpm ct:apply` | Create the missing ones in the sandbox project from `.env` (spike and M0 only; not yet run against a real project) |
 | `pnpm worker` | Start the worker (today: lists the registered jobs) |
@@ -57,7 +64,8 @@ Node 24 and pnpm 10. On Windows with fnm, prefix commands with
 | `services/api` | 4000 |
 
 CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs lint,
-typecheck, tests and the build on every push and pull request. Keep it green.
+typecheck, unit tests, integration tests (against a MongoDB service
+container) and the build on every push and pull request. Keep it green.
 
 ## Layout
 
@@ -237,4 +245,7 @@ that module's exported service, never its collections.
 | `build-service: the bundle imports packages missing from package.json` | A workspace package the service uses imports a third-party package; add it to the service's own `dependencies` (the bundle keeps third-party code external) |
 | After `shadcn add`, an app's `package.json` gained packages, or a component imports `@/hooks/…` | The CLI writes dependencies and hooks into the app it runs from. Move them to `packages/ui` (`package.json`, `src/hooks`, `src/lib`) and import `@gifting/ui/hooks/…` |
 | A Tailwind class used in an app or `packages/ui` has no style | `@source` in `packages/ui/src/styles/globals.css` must cover the file; it scans `apps/**` and `packages/ui/src/**` |
+| `gifting-mongo` exits with `ReplicaSetNoPrimary` / `RSGhost` | The replica set config stores the container hostname. `docker-compose.yml` now pins `hostname: gifting-mongo`; a volume created before that needs resetting once (`docker compose down -v`, then `pnpm dev:all`) |
+| A write fails with code 10107 (not primary) | Atlas Local answers pings before it elects a primary. `pnpm db:up` now waits for a writable primary (`--wait` and the compose healthcheck); a plain `docker compose up -d` doesn't |
+| `next build` tries to prerender a page and fails calling the API | Something caught the error `cookies()` throws to mark a page dynamic. Read cookies outside `try`, and catch only `ApiCallError` |
 | Zod's message for a missing env var says "expected string, received undefined" | Zod 4 only uses `.min()` messages when a value is present; pass `{ error: "X is not set." }` to `z.string()` |

@@ -4,16 +4,21 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./write-demo": "./src/write-demo.ts"
   },
   "scripts": {
     "seed": "tsx --env-file-if-exists=../../.env scripts/seed.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "seed:demo": "tsx --env-file-if-exists=../../.env scripts/seed-demo.ts"
   },
   "dependencies": {
     "@gifting/domain": "workspace:*",
-    "@gifting/logger": "workspace:*"
+    "@gifting/logger": "workspace:*",
+    "@gifting/db": "workspace:*",
+    "@gifting/ledger": "workspace:*",
+    "mongodb": "7.7.0"
   }
 }

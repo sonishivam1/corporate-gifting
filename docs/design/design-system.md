@@ -104,7 +104,14 @@ Ours, built on them:
   `packages/ui/src/styles/globals.css`, with a `.dark` set. Use the Tailwind
   names (`bg-background`, `text-muted-foreground`, `bg-primary`), never raw
   colours.
-- System font stack (`--font-sans`); no web fonts in the POC.
+- The palette is the prototype's (28 Oct 2026): navy text `#012754`, blue
+  actions `#2570C5`, soft blue-grey surfaces, with a derived navy set for
+  dark mode. Beyond shadcn's tokens there are status tones (`success`,
+  `warning`, `info`, each with a `-soft` background) used by the status
+  badges, and one `tile-<category>` pair per catalog category for product
+  art.
+- System font stack (`--font-sans`); no web fonts in the POC (the
+  prototype's Sora and DM Sans are not used).
 - The recipient app sets `--primary` (and `--primary-foreground`) from the
   company's `brandColor` (Business Unit `company-settings`) and shows its
   `logoUrl` in the header. If the brand colour fails contrast, the default

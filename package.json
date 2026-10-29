@@ -7,17 +7,20 @@
   },
   "scripts": {
     "dev": "turbo run dev",
+    "dev:all": "pnpm db:up && pnpm seed:demo && pnpm dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
+    "test:integration": "turbo run test:integration",
     "worker": "pnpm --filter @gifting/worker start",
-    "db:up": "docker compose up -d",
+    "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",
     "db:indexes": "pnpm --filter @gifting/db indexes",
     "ct:plan": "pnpm --filter @gifting/ct-setup plan",
     "ct:apply": "pnpm --filter @gifting/ct-setup apply",
-    "seed": "pnpm --filter @gifting/seed seed"
+    "seed": "pnpm --filter @gifting/seed seed",
+    "seed:demo": "pnpm --filter @gifting/seed seed:demo"
   },
   "devDependencies": {
     "@eslint/js": "^9",

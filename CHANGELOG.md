@@ -5,6 +5,15 @@ change was built, see the [build log](docs/engineering/build-log.md).
 
 ## Unreleased
 
+### Sender dashboard
+- Senders can browse gifts by budget, occasion and category, and send a
+  campaign in four steps: gift, greeting, recipients and delivery, review.
+- The review shows what the send holds from the team budget. Large sends
+  wait for the team's approver, who can approve or decline them.
+- Campaigns show a gift funnel and each recipient's status. Gift links and
+  QR codes are shown once, with a CSV of every link.
+- Demo data only, with development sign-in. Messages aren't delivered yet.
+
 ### Foundations
 - The project exists: four web apps (sender dashboard, recipient experience,
   vendor portal-lite, ops admin), the Gifting API and the worker, each

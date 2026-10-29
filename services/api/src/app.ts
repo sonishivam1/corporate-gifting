@@ -2,12 +2,14 @@ import { createLogger, type Logger } from "@gifting/logger";
 import Fastify, { type FastifyBaseLogger, type FastifyInstance } from "fastify";
 import { ZodError } from "zod";
 
+import { type AppDeps, defaultDeps } from "./deps";
 import { ApiError, errorBody } from "./http/errors";
 import { registerRoutes } from "./http/route";
-import { MODULES } from "./modules/index";
+import { registerSession } from "./http/session";
+import { buildModules } from "./modules/index";
 import { health, meta } from "./system-routes";
 
-export async function buildApp(options: { logger?: Logger } = {}): Promise<FastifyInstance> {
+export async function buildApp(options: { logger?: Logger; deps?: AppDeps } = {}): Promise<FastifyInstance> {
   const log = options.logger ?? createLogger("api");
   const app = Fastify({
     // pino is what Fastify uses underneath; widen to its base logger type.
@@ -33,6 +35,9 @@ export async function buildApp(options: { logger?: Logger } = {}): Promise<Fasti
 
   app.setNotFoundHandler((_request, reply) => reply.status(404).send(errorBody("not_found", "Not found.")));
 
-  registerRoutes(app, [health, meta, ...MODULES.flatMap((m) => m.routes)]);
+  const deps = options.deps ?? defaultDeps();
+  const modules = buildModules(deps);
+  registerSession(app, deps);
+  registerRoutes(app, [health, meta(modules), ...modules.flatMap((m) => m.routes)]);
   return app;
 }

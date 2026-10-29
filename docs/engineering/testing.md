@@ -24,7 +24,7 @@ flowchart TB
 | Layer | Where | What it covers | Status |
 | --- | --- | --- | --- |
 | Unit | `packages/*/src/**/*.test.ts`, `services/*/src/**/*.test.ts`, `infra/*/src/**/*.test.ts` | Money helpers, gift state machine, idempotency keys, balance rule for every lifecycle, test-db guard, index list, channel registry, logger redaction, `/health` and `/v1/meta`, error shape, job registry, fictional seed data, ct-setup drafts | Built |
-| Integration | `services/api/tests/integration/*.test.ts` | Each service against a throwaway `gifting_test_*` database: scope (another company, another team), transactions, duplicate idempotency keys, 50 parallel claims | Planned (M1) |
+| Integration | `services/api/tests/integration/*.test.ts` (`pnpm test:integration`) | Each service against a throwaway `gifting_test_*` database: scope (another company, another team), transactions, duplicate idempotency keys, racing submits and holds; 50 parallel claims in M4 | Built for campaigns (sender dashboard); runs in CI against a MongoDB service container |
 | Contract | `infra/ct-setup/tests/*.contract.ts` | Against the commercetools sandbox, run by hand, never in CI | Planned (spikes) |
 | End to end | `e2e/*.spec.ts` | The three journeys, at phone width for the recipient | Planned (M4) |
 

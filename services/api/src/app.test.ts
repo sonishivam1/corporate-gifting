@@ -2,13 +2,15 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { buildApp } from "./app";
+import { defaultDeps } from "./deps";
 import { ApiError } from "./http/errors";
 import { defineRoute, registerRoutes } from "./http/route";
 
 let app: Awaited<ReturnType<typeof buildApp>>;
 
 beforeAll(async () => {
-  app = await buildApp();
+  // Signed in, so the error-shape routes below get past the session check.
+  app = await buildApp({ deps: defaultDeps({ DEV_AUTH: "1" }) });
   // Test-only routes that exercise the error shape.
   registerRoutes(app, [
     defineRoute({
