@@ -7,6 +7,7 @@ import { z } from "zod";
 
 import { CAMPAIGN_DISPLAY_STATUSES, EXPIRY_DAYS } from "./campaign-rules";
 import { GIFT_STATUSES } from "./gift-status";
+import { MEMBER_ROLES } from "./members";
 import { CAMPAIGN_STATUSES, CAMPAIGN_TYPES, CARD_COVERS, CHANNEL_KINDS, OCCASIONS } from "./models";
 import { CURRENCIES } from "./money";
 
@@ -16,8 +17,6 @@ const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD");
 
 export const PRODUCT_CATEGORIES = ["food", "home", "drink", "outdoors"] as const;
 export type ProductCategory = (typeof PRODUCT_CATEGORIES)[number];
-
-export const MEMBER_ROLES = ["owner", "admin", "sender", "approver"] as const;
 
 const member = z.object({ id: z.string(), name: z.string(), role: z.enum(MEMBER_ROLES) });
 

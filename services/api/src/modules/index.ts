@@ -1,6 +1,7 @@
 import type { AppDeps } from "../deps";
-import type { RouteDefinition } from "../http/route";
+import type { RouteAuth, RouteDefinition, RouteSchema } from "../http/route";
 import { accountsRoutes } from "./accounts/routes";
+import { workspaceRoutes } from "./accounts/workspace";
 import { campaignsRoutes } from "./campaigns/routes";
 import { createCampaignsService } from "./campaigns/service";
 import { catalogRoutes } from "./catalog/routes";
@@ -20,7 +21,7 @@ import { createRecipientsService } from "./recipients/service";
 export type ApiModule = {
   name: string;
   milestone: string;
-  routes: readonly RouteDefinition[];
+  routes: readonly RouteDefinition<RouteSchema, RouteAuth>[];
 };
 
 export function buildModules(deps: AppDeps): ApiModule[] {
@@ -31,7 +32,7 @@ export function buildModules(deps: AppDeps): ApiModule[] {
   const campaigns = createCampaignsService(deps, { catalog, ledger, recipients, gifts });
 
   return [
-    { name: "accounts", milestone: "M1", routes: accountsRoutes(deps) },
+    { name: "accounts", milestone: "M1", routes: [...accountsRoutes, ...workspaceRoutes(deps)] },
     { name: "ledger", milestone: "M1", routes: ledgerRoutes(ledger) },
     { name: "catalog", milestone: "M2", routes: catalogRoutes(catalog) },
     { name: "campaigns", milestone: "M3", routes: campaignsRoutes(campaigns) },

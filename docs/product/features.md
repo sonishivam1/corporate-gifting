@@ -12,7 +12,7 @@ Twenty capabilities across ten modules. Sixteen are in the POC.
 
 | # | Capability | Owning module | App | POC | Milestone | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | Company workspace with teams and roles | Accounts | sender, ops | Yes | M1 | Planned |
+| 1 | Company workspace with teams and roles | Accounts | sender, ops | Yes | M1 | In progress: register and sign-in built (B2C, ADR 0015); the dashboard's workspace is the demo company until the B2C workspace model is decided |
 | 2 | Per-team budgets and spend limits | Accounts + Ledger | sender | Yes | M1 | Partly built: balance computed from the ledger; demo top-ups seeded |
 | 3 | Approval before large sends | Campaigns | sender | Yes | M3 | Built: approve or decline, approver ≠ sender |
 | 4 | Prepaid balance, invoice and card top-ups | Billing + Ledger | sender | Yes (Stripe test mode) | M1 | Planned |

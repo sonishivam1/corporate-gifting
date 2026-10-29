@@ -11,6 +11,7 @@ export function giftsRoutes(gifts: GiftsService, campaigns: CampaignsService) {
     defineRoute({
       method: "GET",
       url: "/v1/campaigns/:id/gifts",
+      auth: "workspace",
       schema: { params: z.object({ id: z.string().min(1) }), response: z.object({ gifts: z.array(giftRowView) }) },
       handler: async ({ params, request }) => {
         const session = requireSession(request);

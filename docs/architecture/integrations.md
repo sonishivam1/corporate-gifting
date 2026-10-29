@@ -46,7 +46,7 @@ redemption.
 | --- | --- | --- |
 | HR systems (birthdays, anniversaries, start dates) | CSV upload, plus one HR system through a unified HR API (for example Merge or Finch) with a nightly sync | More systems through the same adapter |
 | Payments | Stripe test mode: card and ACH top-ups, invoices for invoice-billed accounts | Live mode, purchase orders, multi-currency |
-| Identity | Hosted identity provider (Auth0 or Google Cloud Identity Platform, [ADR 0009](decisions/0009-identity-provider.md)) with email and password or magic link | SSO with SAML or OIDC per company |
+| Identity | The commerce platform's customer accounts: commercetools customers and its OAuth 2.0 password flow, with email verification ([ADR 0015](decisions/0015-commerce-customer-accounts.md)) | Social sign-in through an external identity provider (commercetools external OAuth) |
 | Vendors | Vendor portal-lite plus email notification | Vendor API, EDI or 3PL connectors |
 | Tracking | Vendor enters carrier and tracking number | Tracking aggregator for automatic delivered status |
 

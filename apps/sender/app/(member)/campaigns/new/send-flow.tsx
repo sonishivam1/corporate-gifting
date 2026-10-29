@@ -11,7 +11,7 @@ import { CheckIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState, useTransition } from "react";
 
-import { estimateAction, sendAction } from "@/app/campaigns/actions";
+import { estimateAction, sendAction } from "@/app/(member)/campaigns/actions";
 import { ChannelIcons } from "@/components/channel-icons";
 import { CHANNEL } from "@/lib/catalog";
 import { money, plural } from "@/lib/format";

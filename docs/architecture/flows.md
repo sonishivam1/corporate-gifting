@@ -131,10 +131,10 @@ sequenceDiagram
   W->>DB: insert processedEvents (duplicate → skip)
   W->>V: email + order in vendor portal (by line item supply channel)
   V->>API: mark shipped (carrier, tracking)
-  API->>CT: add Delivery + Parcel with tracking; shipmentState Shipped
+  API->>CT: add Delivery + Parcel with tracking, set shipmentState Shipped
   CT-->>Q: OrderShipmentStateChanged
   Q-->>W: message
-  W->>DB: gift → shipped; notify recipient and sender
+  W->>DB: gift → shipped, then notify recipient and sender
 ```
 
 In the POC the vendor also marks delivery; later a tracking aggregator does

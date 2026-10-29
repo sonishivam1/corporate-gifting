@@ -6,6 +6,7 @@ import { Field, FieldLabel } from "@gifting/ui/components/field";
 import { NativeSelect, NativeSelectOption } from "@gifting/ui/components/native-select";
 import { SidebarShell, type SidebarNavItem } from "@gifting/ui/components/sidebar-shell";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@gifting/ui/components/tooltip";
+import { UserMenu } from "@gifting/ui/components/user-menu";
 import { ChartColumnIcon, GridIcon, HouseIcon, PlusIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -20,7 +21,23 @@ const NAV: SidebarNavItem[] = [
   { href: "/campaigns", label: "Campaigns", icon: ChartColumnIcon },
 ];
 
-export function Shell({ me, balance, children }: { me: MeView | null; balance: BalanceView | null; children: ReactNode }) {
+/**
+ * The dashboard frame: navigation, the workspace footer (team, balance,
+ * "Viewing as") and the signed-in person's account menu with sign-out.
+ */
+export function Shell({
+  me,
+  balance,
+  account,
+  signOut,
+  children,
+}: {
+  me: MeView | null;
+  balance: BalanceView | null;
+  account: { name: string; email: string; detail?: string };
+  signOut: () => Promise<void>;
+  children: ReactNode;
+}) {
   const pathname = usePathname();
   return (
     <SidebarShell
@@ -29,6 +46,7 @@ export function Shell({ me, balance, children }: { me: MeView | null; balance: B
       currentPath={pathname}
       linkAs={Link}
       footer={me ? <Footer me={me} balance={balance} /> : null}
+      actions={<UserMenu name={account.name} email={account.email} detail={account.detail} signOut={signOut} />}
     >
       {children}
     </SidebarShell>

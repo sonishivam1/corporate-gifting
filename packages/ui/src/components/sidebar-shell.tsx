@@ -40,6 +40,7 @@ function SidebarShell({
   currentPath,
   linkAs: Link = "a",
   footer,
+  actions,
   children,
 }: {
   app: string;
@@ -47,6 +48,8 @@ function SidebarShell({
   currentPath: string;
   linkAs?: LinkComponent;
   footer?: ReactNode;
+  /** Shown at the right of the top bar, for example the account menu. */
+  actions?: ReactNode;
   children: ReactNode;
 }) {
   const isActive = (item: SidebarNavItem) =>
@@ -97,6 +100,7 @@ function SidebarShell({
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="h-4" />
           <span className="text-sm text-muted-foreground">{app}</span>
+          {actions ? <div className="ml-auto flex items-center gap-2">{actions}</div> : null}
         </header>
         <div className="mx-auto w-full max-w-6xl px-4 pb-12 sm:px-8">{children}</div>
       </SidebarInset>

@@ -89,6 +89,7 @@ true values while the recipient pays nothing.
 | Architecture v2 and docs | ✅ Done |
 | Monorepo scaffold: 4 apps, API, worker, shared packages, CI | ✅ Done (M0) |
 | Week-1 spikes (company-balance order, catalog, tax, Business Units, channel approvals, concurrency) | Planned (M0) |
+| Accounts: register with email verification and sign in, on commercetools customer accounts (B2C) | ✅ Built (M1): real email through Brevo; commerce connectors (commercetools, memory) |
 | Sender dashboard: Home, Browse gifts, Campaigns, send flow, approvals (ahead of M1 to M3, on seed data) | ✅ Built, see the [plan](docs/plans/sender-dashboard.md) |
 | Accounts, teams and the ledger | Planned (M1) |
 | Catalog and budget collections | Planned (M2) |

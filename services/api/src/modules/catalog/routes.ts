@@ -12,6 +12,7 @@ export function catalogRoutes(catalog: CatalogService) {
     defineRoute({
       method: "GET",
       url: "/v1/catalog/products",
+      auth: "workspace",
       schema: { query: productQuery, response: z.object({ products: z.array(productView) }) },
       handler: async ({ query, request }) => {
         requireSession(request);
@@ -21,6 +22,7 @@ export function catalogRoutes(catalog: CatalogService) {
     defineRoute({
       method: "GET",
       url: "/v1/collections",
+      auth: "workspace",
       schema: { query: budget, response: z.object({ collections: z.array(collectionView) }) },
       handler: async ({ query, request }) => {
         const session = requireSession(request);
@@ -30,6 +32,7 @@ export function catalogRoutes(catalog: CatalogService) {
     defineRoute({
       method: "GET",
       url: "/v1/collections/:id/items",
+      auth: "workspace",
       schema: { params: z.object({ id: z.string().min(1) }), query: budget, response: z.object({ items: z.array(productView) }) },
       handler: async ({ params, query, request }) => {
         const session = requireSession(request);

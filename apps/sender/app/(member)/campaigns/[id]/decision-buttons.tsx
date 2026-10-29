@@ -16,7 +16,7 @@ import { toast } from "@gifting/ui/lib/toast";
 import { CheckIcon } from "lucide-react";
 import { useTransition } from "react";
 
-import { decideAction } from "@/app/campaigns/actions";
+import { decideAction } from "@/app/(member)/campaigns/actions";
 
 export function DecisionButtons({ campaignId, approveLabel }: { campaignId: string; approveLabel: string }) {
   const [pending, startTransition] = useTransition();

@@ -31,15 +31,17 @@ const header = (request: FastifyRequest, name: string) => {
 };
 
 /**
- * Development sign-in until the identity provider lands in M1 (ADR 0009):
- * the sender app forwards the "Viewing as" user and the chosen team as
- * headers. Off unless DEV_AUTH=1 outside production; then every /v1 call
- * except /v1/meta is refused.
+ * The dashboard's development session, until the B2C workspace model is
+ * decided: the sender app forwards the "Viewing as" user and the chosen team
+ * as headers, and they pick a member of the demo company. It applies only to
+ * "workspace" routes (http/route.ts); the account routes use real sign-in
+ * (ADR 0015). Off unless DEV_AUTH=1 outside production; then every workspace
+ * route is refused.
  */
 export function registerSession(app: FastifyInstance, deps: AppDeps): void {
   app.decorateRequest("session", null);
   app.addHook("onRequest", async (request) => {
-    if (!request.url.startsWith("/v1/") || request.url.startsWith("/v1/meta")) return;
+    if (request.routeOptions.config?.workspace !== true) return;
     if (!deps.devAuth) throw new ApiError(401, "unauthenticated", "Sign-in is not set up yet.");
 
     const member = await deps.org.member(header(request, "x-dev-user") ?? DEV_DEFAULT_USER);

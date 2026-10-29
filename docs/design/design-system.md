@@ -110,8 +110,21 @@ Ours, built on them:
   `warning`, `info`, each with a `-soft` background) used by the status
   badges, and one `tile-<category>` pair per catalog category for product
   art.
-- System font stack (`--font-sans`); no web fonts in the POC (the
-  prototype's Sora and DM Sans are not used).
+- DM Sans for text (`font-sans`) and Sora for headings (`font-heading`,
+  applied to `h1` to `h3`). Both are self-hosted by `next/font`
+  (`@gifting/ui/lib/fonts`). Each app's root layout puts `fontVariables` on
+  `<html>`, where `--font-sans` is resolved; on `<body>` the fonts silently
+  fall back to the system stack.
+- Shared account pieces:
+  - `AuthCard`: the wordmark over one card, for the register, sign-in
+    and email pages;
+  - `PasswordInput`: show/hide button and Caps Lock warning;
+  - `Checklist`: live rules, with met items in `text-success`;
+  - `UserMenu`: sign-out is a form post;
+  - the `Wordmark`.
+
+  `AppShell` and `SidebarShell` take header `actions` (the dashboard puts
+  the `UserMenu` there).
 - The recipient app sets `--primary` (and `--primary-foreground`) from the
   company's `brandColor` (Business Unit `company-settings`) and shows its
   `logoUrl` in the header. If the brand colour fails contrast, the default

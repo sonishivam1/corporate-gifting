@@ -6,7 +6,7 @@ import { ChevronRightIcon, GridIcon, SendIcon } from "lucide-react";
 import Link from "next/link";
 
 import { CollectionMosaic } from "@/components/product-art";
-import { getBalance, getCampaigns, getCollections, getMe, getProducts } from "@/lib/api";
+import { getBalance, getCampaigns, getCollections, getWorkspace, getProducts } from "@/lib/api";
 import { LET_THEM_CHOOSE } from "@/lib/features";
 import { money, pct, plural } from "@/lib/format";
 
@@ -16,7 +16,7 @@ function greeting(now = new Date()) {
 }
 
 export default async function Home() {
-  const me = await getMe();
+  const me = await getWorkspace();
   const [balance, campaigns, collections, products] = await Promise.all([
     getBalance(me.team.key),
     getCampaigns("all", 4),

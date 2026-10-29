@@ -26,14 +26,21 @@ Zod at start-up and fails fast with the variable's name (never its value).
 | `CTP_STORE_KEY` | api | no (`gifting`) | `gifting` | |
 | `CTP_IMPORT_URL` | infra (seed) | no (from `CTP_API_URL`, `api.` → `import.`) | `https://import.us-central1.gcp.commercetools.com` | Import API host |
 | `CTP_SETUP_PROJECT_KEY` | infra | no | `corporate-gifting` | Lets `ct:apply` and `seed` write to this exact project although its key has no `sandbox` or `dev`. Only for the POC project; never a client's live project |
-| `SMTP_URL` | worker | no (`smtp://localhost:1025`) | `smtp://localhost:1025` | Mailpit locally |
-| `DEV_AUTH` | api, apps | development only | `1` | Development sign-in switch; ignored when `NODE_ENV=production` |
+| `SMTP_URL` | api, worker | no (`smtp://localhost:1025`) | `smtp://localhost:1025` | Mailpit locally. If no SMTP server answers outside production, account emails go to `.data/outbox` |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` | api | no (port `587`) | `smtp-relay.brevo.com`, `587` | A real email provider, used instead of `SMTP_URL` when `SMTP_HOST` is set. Port 465 is TLS; 587 upgrades with STARTTLS. `SMTP_PASS` is secret |
+| `COMMERCE_CONNECTOR` | api | yes, for sign-in | `commercetools` | The commerce platform: `@gifting/commerce-<name>` must be installed in the API. `memory` keeps customers in memory for local work (refused in production). Unset: register and sign-in answer 503 |
+| `DEV_AUTH` | api | no | `1` | The dashboard's development workspace: "workspace" routes take the demo company's member and team from the `x-dev-user` and `x-dev-team` headers. Never on in production; it never stands in for real sign-in |
+| `MEMORY_SIGN_IN` | api | no (`password`) | `hosted` | With the memory connector: play a platform with its own sign-in page |
+| `API_SESSION_SECRET` | api | with a connector | 64 hex characters | Encrypts the API's own sessions, verification links and sign-in state (`openssl rand -hex 32`). Changing it signs everyone out. Secret |
+| `CTP_SIGNIN_CLIENT_ID`, `CTP_SIGNIN_CLIENT_SECRET` | api | with the commercetools connector | — | The commercetools API client that checks passwords and issues the customer tokens the connector keeps (password flow). **Only `manage_my_profile`**; the API refuses to start with admin scopes, or without it. Secret |
+| `SENDER_PUBLIC_URL` | api | no (`http://localhost:3000`) | `https://app.gifting.example` | Links in account emails |
+| `MAIL_FROM` | api | no (`Gifting <no-reply@gifting.example>`) | `Gifting <you@yourcompany.com>` | Sender of account emails; with a real provider it must be a verified sender. Its domain must be authenticated with that provider (SPF, DKIM), or a domain with a strict DMARC policy gets the email quarantined. Until then, use a personal sender verified in the provider |
+| `OPS_EMAILS` | api | no | `priya@ops.example` | Comma-separated verified emails allowed on `ops` routes |
 
 Planned, as features land:
 
 | Variable | For | Milestone |
 | --- | --- | --- |
-| `AUTH0_*` or `GCP_IDENTITY_*` | Sign-in (ADR 0009) | M1 |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Top-ups (test mode) | M1 |
 | `SENDGRID_API_KEY` | Email in the cloud | M3 |
 | `TOKEN_PEPPER` | Extra secret mixed into gift token hashes | M3 |
@@ -43,6 +50,20 @@ Planned, as features land:
 | `TEAMS_APP_ID`, `TEAMS_APP_PASSWORD` | Teams bot | M5 |
 | `HRIS_API_KEY` | Unified HR API | M5 |
 | `FLE_KEY_*` | Field-level encryption keys for recipient data | M5 |
+
+## Each app's own settings
+
+The Next.js apps don't read the root `.env`: it holds commercetools and
+database secrets they must never have. Each app has its own gitignored
+`.env.local`, copied from its `.env.example`
+([sender](../../apps/sender/.env.example)):
+
+| Variable | Notes |
+| --- | --- |
+| `API_PUBLIC_URL` | Where the Gifting API runs |
+| `SESSION_SECRET` | 32 random bytes in hex (`openssl rand -hex 32`) that encrypt the session cookie. Secret |
+
+Setting up sign-in: [getting started](../engineering/getting-started.md#register-and-sign-in).
 
 ## Per-company settings
 

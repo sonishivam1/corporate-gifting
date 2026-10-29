@@ -14,7 +14,7 @@
 @source "../**/*.{ts,tsx}";
 
 @theme inline {
-    --font-heading: var(--font-sans);
+    --font-heading: var(--font-display), var(--font-sans);
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -71,8 +71,12 @@
 }
 
 :root {
-    /* System fonts: no web fonts in the POC (docs/design/design-system.md). */
-    --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    /*
+     * The prototype's look (docs/design/gifting-prototype.html): navy ink on
+     * white, one blue accent, DM Sans and Sora. --font-body and --font-display
+     * come from next/font (lib/fonts.ts); the system stack is the fallback.
+     */
+    --font-sans: var(--font-body), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     /* Palette from the prototype (docs/design/gifting-prototype.html): navy ink, blue actions. */
     --background: #ffffff;
     --foreground: #012754;
@@ -179,5 +183,8 @@
     }
   body {
     @apply bg-background text-foreground;
+    }
+  h1, h2, h3 {
+    @apply font-heading tracking-tight;
     }
 }

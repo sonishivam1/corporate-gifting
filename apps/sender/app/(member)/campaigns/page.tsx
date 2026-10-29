@@ -9,7 +9,7 @@ import Link from "next/link";
 
 import { ChannelIcons } from "@/components/channel-icons";
 import { FunnelBars } from "@/components/funnel";
-import { getCampaigns, getMe } from "@/lib/api";
+import { getCampaigns, getWorkspace } from "@/lib/api";
 import { money, pct, shortDate } from "@/lib/format";
 
 const TABS = [
@@ -22,7 +22,7 @@ const TABS = [
 export default async function CampaignsPage({ searchParams }: PageProps<"/campaigns">) {
   const raw = await searchParams;
   const { status } = campaignListQuery.catch({ status: "all", limit: 100 }).parse({ status: raw.status });
-  const [me, list] = await Promise.all([getMe(), getCampaigns(status)]);
+  const [me, list] = await Promise.all([getWorkspace(), getCampaigns(status)]);
 
   return (
     <div className="grid gap-6 pt-4">

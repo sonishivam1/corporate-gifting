@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 
-import { DEV_TEAM_COOKIE, DEV_USER_COOKIE } from "@/lib/session";
+import { DEV_TEAM_COOKIE, DEV_USER_COOKIE } from "@/lib/dev-session";
 
 const COOKIE = { httpOnly: true, sameSite: "lax", path: "/" } as const;
 

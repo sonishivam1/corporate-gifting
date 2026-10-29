@@ -1,0 +1,22 @@
+{
+  "name": "@gifting/commerce-commercetools",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:conformance": "vitest run --config vitest.conformance.config.ts"
+  },
+  "dependencies": {
+    "@commercetools/platform-sdk": "9.7.0",
+    "@gifting/commerce": "workspace:*",
+    "@gifting/ct": "workspace:*",
+    "@gifting/logger": "workspace:*",
+    "zod": "4.6.7"
+  }
+}

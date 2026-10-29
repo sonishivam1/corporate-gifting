@@ -1,4 +1,4 @@
-import { getBalance, getCollections, getMe, getProducts, getRecipients } from "@/lib/api";
+import { getBalance, getCollections, getWorkspace, getProducts, getRecipients } from "@/lib/api";
 
 import { SendFlow } from "./send-flow";
 
@@ -6,7 +6,7 @@ import { SendFlow } from "./send-flow";
 export default async function NewCampaignPage({ searchParams }: PageProps<"/campaigns/new">) {
   const raw = await searchParams;
   const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
-  const me = await getMe();
+  const me = await getWorkspace();
   const [balance, collections, products, recipients] = await Promise.all([
     getBalance(me.team.key),
     getCollections(),

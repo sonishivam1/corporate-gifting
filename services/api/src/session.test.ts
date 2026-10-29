@@ -22,9 +22,17 @@ const asUser = (user: string, team?: string) => ({ "x-dev-user": user, ...(team 
 
 describe("development sign-in", () => {
   it("is never on in production", async () => {
-    const res = await signedOut.inject({ method: "GET", url: "/v1/me" });
+    const res = await signedOut.inject({ method: "GET", url: "/v1/workspace" });
     expect(res.statusCode).toBe(401);
     expect(res.json().error.code).toBe("unauthenticated");
+  });
+
+  it("never stands in for real sign-in: account routes ignore the development headers", async () => {
+    // No accounts service in this app: account routes say sign-in isn't configured, whatever the headers say.
+    const res = await app.inject({ method: "GET", url: "/v1/me", headers: asUser("user-maya") });
+    expect([res.statusCode, res.json().error.code]).toEqual([503, "auth_not_configured"]);
+    const options = await signedOut.inject({ method: "GET", url: "/v1/auth/options" });
+    expect(options.json().error.code).toBe("auth_not_configured");
   });
 
   it("still serves /health and /v1/meta without a session", async () => {
@@ -33,7 +41,7 @@ describe("development sign-in", () => {
   });
 
   it("defaults to the demo sender in their first team", async () => {
-    const res = await app.inject({ method: "GET", url: "/v1/me" });
+    const res = await app.inject({ method: "GET", url: "/v1/workspace" });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({
       user: { id: "user-maya", role: "sender" },
@@ -44,14 +52,14 @@ describe("development sign-in", () => {
   });
 
   it("switches team only to one the user belongs to", async () => {
-    const sales = await app.inject({ method: "GET", url: "/v1/me", headers: asUser("user-maya", "team-lumen-sales") });
+    const sales = await app.inject({ method: "GET", url: "/v1/workspace", headers: asUser("user-maya", "team-lumen-sales") });
     expect(sales.json().team.key).toBe("team-lumen-sales");
-    const notMine = await app.inject({ method: "GET", url: "/v1/me", headers: asUser("user-rowan", "team-lumen-sales") });
+    const notMine = await app.inject({ method: "GET", url: "/v1/workspace", headers: asUser("user-rowan", "team-lumen-sales") });
     expect(notMine.json().team.key).toBe("team-lumen-people");
   });
 
   it("refuses an unknown user", async () => {
-    const res = await app.inject({ method: "GET", url: "/v1/me", headers: asUser("user-nobody") });
+    const res = await app.inject({ method: "GET", url: "/v1/workspace", headers: asUser("user-nobody") });
     expect(res.statusCode).toBe(401);
   });
 });

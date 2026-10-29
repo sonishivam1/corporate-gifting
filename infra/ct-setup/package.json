@@ -16,6 +16,7 @@
   "dependencies": {
     "@commercetools/platform-sdk": "9.7.0",
     "@gifting/ct": "workspace:*",
+    "@gifting/domain": "workspace:*",
     "@gifting/logger": "workspace:*",
     "@gifting/seed": "workspace:*"
   }
