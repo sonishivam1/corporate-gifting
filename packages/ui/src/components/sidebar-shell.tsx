@@ -51,6 +51,7 @@ function SidebarShell({
   currentPath,
   linkAs: Link = "a",
   footer,
+  context,
   topBar,
   actions,
   children,
@@ -62,6 +63,8 @@ function SidebarShell({
   currentPath: string;
   linkAs?: LinkComponent;
   footer?: ReactNode;
+  /** The left of the top bar, for example the company being worked in. Defaults to the app's name. */
+  context?: ReactNode;
   /** The middle of the top bar, for example search. */
   topBar?: ReactNode;
   /** Shown at the right of the top bar, for example the account menu. */
@@ -131,7 +134,7 @@ function SidebarShell({
         <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur sm:px-6 lg:px-8">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="h-4" />
-          <span className="hidden text-sm text-muted-foreground md:inline">{app}</span>
+          <div className="hidden min-w-0 md:flex">{context ?? <span className="text-sm text-muted-foreground">{app}</span>}</div>
           {topBar ? <div className="flex min-w-0 flex-1 justify-center">{topBar}</div> : null}
           {actions ? <div className={topBar ? "flex items-center gap-2" : "ml-auto flex items-center gap-2"}>{actions}</div> : null}
         </header>

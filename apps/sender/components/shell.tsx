@@ -9,7 +9,7 @@ import { NativeSelect, NativeSelectOption } from "@gifting/ui/components/native-
 import { SidebarShell, type SidebarNavItem } from "@gifting/ui/components/sidebar-shell";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@gifting/ui/components/tooltip";
 import { UserMenu } from "@gifting/ui/components/user-menu";
-import { BellIcon, ChartColumnIcon, GridIcon, HouseIcon, LayersIcon, PlusIcon, RepeatIcon, SearchIcon, SendIcon, WalletIcon } from "lucide-react";
+import { BellIcon, Building2Icon, ChartColumnIcon, GridIcon, HouseIcon, LayersIcon, PlusIcon, RepeatIcon, SearchIcon, SendIcon, WalletIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type ReactNode, useTransition } from "react";
@@ -39,6 +39,16 @@ function Search() {
         <InputGroupInput type="search" name="q" placeholder="Search campaigns…" aria-label="Search campaigns" />
       </InputGroup>
     </form>
+  );
+}
+
+/** The signed-in person's company, at the left of the top bar (as in the overview mockup). */
+function CompanyContext({ name }: { name: string }) {
+  return (
+    <span className="flex min-w-0 items-center gap-2 rounded-lg border bg-background px-3 py-1.5 text-sm font-medium">
+      <Building2Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+      <span className="truncate">{name}</span>
+    </span>
   );
 }
 
@@ -89,6 +99,8 @@ export function Shell({
       currentPath={pathname}
       linkAs={Link}
       footer={me ? <Footer me={me} balance={balance} /> : null}
+      // The signed-in person's own company, from their account (read live from the commerce platform on every page).
+      context={account.detail ? <CompanyContext name={account.detail} /> : undefined}
       topBar={<Search />}
       actions={
         <>

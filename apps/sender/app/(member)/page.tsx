@@ -54,6 +54,8 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const [me, account] = await Promise.all([getWorkspace(), getMe()]);
   // Greet the signed-in person; the workspace's development user only if their name is missing.
   const firstName = (account.kind === "account" ? account.me.firstName : null) ?? me.user.name.split(" ")[0];
+  // The signed-in person's company, from their account; left out if they didn't give one.
+  const companyName = account.kind === "account" ? account.me.companyName : null;
   const [overview, campaigns, collections, products] = await Promise.all([
     getOverview(me.team.key, range),
     getCampaigns("all", 5),
@@ -71,7 +73,8 @@ export default async function Home({ searchParams }: PageProps<"/">) {
       <section className="flex flex-wrap items-end justify-between gap-4">
         <div className="grid gap-1">
           <p className="text-sm text-muted-foreground">
-            {me.company.name} · {me.team.name} team
+            {companyName ? `${companyName} · ` : ""}
+            {me.team.name} team
           </p>
           <h1 className="text-3xl font-semibold">
             {greeting()}, {firstName}
