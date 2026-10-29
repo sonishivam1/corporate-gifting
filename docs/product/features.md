@@ -12,7 +12,7 @@ Twenty capabilities across ten modules. Sixteen are in the POC.
 
 | # | Capability | Owning module | App | POC | Milestone | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | Company workspace with teams and roles | Accounts | sender, ops | Yes | M1 | Planned |
+| 1 | Company workspace with teams and roles | Accounts | sender, ops | Yes | M1 | In progress: sign-in and member access built |
 | 2 | Per-team budgets and spend limits | Accounts + Ledger | sender | Yes | M1 | Planned |
 | 3 | Approval before large sends | Campaigns | sender | Yes | M3 | Planned |
 | 4 | Prepaid balance, invoice and card top-ups | Billing + Ledger | sender | Yes (Stripe test mode) | M1 | Planned |

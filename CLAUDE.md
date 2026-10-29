@@ -47,6 +47,7 @@ Node 24 and pnpm 10. On Windows with fnm, prefix commands with
 | `pnpm ct:plan` | Print the commercetools setup drafts (store, channels, types); no calls |
 | `pnpm ct:apply` | Set up the project from `.env`: types, product types, tax, zone and shipping, channels, store, associate roles, gift categories. Creates what's missing and adds missing fields and attributes; safe to re-run |
 | `pnpm seed` | Import the fictional products and stock, 250 demo customers, and 5 demo companies with 10 teams (Business Units) through the Import API (run `ct:apply` first) |
+| `pnpm member:add -- --email … --company … [--team …] --role … [--company-name …]` | Add a real person (work email) to a company so they can sign in (M1 phase A; invitations come in phase B). `--company-name` creates the company, with a General team, if its key is new |
 | `pnpm catalog:extract` | Read the Christie Cookie storefront into `.data/catalogs/christie-cookie.json` (gitignored; with the client's permission) |
 | `pnpm catalog:import` / `pnpm catalog:remove` | Import that snapshot into the project (vendor channel, categories, products with images, stock), or delete it all again |
 | `pnpm worker` | Start the worker (today: lists the registered jobs) |
@@ -163,6 +164,12 @@ that module's exported service, never its collections.
 - Routes live under `/v1/…`, built with `defineRoute()` with Zod schemas
   for input and output. Only `/health` is unversioned. Within v1, changes
   are additive.
+- Every route says who may call it: `auth: "account"` (the default),
+  `"ops"` or `"public"` ([register and sign-in plan](docs/plans/m1-register-sign-in.md)).
+  Handlers take the person from `ctx.account`, never from the request.
+  Apps call the API from the server with the customer's commercetools
+  access token, kept in an encrypted http-only cookie; no token reaches a
+  browser ([ADR 0015](docs/architecture/decisions/0015-commerce-customer-accounts.md)).
 - Errors are `{ error: { code, message } }`. Raise expected failures with
   `ApiError(status, code, message)`.
 
@@ -250,4 +257,9 @@ that module's exported service, never its collections.
 | `build-service: the bundle imports packages missing from package.json` | A workspace package the service uses imports a third-party package; add it to the service's own `dependencies` (the bundle keeps third-party code external) |
 | After `shadcn add`, an app's `package.json` gained packages, or a component imports `@/hooks/…` | The CLI writes dependencies and hooks into the app it runs from. Move them to `packages/ui` (`package.json`, `src/hooks`, `src/lib`) and import `@gifting/ui/hooks/…` |
 | A Tailwind class used in an app or `packages/ui` has no style | `@source` in `packages/ui/src/styles/globals.css` must cover the file; it scans `apps/**` and `packages/ui/src/**` |
+| `next/font` fonts don't apply (the page shows the system font) | Put `fontVariables` on `<html>`, not `<body>`: `--font-sans` is resolved on `:root` |
+| A Next.js app can't see a variable from the root `.env` | By design: apps read only their own `.env.local` (see `apps/<app>/.env.example`) |
+| `pnpm --filter <pkg> import` runs pnpm's own import command | Call scripts named like pnpm commands with `pnpm --filter <pkg> run <script>` |
+| Re-importing a team unit fails: "Store mode does not allow editing stores" | The Import API can't update a Division that inherits stores; `pnpm seed` creates missing teams and leaves existing ones |
+| Brevo accepts an account email (API answers 202, nothing in `.data/outbox`) but it never arrives | `MAIL_FROM`'s domain isn't authenticated in Brevo and has a strict DMARC policy (royalcyber.com does), so the receiver quarantines it. Use a personal verified sender, or authenticate the domain |
 | Zod's message for a missing env var says "expected string, received undefined" | Zod 4 only uses `.min()` messages when a value is present; pass `{ error: "X is not set." }` to `z.string()` |

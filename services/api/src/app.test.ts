@@ -14,6 +14,7 @@ beforeAll(async () => {
     defineRoute({
       method: "POST",
       url: "/v1/test/echo",
+      auth: "public",
       schema: { body: z.object({ amountCents: z.number().int() }), response: z.object({ amountCents: z.number() }) },
       handler: async ({ body }) => {
         const withInternalField = { amountCents: body.amountCents, internal: "never leaves" };
@@ -23,6 +24,7 @@ beforeAll(async () => {
     defineRoute({
       method: "GET",
       url: "/v1/test/gift",
+      auth: "public",
       schema: {},
       handler: async () => {
         throw new ApiError(404, "gift_not_found", "Gift not found.");
@@ -31,6 +33,7 @@ beforeAll(async () => {
     defineRoute({
       method: "GET",
       url: "/v1/test/crash",
+      auth: "public",
       schema: {},
       handler: async () => {
         throw new Error("driver said sam@example.com");

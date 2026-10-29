@@ -14,7 +14,7 @@
 @source "../**/*.{ts,tsx}";
 
 @theme inline {
-    --font-heading: var(--font-sans);
+    --font-heading: var(--font-display), var(--font-sans);
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -32,6 +32,7 @@
     --color-input: var(--input);
     --color-border: var(--border);
     --color-destructive: var(--destructive);
+    --color-success: var(--success);
     --color-accent-foreground: var(--accent-foreground);
     --color-accent: var(--accent);
     --color-muted-foreground: var(--muted-foreground);
@@ -57,74 +58,82 @@
 }
 
 :root {
-    /* System fonts: no web fonts in the POC (docs/design/design-system.md). */
-    --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+    /*
+     * The prototype's look (docs/design/gifting-prototype.html): navy ink on
+     * white, one blue accent, DM Sans and Sora. --font-body and --font-display
+     * come from next/font (lib/fonts.ts); the system stack is the fallback.
+     */
+    --font-sans: var(--font-body), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --background: #ffffff;
+    --foreground: #012754;
+    --card: #ffffff;
+    --card-foreground: #012754;
+    --popover: #ffffff;
+    --popover-foreground: #012754;
+    --primary: #2570c5;
+    --primary-foreground: #ffffff;
+    --secondary: #f5f8fc;
+    --secondary-foreground: #012754;
+    --muted: #f5f8fc;
+    --muted-foreground: #59728f;
+    --accent: #eaf2fb;
+    --accent-foreground: #1c5ca6;
+    --destructive: #b42840;
+    /* The prototype's "ok" green: rules met, things done. */
+    --success: #147a55;
+    --border: #e2e9f2;
+    --input: #e2e9f2;
+    --ring: #2570c5;
+    --chart-1: #2570c5;
+    --chart-2: #147a55;
+    --chart-3: #8a5300;
+    --chart-4: #5e4e96;
+    --chart-5: #59728f;
+    --radius: 0.75rem;
+    --sidebar: #f5f8fc;
+    --sidebar-foreground: #012754;
+    --sidebar-primary: #2570c5;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #eaf2fb;
+    --sidebar-accent-foreground: #1c5ca6;
+    --sidebar-border: #e2e9f2;
+    --sidebar-ring: #2570c5;
 }
 
+/* Dark: the prototype's "night" navy, with a lighter blue for contrast. */
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    --background: #0a1f3d;
+    --foreground: #f2f6fb;
+    --card: #10294d;
+    --card-foreground: #f2f6fb;
+    --popover: #10294d;
+    --popover-foreground: #f2f6fb;
+    --primary: #6fa8e8;
+    --primary-foreground: #0a1f3d;
+    --secondary: #16325a;
+    --secondary-foreground: #f2f6fb;
+    --muted: #16325a;
+    --muted-foreground: #a9bbd0;
+    --accent: #1b3a66;
+    --accent-foreground: #f2f6fb;
+    --destructive: #f07a8c;
+    --success: #5cc59a;
+    --border: rgb(255 255 255 / 12%);
+    --input: rgb(255 255 255 / 16%);
+    --ring: #6fa8e8;
+    --chart-1: #6fa8e8;
+    --chart-2: #5cc59a;
+    --chart-3: #e3b25c;
+    --chart-4: #a99be0;
+    --chart-5: #a9bbd0;
+    --sidebar: #10294d;
+    --sidebar-foreground: #f2f6fb;
+    --sidebar-primary: #6fa8e8;
+    --sidebar-primary-foreground: #0a1f3d;
+    --sidebar-accent: #1b3a66;
+    --sidebar-accent-foreground: #f2f6fb;
+    --sidebar-border: rgb(255 255 255 / 12%);
+    --sidebar-ring: #6fa8e8;
 }
 
 @layer base {
@@ -133,5 +142,8 @@
     }
   body {
     @apply bg-background text-foreground;
+    }
+  h1, h2, h3 {
+    @apply font-heading tracking-tight;
     }
 }

@@ -89,6 +89,7 @@ true values while the recipient pays nothing.
 | Architecture v2 and docs | ✅ Done |
 | Monorepo scaffold: 4 apps, API, worker, shared packages, CI | ✅ Done (M0) |
 | Week-1 spikes (company-balance order, catalog, tax, Business Units, channel approvals, concurrency) | Planned (M0) |
+| Accounts: register with email verification and sign in, on commercetools customer accounts (B2C) | Built (M1), waiting for the sign-in API client to try for real |
 | Accounts, teams and the ledger | Planned (M1) |
 | Catalog and budget collections | Planned (M2) |
 | Campaigns, approvals, holds, email, links, QR | Planned (M3) |

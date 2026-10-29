@@ -104,7 +104,26 @@ Ours, built on them:
   `packages/ui/src/styles/globals.css`, with a `.dark` set. Use the Tailwind
   names (`bg-background`, `text-muted-foreground`, `bg-primary`), never raw
   colours.
-- System font stack (`--font-sans`); no web fonts in the POC.
+- The prototype's look ([gifting-prototype.html](gifting-prototype.html)):
+  navy ink `#012754` on white, one blue accent `#2570C5` (`--primary`),
+  soft borders `#E2E9F2`, a 12px radius. Dark mode uses the prototype's
+  night navy `#0A1F3D`.
+- DM Sans for text (`font-sans`) and Sora for headings (`font-heading`,
+  applied to `h1` to `h3`). Both are self-hosted by `next/font`
+  (`@gifting/ui/lib/fonts`). Each app's root layout puts `fontVariables` on
+  `<html>`, where `--font-sans` is resolved; on `<body>` the fonts silently
+  fall back to the system stack.
+- Shared account pieces:
+  - `AuthCard`: the wordmark over one card, for the register, sign-in
+    and email pages;
+  - `PasswordInput`: show/hide button and Caps Lock warning;
+  - `Checklist`: live rules, with met items in `text-success`;
+  - `UserMenu`: sign-out is a form post;
+  - the `Wordmark`.
+
+  `AppShell` takes header `actions`.
+- A `success` token (the prototype's "ok" green, `#147A55`; `#5CC59A` in
+  dark mode) marks things that are met or done.
 - The recipient app sets `--primary` (and `--primary-foreground`) from the
   company's `brandColor` (Business Unit `company-settings`) and shows its
   `logoUrl` in the header. If the brand colour fails contrast, the default

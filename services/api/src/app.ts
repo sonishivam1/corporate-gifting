@@ -4,10 +4,17 @@ import { ZodError } from "zod";
 
 import { ApiError, errorBody } from "./http/errors";
 import { registerRoutes } from "./http/route";
+import type { AccountsService } from "./modules/accounts/service";
 import { MODULES } from "./modules/index";
 import { health, meta } from "./system-routes";
 
-export async function buildApp(options: { logger?: Logger } = {}): Promise<FastifyInstance> {
+/**
+ * `accounts` registers people and checks who is calling (ADR 0015). Without
+ * it, the sign-in routes and every signed-in route answer 503
+ * `auth_not_configured`, so the API still starts (and `/health` works)
+ * before the sign-in API client exists.
+ */
+export async function buildApp(options: { logger?: Logger; accounts?: AccountsService | null } = {}): Promise<FastifyInstance> {
   const log = options.logger ?? createLogger("api");
   const app = Fastify({
     // pino is what Fastify uses underneath; widen to its base logger type.
@@ -15,6 +22,7 @@ export async function buildApp(options: { logger?: Logger } = {}): Promise<Fasti
     disableRequestLogging: false,
     genReqId: () => crypto.randomUUID(),
   });
+  app.decorate("accounts", options.accounts ?? null);
 
   app.setErrorHandler((err, request, reply) => {
     if (err instanceof ApiError) {

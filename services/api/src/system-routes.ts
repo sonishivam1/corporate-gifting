@@ -8,6 +8,7 @@ export const VERSION = "0.1.0";
 export const health = defineRoute({
   method: "GET",
   url: "/health",
+  auth: "public",
   schema: { response: z.object({ status: z.literal("ok") }) },
   handler: async () => ({ status: "ok" as const }),
 });
@@ -15,6 +16,7 @@ export const health = defineRoute({
 export const meta = defineRoute({
   method: "GET",
   url: "/v1/meta",
+  auth: "public",
   schema: {
     response: z.object({
       name: z.string(),

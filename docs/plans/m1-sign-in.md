@@ -1,7 +1,7 @@
 # M1: Sign-in, invitations and member access
 
-**Status:** Agreed; building phase A
-**Agreed:** 28 Oct 2026 · **Built:** —
+**Status:** Superseded on 29 Oct 2026 by [M1: register and sign in](m1-register-sign-in.md). The product became B2C, and accounts moved to commercetools ([ADR 0015](../architecture/decisions/0015-commerce-customer-accounts.md)). Phase A was built against Auth0, and is kept here as a record.
+**Agreed:** 28 Oct 2026
 
 ## Goal
 
@@ -262,4 +262,90 @@ the tests fail.
 
 ## As built
 
-—
+### Phase A (28 Oct 2026)
+
+**Built, as planned:**
+- **Commercetools:** `member-profile` on Customer (`identityIds`, `status`,
+  `invitedAt`, `invitedBy`) and `emailDomains` on `company-settings`
+  (`ct:apply`). The seed marks its 250 demo members active, and gives each
+  company its domain.
+- **`@gifting/domain`:** `MEMBER_ROLES`, `MEMBER_STATUSES`,
+  `isPersonalEmail`, the `memberView` schema, `hasRole` and `primaryRole`.
+- **API:**
+  - `http/auth.ts` verifies tokens with `jose` 6.2.12: RS256 only, plus
+    issuer, audience and expiry;
+  - `defineRoute({ auth })` takes `member` (default), `ops` or `public`;
+  - the accounts module has a pure `memberScope` (owners and admins reach
+    every team; approvers and senders their own), a cached resolver, and a
+    commercetools directory;
+  - `GET /v1/me`.
+- **Sender app:**
+  - `@auth0/nextjs-auth0` 4.32.0;
+  - `proxy.ts`: `/auth/*` routes, redirects to `/sign-in` keeping
+    `returnTo`, and the access token renewed and saved;
+  - a member-only route group, the dashboard with the account menu,
+    `/sign-in`, `/no-access`;
+  - Auth0 errors land back on `/sign-in`.
+- **`@gifting/ui`:**
+  - the prototype's colours (light, plus a derived dark);
+  - DM Sans and Sora through `next/font`;
+  - `SignInCard`, `GoogleIcon`, `UserMenu` and `Wordmark`, and
+    `AppShell` actions.
+- **`infra/auth0`:** a setup checklist and the post-login Action.
+
+**Changed from the plan:**
+- **`email_not_verified` is its own `403` code**, not `no_access`, so the
+  page can say what to do.
+- **Members are found by verified email only.** `identityIds` records every
+  sign-in method, and Google and a password for the same email reach one
+  member. Looking up by identity id first would add a query and gain
+  nothing.
+- **Each app reads its own `.env.local`.** The root `.env` holds
+  commercetools and database secrets the apps must not have. App variables
+  use the SDK's standard names (`AUTH0_CLIENT_ID` …), not
+  `SENDER_AUTH0_CLIENT_ID`.
+- **`pnpm member:add`** adds a real person to a company, so phase A can be
+  tried before invitations exist. Work emails only. `--company-name` creates
+  the company (with the email's domain and a General team) when its key is
+  new. Royal Cyber (`royal-cyber`) was created this way, with Shivam as
+  owner.
+- **Without Auth0 settings, the API still starts.** Its routes that need
+  sign-in answer `503 auth_not_configured`, and the sender app shows a
+  notice on `/sign-in`.
+- **Re-seeding leaves existing team units alone.** The Import API can't
+  update a Division that inherits stores.
+
+**Verified:**
+- **API:**
+  - 31 tests in `services/api`: 17 for sign-in and access, 6 for
+    `memberScope`, and the 8 that were there. They cover:
+    - 401 for no token, a bad signature, an expired token, the wrong
+      audience or issuer, HS256 and alg none;
+    - 403 for an unverified email, a non-member, a disabled member and a
+      member in no company;
+    - 404 for ops routes without `ops:manage`;
+    - scope ignores the request body;
+    - an invited member activates once;
+    - Google and a password reach one member;
+    - the 60-second cache;
+    - 503 before Auth0 is configured.
+  - Plus 6 for the member rules in `@gifting/domain`.
+- **Guard check:** each of these, removed in turn, failed its test, and all
+  pass once restored:
+  - the issuer check;
+  - the audience check;
+  - the disabled-member check;
+  - the verified-email check;
+  - the ops permission check.
+- **In commercetools:** the member queries were tried against the project
+  (customer by email; units by associate; a company's teams), with a demo
+  owner and a demo approver.
+- **The built sender app, in the browser:**
+  - `/` redirects to `/sign-in`, keeping `returnTo` on both buttons;
+  - DM Sans and Sora load;
+  - the prototype palette in light and dark;
+  - the no-access page;
+  - no sideways scroll at 390px.
+
+**Not yet verified:** a real sign-in. That waits for the Auth0 tenant
+(`infra/auth0/README.md`).

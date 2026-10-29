@@ -1,15 +1,26 @@
-import { AppShell } from "@gifting/ui/components/app-shell";
+import { Badge } from "@gifting/ui/components/badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@gifting/ui/components/card";
 import { Suspense } from "react";
 
-import { ApiStatus } from "./api-status";
+import { getMe } from "@/lib/api";
 
-export default function Home() {
+import { ApiStatus } from "./api-status";
+import { MemberShell } from "./member-shell";
+
+export default async function Home() {
+  const result = await getMe();
+  const me = result.kind === "account" ? result.me : null;
+
   return (
-    <AppShell app="Sender dashboard" title="Send gifts your team will actually want.">
-      <p className="mb-6 text-sm text-muted-foreground">
-        Scaffold (M0). The milestone that builds each part is in brackets.
-      </p>
+    <MemberShell title={me?.firstName ? `Welcome, ${me.firstName}` : "Welcome"}>
+      {me ? (
+        <section className="mb-8 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+          <span>
+            You&rsquo;re signed in as <span className="font-medium text-foreground">{me.email}</span>.
+          </span>
+          {me.companyName ? <Badge variant="secondary">{me.companyName}</Badge> : null}
+        </section>
+      ) : null}
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <CardHeader>
@@ -39,6 +50,6 @@ export default function Home() {
       <Suspense fallback={<p className="mt-8 text-sm text-muted-foreground">Checking the Gifting API…</p>}>
         <ApiStatus />
       </Suspense>
-    </AppShell>
+    </MemberShell>
   );
 }

@@ -27,5 +27,7 @@ describe("demo customers", () => {
     expect(draft.addresses?.[0]?.country).toBe("US");
     expect(draft.defaultShippingAddress).toBe(0);
     expect(draft.defaultBillingAddress).toBe(0);
+    expect(draft.custom?.type.key).toBe("member-profile");
+    expect(draft.custom?.fields?.status?.value).toBe("active");
   });
 });

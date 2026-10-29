@@ -12,7 +12,7 @@ affected docs.
 | 4 | Countries and currencies after the US? | Stores per country, prices, tax, multi-currency ledger | After the POC | — | — |
 | 5 | Vendor payout terms and returns policy? | Vendor cancellation flow, refunds, statements | After the POC (M6 refund flow assumes full refund) | — | — |
 | 6 | Which HR system to integrate first? | The HR adapter and sandbox account | M5 | — | — |
-| 7 | Identity provider: Auth0 or Google Cloud Identity Platform? ([ADR 0009](../architecture/decisions/0009-identity-provider.md)) | Sign-in, member invites | M1 | Auth0, Free plan. Invite-only, work emails only ([M1 sign-in plan](../plans/m1-sign-in.md)) | 28 Oct 2026, Shivam |
+| 7 | Identity provider: Auth0 or Google Cloud Identity Platform? ([ADR 0009](../architecture/decisions/0009-identity-provider.md)) | Sign-in, member invites | M1 | Neither: commercetools customer accounts with its OAuth password flow. B2C, open registration with email verification ([ADR 0015](../architecture/decisions/0015-commerce-customer-accounts.md)). Auth0 was chosen on 28 Oct and replaced on 29 Oct | 29 Oct 2026, Shivam |
 | 8 | Which commercetools project and region for the POC? | `CTP_*` settings, data residency | Week 1 | — | — |
 
 ## Working assumptions until answered

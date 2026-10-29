@@ -18,6 +18,7 @@
     "ct:plan": "pnpm --filter @gifting/ct-setup plan",
     "ct:apply": "pnpm --filter @gifting/ct-setup apply",
     "seed": "pnpm --filter @gifting/seed seed",
+    "member:add": "pnpm --filter @gifting/seed run add-member",
     "catalog:extract": "pnpm --filter @gifting/catalog run extract",
     "catalog:import": "pnpm --filter @gifting/catalog run import",
     "catalog:remove": "pnpm --filter @gifting/catalog run remove"

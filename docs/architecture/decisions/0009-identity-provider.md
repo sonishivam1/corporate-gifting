@@ -1,6 +1,6 @@
 # 0009 — A hosted identity provider (Auth0 or Google Cloud Identity Platform)
 
-**Status:** Accepted (28 Oct 2026, Shivam): **Auth0, Free plan.** See "Decision" at the end.
+**Status:** Superseded by [0015](0015-commerce-customer-accounts.md) on 29 Oct 2026. It was accepted on 28 Oct 2026 as Auth0, Free plan; the product then became B2C, with accounts in the commerce platform.
 
 ## Context
 

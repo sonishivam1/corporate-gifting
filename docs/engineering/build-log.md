@@ -11,7 +11,75 @@ how it was verified, and any lesson worth keeping.
 
 ---
 
+## 29 Oct 2026
+
+### Register and sign in with commercetools customer accounts (B2C)
+- **What:**
+  - Auth0 is replaced
+    ([ADR 0015](../architecture/decisions/0015-commerce-customer-accounts.md),
+    [plan](../plans/m1-register-sign-in.md)). Anyone can register,
+    verify their email from a link, and sign in with commercetools' OAuth
+    password flow.
+  - The API hides the platform behind an `IdentityProvider`, sends the
+    account emails itself, rate-limits, and refuses unverified accounts.
+  - The sender app keeps the tokens in an encrypted http-only cookie and
+    has register, verify and sign-in pages.
+- **Why:** the product is B2C, a corporate gifting platform for one
+  merchant, with accounts in the commerce platform.
+- **Verified:**
+  - 21 accounts tests, and a guard check on five guards.
+  - Register, verify and the duplicate email, against the real project.
+  - Lint, typecheck, 152 tests and the build.
+  - Real sign-in waits for the sign-in API client.
+- **Lessons:**
+  - A password-flow token inherits its API client's scopes: with an admin
+    client, every customer would hold full project access. Customer tokens
+    need their own `manage_my_profile` client, enforced at start-up.
+  - commercetools' password flow signs in unverified customers, so the
+    application must check `isEmailVerified` itself.
+
+### Real account emails through Brevo
+- **What:** separate `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER` and `SMTP_PASS`
+  settings, and Brevo's free plan for development email.
+- **Why:** verification emails only reached `.data/outbox`, and nobody could
+  test with a real inbox.
+- **Verified:** an SMTP login check, then a verification email received in a
+  personal inbox.
+- **Lessons:** a sender's domain must be authenticated with the provider.
+  `@royalcyber.com` (DMARC `p=quarantine`, no Brevo DKIM) was accepted by
+  Brevo and then silently quarantined by the receiver.
+
 ## 28 Oct 2026
+
+### M1 sign-in, phase A: Auth0 sign-in and member access
+- **What:**
+  - **API:** checks Auth0 access tokens (`jose`, RS256, issuer, audience,
+    expiry). Every route declares `auth: "member" | "ops" | "public"`.
+    Members are found in commercetools by verified email, scoped to their
+    company and teams, and returned by `GET /v1/me`.
+  - **Sender app:**
+    - `@auth0/nextjs-auth0` 4.32.0, with a `proxy.ts` that redirects to
+      `/sign-in`;
+    - a member-only route group with the account menu, and a no-access
+      page;
+    - the sign-in page in the prototype's look.
+  - **`@gifting/ui`:** the prototype's colours, DM Sans and Sora.
+  - **commercetools:** a `member-profile` type and company `emailDomains`.
+  - `pnpm member:add`, and an Auth0 setup checklist in `infra/auth0`.
+  - Details: the [plan's As built section](../plans/m1-sign-in.md#as-built).
+- **Why:** sign-in is the base of every M1 to M7 flow, and the team needed
+  the screens to match the prototype.
+- **Verified:**
+  - 31 API tests for every refusal, and a guard check on five guards.
+  - The member queries ran against the commercetools project.
+  - The built sender app's pages, at 390px and in light and dark.
+  - A real sign-in waits for the Auth0 tenant.
+- **Lessons:**
+  - `next/font` variables must sit on `<html>`. On `<body>`, `--font-sans`
+    (resolved on `:root`) silently falls back to the system font.
+  - `defineRoute` called inline in an array infers its access mode from
+    the array's type, not the default. Define routes as constants.
+  - The Import API can't re-import a team unit that inherits its stores.
 
 ### Proposed: M1 sign-in plan; ADR 0009 accepted (Auth0)
 - **What:** [M1: sign-in, invitations and member access](../plans/m1-sign-in.md),

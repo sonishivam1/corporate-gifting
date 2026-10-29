@@ -1,4 +1,5 @@
-import type { RouteDefinition } from "../http/route";
+import type { RouteAuth, RouteDefinition, RouteSchema } from "../http/route";
+import { accountsRoutes } from "./accounts/routes";
 
 /**
  * The ten modules (docs/architecture/overview.md). Each gets its own folder
@@ -8,11 +9,11 @@ import type { RouteDefinition } from "../http/route";
 export type ApiModule = {
   name: string;
   milestone: string;
-  routes: readonly RouteDefinition[];
+  routes: readonly RouteDefinition<RouteSchema, RouteAuth>[];
 };
 
 export const MODULES: readonly ApiModule[] = [
-  { name: "accounts", milestone: "M1", routes: [] },
+  { name: "accounts", milestone: "M1", routes: accountsRoutes },
   { name: "ledger", milestone: "M1", routes: [] },
   { name: "catalog", milestone: "M2", routes: [] },
   { name: "campaigns", milestone: "M3", routes: [] },

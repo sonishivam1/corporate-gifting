@@ -12,6 +12,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@commercetools/platform-sdk": "9.7.0",
+    "@commercetools/ts-client": "5.1.1",
     "@gifting/channels": "workspace:*",
     "@gifting/ct": "workspace:*",
     "@gifting/db": "workspace:*",
@@ -19,7 +21,11 @@
     "@gifting/ledger": "workspace:*",
     "@gifting/logger": "workspace:*",
     "fastify": "5.12.7",
+    "nodemailer": "10.1.1",
     "pino": "10.4.0",
     "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/nodemailer": "8.0.2"
   }
 }

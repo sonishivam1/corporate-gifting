@@ -59,6 +59,7 @@ export function businessUnitImports(customers: readonly DemoCustomer[]): Busines
           brandColor: { type: "String", value: company.brandColor },
           retentionDays: { type: "Number", value: DEMO_RETENTION_DAYS },
           allowOverage: { type: "Boolean", value: false },
+          emailDomains: { type: "StringSet", value: [company.domain] },
         },
       },
     };
@@ -69,7 +70,8 @@ export function businessUnitImports(customers: readonly DemoCustomer[]): Busines
         key: team.key,
         name: `${company.name} · ${team.name}`,
         parentUnit: { typeId: "business-unit", key: company.key },
-        storeMode: "FromParent",
+        // Teams inherit the company's stores by default. Setting storeMode here
+        // makes a re-import try to edit the team's stores, which commercetools refuses.
         associateMode: "ExplicitAndFromParent",
         approvalRuleMode: "ExplicitAndFromParent",
         associates: [

@@ -50,7 +50,7 @@ flowchart TB
   db[("MongoDB Atlas")]
   ct["commercetools<br/>Business Units · products · carts<br/>payments · orders · deliveries"]
   queue["Queue (Pub/Sub)<br/>Subscription messages"]
-  idp["Identity provider<br/>Auth0 or Identity Platform"]
+  idp["Account emails<br/>SMTP · SendGrid"]
   stripe["Stripe (test mode)"]
   chan["Email · SMS · Slack · Teams"]
   hr["Unified HR API"]

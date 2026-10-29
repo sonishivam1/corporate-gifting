@@ -19,6 +19,7 @@ import type {
   ZoneDraft,
 } from "@commercetools/platform-sdk";
 import { CT_LOCALE } from "@gifting/ct";
+import { MEMBER_STATUSES } from "@gifting/domain";
 import { vendors, type SeedVendor } from "@gifting/seed";
 
 const en = (text: string) => ({ [CT_LOCALE]: text });
@@ -91,6 +92,7 @@ export const typeDrafts: TypeDraft[] = [
       stringField("logoUrl", "Logo URL"),
       numberField("retentionDays", "Recipient data retention (days)"),
       booleanField("allowOverage", "Charge overage to the team"),
+      stringSetField("emailDomains", "Email domains members may use"),
     ],
   },
   {
@@ -98,6 +100,24 @@ export const typeDrafts: TypeDraft[] = [
     name: en("Team settings"),
     resourceTypeIds: ["business-unit"],
     fieldDefinitions: [numberField("approvalThresholdCents", "Approval threshold (cents)"), stringSetField("approverIds", "Approvers")],
+  },
+  {
+    // M1 sign-in: links a commercetools customer (a company member) to the
+    // identities they sign in with, and records their access status.
+    key: "member-profile",
+    name: en("Member profile"),
+    resourceTypeIds: ["customer"],
+    fieldDefinitions: [
+      stringSetField("identityIds", "Sign-in identities (Auth0 user ids)"),
+      {
+        name: "status",
+        label: en("Access status"),
+        required: true,
+        type: { name: "Enum", values: MEMBER_STATUSES.map((key) => ({ key, label: key })) },
+      },
+      { name: "invitedAt", label: en("Invited at"), required: false, type: { name: "DateTime" } },
+      stringField("invitedBy", "Invited by (customer key)"),
+    ],
   },
   {
     // ADR 0005: the Payment that records a redemption paid from the company balance.

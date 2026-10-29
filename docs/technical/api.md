@@ -7,19 +7,44 @@ generated from them (M1).
 **Errors:** always `{ "error": { "code": "snake_case", "message": "…" } }`.
 Outside the caller's scope is `404`, never `403`.
 
+## Sign-in
+
+Every route declares who may call it, in `defineRoute({ auth })`
+([ADR 0015](../architecture/decisions/0015-commerce-customer-accounts.md)):
+
+| `auth` | Who | Without it |
+| --- | --- | --- |
+| `"account"` (default) | A signed-in person with a verified email. The handler gets `account`, taken from the access token, never from the request | `401 unauthenticated` (no token, or not active) |
+| `"ops"` | Platform staff (verified emails in `OPS_EMAILS`) | `404 not_found`, so the route's existence doesn't leak |
+| `"public"` | Anyone | — |
+
+- **Tokens:** callers send `Authorization: Bearer <access token>`, a
+  commercetools customer token from the password flow. The API introspects
+  it (cached for 60 seconds).
+- **Only the sender app's server calls the auth routes.** It keeps the
+  tokens in an encrypted cookie.
+- **Before the sign-in client is configured:** the auth routes and signed-in
+  routes answer `503 auth_not_configured`.
+
 ## Built
 
 | Method | Path | Auth | Returns |
 | --- | --- | --- | --- |
-| GET | `/health` | none | `{ status: "ok" }` |
-| GET | `/v1/meta` | none | `{ name, version, modules[] }` |
+| GET | `/health` | public | `{ status: "ok" }` |
+| GET | `/v1/meta` | public | `{ name, version, modules[] }` |
+| POST | `/v1/auth/register` | public | `202 { status: "check_email" }` for a new email (or a taken one not yet verified, which gets a fresh link); `409 email_taken` for an existing account. Body: `firstName, lastName, email, password, companyName?, acceptTerms: true`. Password: 10 to 128 characters, with uppercase, lowercase, a number and a special character, and not containing the email name |
+| POST | `/v1/auth/verify-email` | public | `{ status: "verified" }`, or `400 invalid_token` |
+| POST | `/v1/auth/resend-verification` | public | `202 { status: "check_email" }`, always |
+| POST | `/v1/auth/sign-in` | public | `{ accessToken, refreshToken, expiresAt, account }`; `401 invalid_credentials`, `403 email_not_verified`, `429 too_many_attempts` |
+| POST | `/v1/auth/refresh` | public | `{ accessToken, expiresAt }`, or `401` |
+| POST | `/v1/auth/sign-out` | public | `{ status: "signed_out" }`; revokes the given tokens |
+| GET | `/v1/me` | account | `AccountView`: `id, email, firstName, lastName, companyName` (`@gifting/domain`) |
 
 ## Planned
 
 | Method | Path | Who | Module | Milestone |
 | --- | --- | --- | --- | --- |
 | POST | `/v1/companies` | ops | accounts | M1 |
-| GET | `/v1/me` | member | accounts | M1 |
 | GET, POST | `/v1/teams/:teamKey/members` | owner, admin | accounts | M1 |
 | GET | `/v1/teams/:teamKey/balance` | owner, admin, sender | ledger | M1 |
 | POST | `/v1/teams/:teamKey/top-ups` | owner, admin | ledger | M1 |
