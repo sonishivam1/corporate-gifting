@@ -13,6 +13,7 @@ import {
   type DecisionResultView,
   type EstimateView,
   estimateSend,
+  type Gift,
   hasShareableLinks,
   type SendRequest,
   type SubmitResultView,
@@ -25,19 +26,12 @@ import { ApiError } from "../../http/errors";
 import type { Session } from "../../http/session";
 import type { OrgTeam } from "../accounts/org";
 import type { CatalogService, ResolvedGift } from "../catalog/service";
+import type { ChannelsService } from "../channels/service";
 import type { GiftsService } from "../gifts/service";
 import type { LedgerService } from "../ledger/service";
 import type { RecipientsService } from "../recipients/service";
 
 type ListStatus = "all" | "active" | "scheduled" | "pending_approval";
-
-/**
- * Per-gift hold. Shipping, tax and the fee are open questions
- * (docs/business/open-questions.md); they are zero until decided and slot in
- * here without changing the flow.
- */
-const holdFor = (budgetCents: number) =>
-  holdAmount({ budgetCents, shippingAllowanceCents: 0, taxEstimateCents: 0, feeCents: 0 });
 
 const LIST_FILTERS: Record<ListStatus, (c: Campaign) => boolean> = {
   all: () => true,
@@ -48,9 +42,17 @@ const LIST_FILTERS: Record<ListStatus, (c: Campaign) => boolean> = {
 
 export type CampaignsService = ReturnType<typeof createCampaignsService>;
 
+/**
+ * Per-gift hold. Shipping, tax and the fee are open questions
+ * (docs/business/open-questions.md); they are zero until decided and slot in
+ * here without changing the flow.
+ */
+const holdFor = (budgetCents: number) =>
+  holdAmount({ budgetCents, shippingAllowanceCents: 0, taxEstimateCents: 0, feeCents: 0 });
+
 export function createCampaignsService(
   deps: AppDeps,
-  services: { catalog: CatalogService; ledger: LedgerService; recipients: RecipientsService; gifts: GiftsService },
+  services: { catalog: CatalogService; ledger: LedgerService; recipients: RecipientsService; gifts: GiftsService; channels: ChannelsService },
 ) {
   const c = () => getCollections(deps.db);
 
@@ -216,7 +218,10 @@ export function createCampaignsService(
      * Short of funds, nothing is written. A second submit changes nothing.
      */
     async submit(session: Session, id: string): Promise<SubmitResultView> {
-      return withTransaction(async (tx) => {
+      // The links minted inside the transaction are the only moment they exist in the clear: deliver with them once it commits.
+      const fresh: { campaign?: Campaign; items?: Array<{ gift: Gift; url: string }> } = {};
+      const result = await withTransaction<SubmitResultView>(async (tx) => {
+        fresh.campaign = undefined;
         const campaign = await find(session, id, tx);
         if (campaign.status !== "draft") {
           const outcome = campaign.status === "pending_approval" ? "pending_approval" : campaign.status === "approved" ? "scheduled" : "sent";
@@ -259,6 +264,10 @@ export function createCampaignsService(
             session: tx,
           });
         }
+        if (giftStatus === "sent") {
+          fresh.campaign = claimed;
+          fresh.items = gifts.map((g) => ({ gift: g, url: links.find((l) => l.giftId === g._id)!.url }));
+        }
         return {
           campaignId: campaign._id,
           outcome: giftStatus,
@@ -267,6 +276,11 @@ export function createCampaignsService(
           links: hasShareableLinks(campaign.channels) ? links : [],
         };
       });
+      if (fresh.campaign && fresh.items) {
+        // Best effort: a failure never undoes a campaign that was sent. Each gift stays retryable.
+        await services.channels.deliverFresh(fresh.campaign, fresh.items).catch((err) => deps.log?.warn({ campaignId: id, err }, "delivery after send failed"));
+      }
+      return result;
     },
 
     /**

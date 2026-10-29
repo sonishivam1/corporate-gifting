@@ -11,6 +11,12 @@ export type GiftMessage = {
   link: string;
   greeting: string;
   senderName: string;
+  /** The recipient's name, for the greeting line. */
+  recipientName?: string;
+  /** The sender's personal message. Plain text. */
+  message?: string;
+  /** ISO date the gift can be chosen until. */
+  expiresOn?: string;
   branding: { brandColor: string | null; logoUrl: string | null };
 };
 

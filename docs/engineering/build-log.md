@@ -13,130 +13,17 @@ how it was verified, and any lesson worth keeping.
 
 ## 29 Oct 2026
 
-### Commerce connectors: the platform is a plug-in
-- **What:**
-  - The commerce platform became a connector
-    ([ADR 0013](../architecture/decisions/0013-commerce-adapters.md),
-    accepted; [plan](../plans/commerce-connectors.md)).
-  - `@gifting/commerce` holds the contract and a conformance suite.
-    `@gifting/commerce-commercetools` (moved out of the API) and
-    `@gifting/commerce-memory` implement it.
-  - `COMMERCE_CONNECTOR` picks one per deployment, from a list generated out
-    of the API's dependencies.
-  - The API now issues its own sessions and verification links; a
-    platform's tokens travel sealed inside them.
-  - A second sign-in mode, `hosted`, for platforms with their own sign-in
-    page. `GET /v1/auth/options` tells the app which mode applies.
-  - A lint rule keeps platform code inside connector packages.
-- **Why:** the product will be sold to clients on Shopify, BigCommerce and
-  others, and Shivam asked for plug and play from today: a new platform is a
-  new connector and configuration, never a change to the product.
-- **Verified:**
-  - The conformance suite on memory (three modes) and on the real
-    commercetools project.
-  - 37 API tests, guard checks on sign-out, the newest link and the import
-    rule.
-  - Lint, typecheck, 190 tests and the build.
-  - The hosted flow end to end in the browser, and the running API on
-    commercetools.
-- **Lessons:**
-  - A Next.js server action redirecting to a URL on the same site is handled
-    inside the app, so cookies set at the destination never reach the
-    browser. Hand over to another page with a full page load.
-  - A page that depends on the API's answer must render per request, or a
-    build made while the API was down freezes it.
-
-### Register and sign in with commercetools customer accounts (B2C)
-- **What:**
-  - Auth0 is replaced
-    ([ADR 0015](../architecture/decisions/0015-commerce-customer-accounts.md),
-    [plan](../plans/m1-register-sign-in.md)). Anyone can register,
-    verify their email from a link, and sign in with commercetools' OAuth
-    password flow.
-  - The API hides the platform behind an `IdentityProvider`, sends the
-    account emails itself, rate-limits, and refuses unverified accounts.
-  - The sender app keeps the tokens in an encrypted http-only cookie and
-    has register, verify and sign-in pages.
-- **Why:** the product is B2C, a corporate gifting platform for one
-  merchant, with accounts in the commerce platform.
-- **Verified:**
-  - 21 accounts tests, and a guard check on five guards.
-  - Register, verify and the duplicate email, against the real project.
-  - Lint, typecheck, 152 tests and the build.
-  - Real sign-in waits for the sign-in API client.
-- **Lessons:**
-  - A password-flow token inherits its API client's scopes: with an admin
-    client, every customer would hold full project access. Customer tokens
-    need their own `manage_my_profile` client, enforced at start-up.
-  - commercetools' password flow signs in unverified customers, so the
-    application must check `isEmailVerified` itself.
-
-### Real account emails through Brevo
-- **What:** separate `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER` and `SMTP_PASS`
-  settings, and Brevo's free plan for development email.
-- **Why:** verification emails only reached `.data/outbox`, and nobody could
-  test with a real inbox.
-- **Verified:** an SMTP login check, then a verification email received in a
-  personal inbox.
-- **Lessons:** a sender's domain must be authenticated with the provider.
-  `@royalcyber.com` (DMARC `p=quarantine`, no Brevo DKIM) was accepted by
-  Brevo and then silently quarantined by the receiver.
-
-## 28 Oct 2026
-
-### M1 sign-in, phase A: Auth0 sign-in and member access
-- **What:**
-  - **API:** checks Auth0 access tokens (`jose`, RS256, issuer, audience,
-    expiry). Every route declares `auth: "member" | "ops" | "public"`.
-    Members are found in commercetools by verified email, scoped to their
-    company and teams, and returned by `GET /v1/me`.
-  - **Sender app:**
-    - `@auth0/nextjs-auth0` 4.32.0, with a `proxy.ts` that redirects to
-      `/sign-in`;
-    - a member-only route group with the account menu, and a no-access
-      page;
-    - the sign-in page in the prototype's look.
-  - **`@gifting/ui`:** the prototype's colours, DM Sans and Sora.
-  - **commercetools:** a `member-profile` type and company `emailDomains`.
-  - `pnpm member:add`, and an Auth0 setup checklist in `infra/auth0`.
-  - Details: the [plan's As built section](../plans/m1-sign-in.md#as-built).
-- **Why:** sign-in is the base of every M1 to M7 flow, and the team needed
-  the screens to match the prototype.
-- **Verified:**
-  - 31 API tests for every refusal, and a guard check on five guards.
-  - The member queries ran against the commercetools project.
-  - The built sender app's pages, at 390px and in light and dark.
-  - A real sign-in waits for the Auth0 tenant.
-- **Lessons:**
-  - `next/font` variables must sit on `<html>`. On `<body>`, `--font-sans`
-    (resolved on `:root`) silently falls back to the system font.
-  - `defineRoute` called inline in an array infers its access mode from
-    the array's type, not the default. Define routes as constants.
-  - The Import API can't re-import a team unit that inherits its stores.
-
-### Proposed: M1 sign-in plan; ADR 0009 accepted (Auth0)
-- **What:** [M1: sign-in, invitations and member access](../plans/m1-sign-in.md),
-  proposed:
-  - Auth0 Free plan, with Google and email and password;
-  - invite-only and work emails only;
-  - members in commercetools Business Units;
-  - the Gifting API decides access from the member record.
-
-  ADR 0009 is accepted as Auth0, and open question 7 is answered.
-- **Why:** sign-in is the base of every M1 to M7 flow. The prototype has no
-  auth screens, so the plan sets them out in its look.
-
-### Sender dashboard merged with the commercetools catalog import
-- **What:** `develop` (commercetools setup, Christie Cookie catalog, five
-  demo companies) merged into the sender dashboard branch. In
-  `infra/seed/src/index.ts` the products keep develop's descriptions and
-  `perishable`, plus the dashboard's `category` and `occasions`.
-  `demoCompanies` is develop's list of five; `demoCompany` is its first
-  entry (Lumen Labs) with the dashboard's team thresholds, approvers and
-  members added.
-- **Why:** both branches changed the seed products and the demo company.
-- **Verified:** lint, typecheck and unit tests after the merge; a new seed
-  test checks that `demoCompany` keeps the same teams as `demoCompanies[0]`.
+### Gift delivery by email (M3.4)
+- **What:** sending a campaign emails each recipient a private link
+  (`/r/<token>`; SMTP in dev, Mailpit locally). Delivery is claimed with an
+  atomic `queued` to `sending` update, so a retry never sends twice. The
+  sender can send a gift again (new link, old one stops) or cancel it (hold
+  released); both are API routes for now. New: `@gifting/content` (every
+  user-facing string) and the email channel adapter in `@gifting/channels`.
+- **Why:** the email half of M3.4 is ours.
+- **Verified:** integration tests for one email per recipient, no raw link
+  stored, a failed email left retryable, resend and cancel, and scoping to the
+  caller's team; unit tests for the email adapter and the strings.
 
 ---
 
