@@ -124,11 +124,35 @@ Ours, built on them:
   - the `Wordmark`.
 
   `AppShell` and `SidebarShell` take header `actions` (the dashboard puts
-  the `UserMenu` there).
+  the `UserMenu` there). `SidebarShell` also has a `topBar` slot (search),
+  and nav items can be `soon` (shown with a badge, not a link). Its menu
+  uses 40px rows, 18px icons and a primary-tinted active item under a
+  "Menu" heading. The page uses wide screens up to 1600px.
+- Overview pieces:
+  - `StatCard`: an icon in a soft tone, a label, a value, the change
+    against the previous period, and an optional footer;
+  - `GiftActivityChart` and `GiftStatusDonut`, built on the shadcn `chart`
+    component.
+
+  Each gift status has one colour: waiting slate, opened amber, chose
+  blue, shipped purple, delivered green, expired red. The activity chart
+  uses the same colours. Charts don't animate in.
 - The recipient app sets `--primary` (and `--primary-foreground`) from the
   company's `brandColor` (Business Unit `company-settings`) and shows its
   `logoUrl` in the header. If the brand colour fails contrast, the default
   `--primary` stays.
+
+## Emails
+
+Emails can't use the component library, so they have their own layout in
+`services/api/src/mail/layout.ts` (`brandedEmail()`), with the same palette:
+- the wordmark (the gift icon as an inline PNG, `cid:`; email clients strip
+  SVG and block `data:` images), then one white card with a heading,
+  paragraphs, a button and a copy-paste link, a note, and a footer;
+- tables and inline styles only, light only (`color-scheme`), a hidden
+  preheader for the inbox preview line, and a plain-text version;
+- every account email uses it. Outside production the outbox writes an
+  `.html` preview next to each `.eml`, to see the design without sending.
 
 ## Gift status colours
 

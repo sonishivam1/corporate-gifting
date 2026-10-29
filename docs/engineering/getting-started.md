@@ -22,6 +22,7 @@ Docker and need no accounts.
 
 ```bash
 pnpm db:up        # MongoDB (27017) and Mailpit (8025)
+pnpm seed:demo    # the demo company, and 30 days of campaigns and gifts for the Home overview
 pnpm db:indexes   # create the indexes
 pnpm dev          # all apps and the API
 ```
@@ -103,3 +104,18 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm build
 ## Troubleshooting
 
 See the gotchas table in [CLAUDE.md](../../CLAUDE.md#gotchas).
+
+## Moving the demo activity to today
+
+`pnpm seed:demo` dates its demo campaigns and gifts relative to its first
+run, and never rewrites them (the ledger is append-only, even for demo
+data). After a few weeks the Home's last-30-days view empties. To start
+over, drop the local database and seed again:
+
+```bash
+docker exec gifting-mongo mongosh gifting --quiet --eval "db.dropDatabase()"
+```
+
+```bash
+pnpm seed:demo
+```

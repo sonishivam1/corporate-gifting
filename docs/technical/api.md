@@ -43,6 +43,7 @@ Every route declares who may call it, in `defineRoute({ auth })`
 | POST | `/v1/auth/sign-out` | public | `{ status: "signed_out" }`; ends the session at once, and the platform's own session |
 | GET | `/v1/me` | account | `AccountView`: `id, email, firstName, lastName, companyName` (`@gifting/domain`) |
 | GET | `/v1/workspace` | workspace | User, company, current team (threshold, approvers), the user's teams; `devUsers` with development sign-in |
+| GET | `/v1/teams/:teamKey/overview?range=7d\|30d\|90d` | workspace (member of that team) | The Home overview: `balance`, `sent` and `chose` (with the previous period), `expiringSoon` (next 7 days), `pendingApprovals`, `daily` (sent, opened, chose per day) and `statuses`. Counted by `overviewFrom()` in `@gifting/domain` |
 | GET | `/v1/teams/:teamKey/balance` | workspace (member of that team) | `{ teamKey, currency, availableCents, heldCents, spentCents }`, computed from the ledger |
 | GET | `/v1/catalog/products?budget&occasion&category&q` | workspace | `{ products[] }`: available items only |
 | GET | `/v1/collections?budget=` | workspace | `{ collections[] }` with `itemCount` at the budget (the band when none) |

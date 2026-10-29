@@ -8,7 +8,7 @@ commitments. Owners are suggestions to confirm.
 **This file is updated with every milestone step**, together with
 [features.md](features.md) and the README progress table.
 
-_Last updated: 29 Oct 2026 (register and sign-in built on commercetools customer accounts; commerce made a plug-in, ADR 0013 accepted; sender dashboard built ahead of M1 to M3 and merged behind sign-in, see [change 1](../plans/poc-plan.md#changes-after-agreement))._
+_Last updated: 29 Oct 2026 (register and sign-in built on commercetools customer accounts; commerce made a plug-in, ADR 0013 accepted; sender dashboard built ahead of M1 to M3 and merged behind sign-in, see [change 1](../plans/poc-plan.md#changes-after-agreement); Home redesigned as an overview; branded account emails)._
 
 ## Where we are
 
@@ -25,6 +25,7 @@ app). Then M1 starts.
 | ✅ Done | Register, verify and sign in (B2C, commercetools customer accounts, real email) | M1 |
 | ✅ Done | Commerce connectors: the contract, conformance suite, commercetools and memory connectors (accounts) | M1 |
 | ✅ Done | Sender dashboard slice: balance, catalog read, campaigns with estimate, approval and holds, on seed data ([plan](../plans/sender-dashboard.md)) | M0 (ahead) |
+| ✅ Done | Sender Home as an overview: stat cards, activity chart, status donut, the prototype's menu ([plan](../plans/sender-home-redesign.md)) | M0 (ahead) |
 | Planned | Spikes 1 to 6 written up ([spikes](../plans/spikes.md)) | M0 |
 | Planned | A2P 10DLC registration, Slack app and Teams bot submitted | M0 |
 | Planned | Companies and teams as Business Units, identity, budget accounts, ledger, Stripe test top-ups | M1 |

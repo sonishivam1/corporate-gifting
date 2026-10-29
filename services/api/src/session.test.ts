@@ -65,6 +65,15 @@ describe("development sign-in", () => {
 });
 
 describe("scope", () => {
+  it("treats another team's overview as not found, and refuses an unknown range", async () => {
+    const other = await app.inject({ method: "GET", url: "/v1/teams/team-lumen-sales/overview" });
+    expect([other.statusCode, other.json().error.code]).toEqual([404, "not_found"]);
+    const range = await app.inject({ method: "GET", url: "/v1/teams/team-lumen-people/overview?range=1y" });
+    expect(range.statusCode).toBe(400);
+    const signedOutRes = await signedOut.inject({ method: "GET", url: "/v1/teams/team-lumen-people/overview" });
+    expect(signedOutRes.statusCode).toBe(401);
+  });
+
   it("treats another team's balance as not found", async () => {
     const res = await app.inject({ method: "GET", url: "/v1/teams/team-lumen-sales/balance" });
     expect(res.statusCode).toBe(404);

@@ -57,7 +57,7 @@ Node 24 and pnpm 10. On Windows with fnm, prefix commands with
 | `pnpm build` | Production build of every app and service; must never need a database or commercetools |
 | `pnpm db:up` / `pnpm db:down` | Local MongoDB (Atlas Local) and Mailpit in Docker; `db:up` waits until MongoDB accepts writes |
 | `pnpm db:indexes` | Create the MongoDB indexes (`packages/db`) |
-| `pnpm seed:demo` | Write the demo company's accounts, top-ups, collections and directory to MongoDB; safe to repeat |
+| `pnpm seed:demo` | Write the demo company's accounts, top-ups, collections and directory, and 30 days of demo campaigns and gifts, to MongoDB; safe to repeat |
 | `pnpm ct:plan` | Print the commercetools setup drafts (store, channels, types); no calls |
 | `pnpm ct:apply` | Set up the project from `.env`: types, product types, tax, zone and shipping, channels, store, associate roles, gift categories. Creates what's missing and adds missing fields and attributes; safe to re-run |
 | `pnpm seed` | Import the fictional products and stock, 250 demo customers, and 5 demo companies with 10 teams (Business Units) through the Import API (run `ct:apply` first) |

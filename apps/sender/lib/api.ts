@@ -11,6 +11,8 @@ import {
   estimateView,
   giftRowView,
   meView,
+  type OverviewRange,
+  overviewView,
   productView,
   recipientView,
   type SendInput,
@@ -141,6 +143,10 @@ async function call<S extends z.ZodType>(
 export const getWorkspace = () => call("/v1/workspace", meView);
 
 export const getBalance = (teamKey: string) => call(`/v1/teams/${encodeURIComponent(teamKey)}/balance`, balanceView);
+
+/** The Home overview for a range: balance, sent and chosen, expiring soon, daily activity, statuses. */
+export const getOverview = (teamKey: string, range: OverviewRange) =>
+  call(`/v1/teams/${encodeURIComponent(teamKey)}/overview?range=${range}`, overviewView);
 
 export function getProducts(filters: { budget?: number; occasion?: string; category?: string; q?: string } = {}) {
   const params = new URLSearchParams();

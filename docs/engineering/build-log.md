@@ -13,6 +13,52 @@ how it was verified, and any lesson worth keeping.
 
 ## 29 Oct 2026
 
+### Sender Home as an overview
+- **What:**
+  - Home keeps the prototype's features in the overview look Shivam
+    shared ([plan](../plans/sender-home-redesign.md)):
+    - four stat cards with the change against the previous period;
+    - a daily activity chart and a status donut;
+    - quick actions and a recent campaigns table;
+    - the prototype's seven-item menu (three marked "Soon"), campaign
+      search and an approvals bell.
+  - **New API:** `GET /v1/teams/:teamKey/overview`, the `reporting`
+    module's first route.
+  - **Data:** gifts now record `statusAt`.
+  - **Seed:** `pnpm seed:demo` adds 30 days of demo activity.
+- **Why:** the team wanted the dashboard to look like a real gifting
+  product, without adding features the prototype doesn't have.
+- **Verified:**
+  - 7 overview rule tests, 3 demo-activity tests, API scope tests and a
+    guard check;
+  - 32 integration tests;
+  - 238 unit tests, lint, typecheck and the build;
+  - the browser at desktop and phone widths, in light and dark.
+- **Lessons:**
+  - Never import a plain value from a `"use client"` module into a server
+    page.
+  - Chart entry animations can leave charts blank where animation frames
+    are paused.
+  - Check the palette for tokens that share a colour before mapping
+    statuses to it.
+
+### Branded account emails
+- **What:**
+  - `brandedEmail()` (`services/api/src/mail/layout.ts`): the wordmark, a
+    card with a heading, a button and a copy-paste link, a note, a footer,
+    a preheader and a plain-text version.
+  - The verification email uses it.
+  - Inline images (`cid:`) go over SMTP, and the outbox writes an `.html`
+    preview.
+- **Why:** the first verification email was a few bare paragraphs and a
+  button, and looked unfinished in the inbox.
+- **Verified:**
+  - 5 layout tests: the link in both places, escaping, no first name, the
+    logo attached as a real PNG, the preheader;
+  - the preview at desktop and phone widths, with no sideways scrolling.
+- **Lessons:** Gmail strips SVG and blocks `data:` images, so a logo in an
+  email must be an inline attachment or hosted.
+
 ### Commerce connectors: the platform is a plug-in
 - **What:**
   - The commerce platform became a connector

@@ -11,18 +11,27 @@ import path from "node:path";
 import type { Logger } from "@gifting/logger";
 import nodemailer from "nodemailer";
 
-export type Email = { to: string; subject: string; text: string; html: string };
+/** An image the HTML shows with `cid:<cid>` (attached inline; email clients block SVG and data: URLs). */
+export type InlineImage = { cid: string; filename: string; contentType: string; content: Buffer };
+
+export type Email = { to: string; subject: string; text: string; html: string; images?: InlineImage[] };
 
 export type Mailer = { send(email: Email): Promise<void> };
 
-/** Writes each email as an .eml file, for development and tests. */
+/**
+ * Writes each email as an .eml file (the text), plus an .html file to open in
+ * a browser and see the design, for development and tests.
+ */
 export function outboxMailer(dir: string, from: string): Mailer {
   return {
     async send(email) {
       await mkdir(dir, { recursive: true });
-      const file = path.join(dir, `${new Date().toISOString().replace(/[:.]/g, "-")}-${email.subject.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.eml`);
+      const base = path.join(dir, `${new Date().toISOString().replace(/[:.]/g, "-")}-${email.subject.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`);
       const message = [`From: ${from}`, `To: ${email.to}`, `Subject: ${email.subject}`, "Content-Type: text/plain; charset=utf-8", "", email.text, ""].join("\r\n");
-      await writeFile(file, message, "utf8");
+      await writeFile(`${base}.eml`, message, "utf8");
+      // In a browser the inline images can be data: URLs.
+      const preview = (email.images ?? []).reduce((html, image) => html.replaceAll(`cid:${image.cid}`, `data:${image.contentType};base64,${image.content.toString("base64")}`), email.html);
+      await writeFile(`${base}.html`, preview, "utf8");
     },
   };
 }
@@ -43,7 +52,14 @@ export function smtpMailer(smtp: SmtpSettings, from: string): Mailer {
         });
   return {
     async send(email) {
-      await transport.sendMail({ from, ...email });
+      await transport.sendMail({
+        from,
+        to: email.to,
+        subject: email.subject,
+        text: email.text,
+        html: email.html,
+        attachments: (email.images ?? []).map((i) => ({ cid: i.cid, filename: i.filename, contentType: i.contentType, content: i.content, contentDisposition: "inline" as const })),
+      });
     },
   };
 }
