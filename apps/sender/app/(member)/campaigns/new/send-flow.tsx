@@ -228,7 +228,7 @@ export function SendFlow({ me, balance, collections, products, recipients, start
                 <span className="text-muted-foreground">Channels</span>
                 <ChannelIcons channels={draft.channels} />
               </div>
-              <Row label="Hold at send" value={money(hold)} />
+              <Row label="Hold at send" value={money(current?.value?.totalCents ?? hold)} />
               <Row label="Available now" value={money(balance.availableCents)} />
             </CardContent>
           </Card>

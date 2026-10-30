@@ -95,7 +95,8 @@ true values while the recipient pays nothing.
 | Accounts, teams and the ledger | Planned (M1) |
 | Catalog and budget collections | Planned (M2) |
 | Campaigns, approvals, holds, email, links, QR | Planned (M3) |
-| Redemption, vendor routing and tracking | Planned (M4) |
+| Gift email, recipient page, redemption into a commercetools order, resend, cancel | ✅ Built (M4) |
+| Vendor routing and tracking | Planned (M4) |
 | Automation and more channels | Planned (M5) |
 | Statements, reconciliation and reporting | Planned (M6) |
 | Hardening and the demo | Planned (M7) |

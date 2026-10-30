@@ -13,6 +13,9 @@ money moving twice. Both are blocked in the database, not only in code.
 | Money moved twice (job retry, webhook replay) | Deterministic idempotency keys with a unique index; append-only ledger |
 | Recipient picks something over budget, or tampers with price | The server re-reads SKU, price, stock and country; prices never come from the browser; total must fit the hold |
 | Gift link guessed or leaked | 32 random bytes, stored only as SHA-256; links expire; short codes rate-limited with lockout; `/r/*` behind bot protection |
+| Link secret leaks in a log, referrer or cache | The request log records the route pattern, not the URL; the recipient app sends no referrer, is never cached or indexed, and cannot be framed; a resend or reissue replaces the link and the old one stops working |
+| Someone hammers links or the choose step | Per-address limits (60 opens, 10 choices a minute) |
+| Gift email carries injected markup or a bad link | Every user text is HTML-escaped; only http(s) links are used |
 | A company sees another company's data | Every call scoped to the session's company and team; outside scope is "not found" |
 | A vendor sees other vendors' orders, or recipient details it doesn't need | Vendor queries filter on the vendor's channel; only shipping fields returned |
 | Sender approves their own large campaign | Approver must differ from the sender, above each team's threshold |

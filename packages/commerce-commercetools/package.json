@@ -16,6 +16,7 @@
     "@commercetools/platform-sdk": "9.7.0",
     "@gifting/commerce": "workspace:*",
     "@gifting/ct": "workspace:*",
+    "@gifting/domain": "workspace:*",
     "@gifting/logger": "workspace:*",
     "zod": "4.6.7"
   }
