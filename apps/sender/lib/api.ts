@@ -14,6 +14,8 @@ import {
   type OverviewRange,
   overviewView,
   productView,
+  recipientImportView,
+  type RecipientImportInput,
   recipientView,
   type SendInput,
   submitResultView,
@@ -162,6 +164,9 @@ export const getCollections = (budget?: number) =>
 
 export const getRecipients = () =>
   call("/v1/recipients", z.object({ recipients: z.array(recipientView) })).then((r) => r.recipients);
+
+export const importRecipients = (input: RecipientImportInput) =>
+  call("/v1/recipients/import", recipientImportView, { method: "POST", body: input });
 
 export const getCampaigns = (status = "all", limit?: number) =>
   call(`/v1/campaigns?status=${status}${limit ? `&limit=${limit}` : ""}`, campaignListView);

@@ -7,5 +7,6 @@ export * from "./keys";
 export * from "./members";
 export * from "./models";
 export * from "./money";
+export * from "./recipient-upload";
 export * from "./views";
 export * from "./overview";

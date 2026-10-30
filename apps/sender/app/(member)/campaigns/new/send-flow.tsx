@@ -7,6 +7,7 @@ import {
   findVariant,
   type MeView,
   type ProductView,
+  type RecipientImportView,
   type RecipientView,
   type SubmitResultView,
   variantName,
@@ -47,6 +48,17 @@ export function SendFlow({ me, balance, collections, products, recipients, start
   const [estimate, setEstimate] = useState<{ for: string; value: EstimateView | null; error: string | null } | null>(null);
   const [result, setResult] = useState<SubmitResultView | null>(null);
   const [sending, startSending] = useTransition();
+  // The directory, plus anyone uploaded in this flow (they're saved to it on upload).
+  const [directory, setDirectory] = useState<RecipientView[]>(recipients);
+
+  /** Uploaded people join the list and are ticked for this campaign. */
+  function onImported({ recipients: added }: RecipientImportView) {
+    setDirectory((current) => {
+      const known = new Set(current.map((r) => r.id));
+      return [...current, ...added.filter((r) => !known.has(r.id))].sort((a, b) => a.name.localeCompare(b.name));
+    });
+    setDraft((d) => ({ ...d, recipientIds: [...new Set([...d.recipientIds, ...added.map((r) => r.id)])] }));
+  }
 
   const update = (change: Partial<Draft>) => setDraft((d) => ({ ...d, ...change }));
   const input = useMemo(() => toSendInput(draft), [draft]);
@@ -167,7 +179,7 @@ export function SendFlow({ me, balance, collections, products, recipients, start
           <CardContent className="grid gap-8">
             {step === 0 ? <GiftStep draft={draft} update={update} collections={collections} products={products} /> : null}
             {step === 1 ? <GreetingStep draft={draft} update={update} /> : null}
-            {step === 2 ? <RecipientsStep draft={draft} update={update} recipients={recipients} /> : null}
+            {step === 2 ? <RecipientsStep draft={draft} update={update} recipients={directory} onImported={onImported} /> : null}
             {step === 3 ? (
               <ReviewStep
                 draft={draft}

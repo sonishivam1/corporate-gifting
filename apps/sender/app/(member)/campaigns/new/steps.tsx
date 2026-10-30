@@ -9,6 +9,7 @@ import {
   type MeView,
   findVariant,
   type ProductView,
+  type RecipientImportView,
   type RecipientView,
 } from "@gifting/domain";
 import { Alert, AlertDescription, AlertTitle } from "@gifting/ui/components/alert";
@@ -32,6 +33,7 @@ import { useState } from "react";
 import { z } from "zod";
 
 import { CollectionMosaic, ProductArt } from "@/components/product-art";
+import { RecipientUpload } from "@/components/recipient-upload";
 import { BUDGETS, CHANNEL } from "@/lib/catalog";
 import { CHANNEL_CHOICE, LET_THEM_CHOOSE } from "@/lib/features";
 import { money, plural, priceLabel, shortDate } from "@/lib/format";
@@ -252,7 +254,17 @@ export function GreetingStep({ draft, update }: { draft: Draft; update: Update }
 
 const emailSchema = z.email();
 
-export function RecipientsStep({ draft, update, recipients }: { draft: Draft; update: Update; recipients: readonly RecipientView[] }) {
+export function RecipientsStep({
+  draft,
+  update,
+  recipients,
+  onImported,
+}: {
+  draft: Draft;
+  update: Update;
+  recipients: readonly RecipientView[];
+  onImported: (result: RecipientImportView) => void;
+}) {
   const [query, setQuery] = useState("");
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
@@ -291,13 +303,16 @@ export function RecipientsStep({ draft, update, recipients }: { draft: Draft; up
           </>
         }
         aside={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => update({ recipientIds: allPicked ? [] : recipients.map((r) => r.id) })}
-          >
-            {allPicked ? "Clear all" : "Select all"}
-          </Button>
+          <div className="flex gap-2">
+            <RecipientUpload onImported={onImported} />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => update({ recipientIds: allPicked ? [] : recipients.map((r) => r.id) })}
+            >
+              {allPicked ? "Clear all" : "Select all"}
+            </Button>
+          </div>
         }
       >
         <div className="relative">

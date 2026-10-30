@@ -49,6 +49,7 @@ Every route declares who may call it, in `defineRoute({ auth })`
 | GET | `/v1/collections?budget=` | workspace | `{ collections[] }` with `itemCount` at the budget (the band when none) |
 | GET | `/v1/collections/:id/items?budget=` | workspace | `{ items[] }`, narrowed to the variants that fit. Catalog routes answer `503 catalog_unavailable` when commercetools can't be reached |
 | GET | `/v1/recipients?q=` | workspace | `{ recipients[] }`: the company directory |
+| POST | `/v1/recipients/import` | workspace | A list from a file: body `{ rows[] }` of `email`, `firstName?`, `lastName?` (1 to 500). Everyone joins the company directory, matched by email (an existing person keeps their record). Returns `{ recipients[] (file order), added, existing }`. Any invalid row: `400 invalid_request`, nothing written |
 | POST | `/v1/campaigns/estimate` | workspace | Estimate for an unsaved send: gifts, hold, total, available, after, `needsApproval`, `short` |
 | GET | `/v1/campaigns?status=all\|active\|scheduled\|pending_approval` | workspace | `{ campaigns[], funnel, counts }` (drafts are not listed) |
 | POST | `/v1/campaigns` | workspace | `201 { id }`: a draft. Optional `Idempotency-Key` (UUID) becomes the id |
@@ -117,7 +118,7 @@ on the spot.
 | POST | `/v1/gifts/:id/extend` | sender+ | gifts | M3 |
 | GET | `/v1/vendor/orders` | vendor | fulfillment | M4 |
 | POST | `/v1/vendor/orders/:orderNumber/ship` | vendor | fulfillment | M4 |
-| POST | `/v1/recipients`, `/v1/recipients/import` | admin+ | recipients | M5 |
+| POST | `/v1/recipients` | admin+ | recipients | M5 |
 | POST | `/v1/integrations/:type/connect` | admin+ | integrations | M5 |
 | GET | `/v1/reports/funnel`, `/spend`, `/exports/:kind` | sender+ | reporting | M6 |
 | GET | `/v1/teams/:teamKey/statements` | owner, admin | ledger | M6 |

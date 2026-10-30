@@ -78,11 +78,17 @@ placed, and the campaign fails fast if funds are short. Automated campaigns
 create one gift per birthday, work anniversary or start date, idempotent on
 campaign, recipient and occurrence.
 
-### Recipients — Planned (M5)
+### Recipients — Partly built (send-flow upload); the rest M5
 A per-company directory of name, email, phone, Slack or Teams id, birthday,
 start date and team. It is filled by CSV upload or a nightly HR-system sync
 through a unified HR API. Personal fields are encrypted at rest and purged
 after a configurable retention period.
+
+Built so far ([plan](../plans/recipient-upload.md)): in the send flow, a
+sender uploads a CSV of email, first name and last name. The preview flags
+problems by line; everyone valid joins the directory (one person per email)
+and is ticked for the campaign. Birthdays, start dates, HR sync and
+encryption are still M5.
 
 ### Delivery channels — Channel interface scaffolded; Planned (M3, M5)
 Email (SendGrid) and links and QR codes in M3. SMS (Twilio), Slack and

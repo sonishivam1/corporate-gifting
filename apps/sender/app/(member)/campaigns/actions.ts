@@ -1,9 +1,9 @@
 "use server";
 
-import type { DecisionResultView, EstimateView, SendInput, SubmitResultView } from "@gifting/domain";
+import type { DecisionResultView, EstimateView, RecipientImportInput, RecipientImportView, SendInput, SubmitResultView } from "@gifting/domain";
 import { revalidatePath } from "next/cache";
 
-import { ApiCallError, createCampaign, decideCampaign, estimateSend, submitCampaign } from "@/lib/api";
+import { ApiCallError, createCampaign, decideCampaign, estimateSend, importRecipients, submitCampaign } from "@/lib/api";
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; code: string; message: string };
 
@@ -32,6 +32,11 @@ export async function sendAction(input: SendInput, idempotencyKey: string): Prom
   });
   revalidatePath("/", "layout");
   return result;
+}
+
+/** A recipient list from a file: everyone joins the company's directory. */
+export async function importRecipientsAction(input: RecipientImportInput): Promise<ActionResult<RecipientImportView>> {
+  return attempt(() => importRecipients(input));
 }
 
 export async function decideAction(id: string, decision: "approve" | "decline"): Promise<ActionResult<DecisionResultView>> {

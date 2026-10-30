@@ -5,6 +5,12 @@ change was built, see the [build log](docs/engineering/build-log.md).
 
 ## Unreleased
 
+### Upload a recipient list
+- In a new campaign, senders can upload a CSV of email, first name and
+  last name. The preview shows who is ready and which lines are skipped
+  and why; everyone valid joins the company directory and is added to the
+  campaign. A template is offered for download.
+
 ### Simpler send flow
 - The send flow no longer asks for an occasion, and Browse gifts no longer
   filters by one. A campaign without a name is called after its greeting's
