@@ -102,8 +102,8 @@ A probe of the commercetools project on 29 Oct 2026 showed:
   identity provider, which commercetools supports through external OAuth
   token introspection.
 - We own the account emails (verification, "already registered", and
-  password reset later). Locally they go to Mailpit, or to `.data/outbox`
-  when Mailpit isn't running. In the cloud they go through SendGrid.
+  password reset later). Locally they go to `.data/outbox`, or to an SMTP
+  provider when one is set. In the cloud they go through SendGrid.
 - An admin must create the sign-in API client in the Merchant Center.
   Scopes: `manage_my_profile:{project}`.
 - The B2B parts already in the project (Business Units, associate roles,

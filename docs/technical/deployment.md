@@ -8,7 +8,7 @@ is planned for M7, on Google Cloud
 
 | Environment | What runs | Data | commercetools |
 | --- | --- | --- | --- |
-| Local | `pnpm dev` (apps and API), worker on demand, Docker: MongoDB Atlas Local, Mailpit | Local MongoDB | Sandbox project (from the spikes on) |
+| Local | `pnpm dev` (apps and API), worker on demand, Docker: MongoDB Atlas Local; emails to `.data/outbox` | Local MongoDB | Sandbox project (from the spikes on) |
 | CI | Lint, typecheck, unit tests, build, on every push to `main`, `qa`, `develop` and every PR | None | Never called |
 | QA (M7), from `qa` | Four apps, API, worker on Cloud Run | Its own MongoDB Atlas database (on GCP) | Sandbox project |
 | POC demo (M7), from `main` | Four apps, API, worker on Cloud Run | MongoDB Atlas on GCP (M10 or higher, for transactions and backups) | Sandbox or a dedicated POC project |
@@ -60,7 +60,7 @@ flowchart LR
 | CI to GCP access | Workload Identity Federation | GitHub Actions deploys with no service-account key files |
 | Database | MongoDB Atlas on GCP, `us-central1` | Bought through Atlas (or the Google Cloud Marketplace). The POC allows only the Cloud NAT static egress IP. Production uses Private Service Connect |
 | Outbound IP for Atlas | Direct VPC egress and Cloud NAT with a reserved static IP | One address to put on the Atlas access list |
-| Email | SendGrid | Google Cloud has no transactional email service of its own. Mailpit locally |
+| Email | SendGrid, over SMTP (`SMTP_URL` in Secret Manager) | Google Cloud has no transactional email service of its own. Locally, emails go to `.data/outbox` |
 | Logs, metrics and alerts | Cloud Logging, Cloud Monitoring, Error Reporting | The pino JSON logs are read as structured logs |
 | Scheduled jobs | Agenda on MongoDB ([ADR 0011](../architecture/decisions/0011-jobs-on-mongodb.md)) | Cloud Scheduler is the alternative if we move off Agenda |
 

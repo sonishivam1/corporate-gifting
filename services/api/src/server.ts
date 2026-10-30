@@ -3,12 +3,12 @@ import path from "node:path";
 import type { CatalogConnector } from "@gifting/commerce";
 import { dbConfig, getDb } from "@gifting/db";
 import type { OrderPlacer } from "@gifting/domain";
-import { createLogger } from "@gifting/logger";
+import { AppError, createLogger } from "@gifting/logger";
 import { z } from "zod";
 
 import { buildApp } from "./app";
 import { loadConnector } from "./commerce/load";
-import { createMailer } from "./mail/mailer";
+import { createMailer, type Mailer } from "./mail/mailer";
 import { type AccountsService, createAccountsService } from "./modules/accounts/service";
 
 const log = createLogger("api");
@@ -17,7 +17,7 @@ const env = z
     API_PORT: z.coerce.number().int().positive().default(4000),
     SENDER_PUBLIC_URL: z.url().default("http://localhost:3000"),
     SMTP_URL: z.string().optional(),
-    // Separate SMTP settings (for example Brevo); used instead of SMTP_URL when SMTP_HOST is set.
+    // The same server as separate settings; used instead of SMTP_URL when SMTP_HOST is set.
     SMTP_HOST: z.string().optional(),
     SMTP_PORT: z.coerce.number().int().positive().default(587),
     SMTP_USER: z.string().optional(),
@@ -29,18 +29,19 @@ const env = z
   .parse(process.env);
 
 let accounts: AccountsService | null = null;
+let mailer: Mailer;
 let catalog: CatalogConnector | null = null;
 let orders: OrderPlacer | undefined;
 try {
   const production = process.env.NODE_ENV === "production";
+  const smtp = env.SMTP_HOST ? { host: env.SMTP_HOST, port: env.SMTP_PORT, user: env.SMTP_USER || undefined, pass: env.SMTP_PASS || undefined } : env.SMTP_URL || undefined;
+  mailer = createMailer({ smtp, from: env.MAIL_FROM, outboxDir: path.resolve(import.meta.dirname, "../../../.data/outbox"), production, log });
   // The commerce platform is a plug-in: COMMERCE_CONNECTOR names it, and it reads its own settings.
   const connector = await loadConnector({ env: process.env, log, production });
   catalog = connector?.catalog ?? null;
   if (connector) {
     orders = connector.orders;
-    if (!env.API_SESSION_SECRET) throw new Error("API_SESSION_SECRET is not set (openssl rand -hex 32).");
-    const smtp = env.SMTP_HOST ? { host: env.SMTP_HOST, port: env.SMTP_PORT, user: env.SMTP_USER || undefined, pass: env.SMTP_PASS || undefined } : env.SMTP_URL || undefined;
-    const mailer = createMailer({ smtp, from: env.MAIL_FROM, outboxDir: path.resolve(import.meta.dirname, "../../../.data/outbox"), production, log });
+    if (!env.API_SESSION_SECRET) throw new AppError("config_invalid", "API_SESSION_SECRET is not set (openssl rand -hex 32).");
     accounts = createAccountsService({
       connector,
       mailer,
@@ -58,7 +59,7 @@ try {
   process.exit(1);
 }
 
-const app = await buildApp({ logger: log, accounts, catalog, ...(orders ? { orders } : {}) });
+const app = await buildApp({ logger: log, accounts, catalog, mailer, ...(orders ? { orders } : {}) });
 
 try {
   await app.listen({ port: env.API_PORT, host: "0.0.0.0" });

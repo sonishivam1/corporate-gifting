@@ -35,7 +35,7 @@ corporate-gifting-marketplace/
 ├── .env.example                             Template for local settings (.env is gitignored)
 ├── .gitattributes  .gitignore  .node-version
 ├── AGENTS.md  CLAUDE.md  README.md  CHANGELOG.md
-├── docker-compose.yml                       MongoDB (Atlas Local) + Mailpit
+├── docker-compose.yml                       MongoDB (Atlas Local)
 ├── package.json  pnpm-workspace.yaml  pnpm-lock.yaml
 ├── turbo.json  tsconfig.base.json  eslint.config.mjs
 │

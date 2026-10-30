@@ -23,7 +23,7 @@ reference at call time.
 
 - A campaign can mix channels per recipient; adding a channel is a new
   adapter plus registration.
-- A development `log` adapter (and Mailpit for email) lets the whole flow run
-  locally with no provider accounts.
+- A development `log` adapter (and the `.data/outbox` folder for email) lets
+  the whole flow run locally with no provider accounts.
 - Provider-specific features (Slack buttons, Teams adaptive cards) live
   inside adapters; the shared `GiftMessage` stays small.
