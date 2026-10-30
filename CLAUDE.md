@@ -184,6 +184,10 @@ that module's exported service, never its collections.
 **Channels and integrations** ([ADR 0008](docs/architecture/decisions/0008-channel-adapters.md))
 - Every delivery channel implements `Channel` from `@gifting/channels`.
   Campaigns and gifts never import a provider SDK.
+- Every email, account or gift, goes through the one mailer in
+  `services/api/src/mail/mailer.ts`, so `SMTP_URL` alone picks the provider.
+  Outside production it falls back to `.data/outbox`; production refuses to
+  start without SMTP.
 - Provider secrets live in a secrets manager. `integrations` stores only a
   `secretRef`.
 
@@ -288,7 +292,7 @@ that module's exported service, never its collections.
 | A Next.js app can't see a variable from the root `.env` | By design: apps read only their own `.env.local` (see `apps/<app>/.env.example`) |
 | `pnpm --filter <pkg> import` runs pnpm's own import command | Call scripts named like pnpm commands with `pnpm --filter <pkg> run <script>` |
 | Re-importing a team unit fails: "Store mode does not allow editing stores" | The Import API can't update a Division that inherits stores; `pnpm seed` creates missing teams and leaves existing ones |
-| Brevo accepts an account email (API answers 202, nothing in `.data/outbox`) but it never arrives | `MAIL_FROM`'s domain isn't authenticated in Brevo and has a strict DMARC policy (royalcyber.com does), so the receiver quarantines it. Use a personal verified sender, or authenticate the domain |
+| The email provider accepts an email (API answers 202, nothing in `.data/outbox`) but it never arrives | `MAIL_FROM`'s domain isn't authenticated in the provider and has a strict DMARC policy (royalcyber.com does), so the receiver quarantines it. Use a personal verified sender, or authenticate the domain |
 | `COMMERCE_CONNECTOR=<name> is not installed` | Add `@gifting/commerce-<name>` to `services/api/package.json`; `src/commerce/installed.ts` is regenerated before dev, build, typecheck and test |
 | `gifting-mongo` exits with `ReplicaSetNoPrimary` / `RSGhost` | The replica set config stores the container hostname. `docker-compose.yml` now pins `hostname: gifting-mongo`; a volume created before that needs resetting once (`docker compose down -v`, then `pnpm dev:all`) |
 | A write fails with code 10107 (not primary) | Atlas Local answers pings before it elects a primary. `pnpm db:up` now waits for a writable primary (`--wait` and the compose healthcheck); a plain `docker compose up -d` doesn't |

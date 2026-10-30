@@ -11,6 +11,40 @@ how it was verified, and any lesson worth keeping.
 
 ---
 
+## 30 Oct 2026
+
+### One mailer for every email
+- **What:** the Mailpit removal was checked against the new gift delivery
+  (M3.4), and left gift emails with nowhere to go. Account and gift emails were
+  two paths with different settings. Now both go through the one mailer in
+  `services/api/src/mail/mailer.ts`, built once in `server.ts`:
+  - no SMTP set: gift emails reach `.data/outbox` like account emails. They
+    used to go to the log channel, which reported `sent` and dropped a link
+    that is stored only as a hash, so it could never be recovered;
+  - `SMTP_HOST` now works for gift emails too (they only read `SMTP_URL`);
+  - SMTP down outside production: both fall back to the outbox;
+  - production without SMTP refuses to start, and says why (the logger drops
+    a plain `Error`'s message, so the refusal is an `AppError`);
+  - one SMTP transport with one set of timeouts (account emails could wait
+    about 2 minutes on a dead server), and one default From address;
+  - outbox file names carry an id: a campaign's emails share a subject and a
+    millisecond, and were overwriting each other;
+  - delivery failures are logged (`defaultDeps` never passed the logger).
+- **Why:** with Mailpit gone a fresh clone lost every gift link silently, and
+  changing provider must be a setting, not a code change.
+- **Verified:**
+  - the built API in six set-ups: `SMTP_URL` and `SMTP_HOST` against a real
+    SMTP server (8 emails each: verification, 6 gifts, a resend), no SMTP,
+    a leftover `smtp://localhost:1025` with Mailpit stopped, and production
+    with and without SMTP;
+  - in the outbox, the link of every gift matches its stored hash, and a
+    resend replaces the old link;
+  - the SendGrid login with the new transport (nothing sent);
+  - unit tests; each guard broken, seen to fail, and restored;
+  - lint, typecheck, unit and integration tests, and the build.
+- **Note:** a machine that ran Mailpit keeps its container until
+  `docker compose up -d --remove-orphans`.
+
 ## 29 Oct 2026
 
 ### Mailpit and the last of Auth0 removed

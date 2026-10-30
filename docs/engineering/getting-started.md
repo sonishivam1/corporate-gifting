@@ -79,12 +79,12 @@ Accounts are commercetools customers
 4. **Find the verification email:**
    - in `.data/outbox/`: an `.eml` file, and an `.html` preview to open in a
      browser;
-   - or in a real inbox, when `SMTP_HOST` names a provider such as Brevo
-     (see [configuration](../technical/configuration.md)). Allow your IP in
-     the provider, and use a verified sender whose domain is authenticated
-     there, or a personal sender.
+   - or in a real inbox, when `SMTP_URL` names a provider such as SendGrid
+     (see [configuration](../technical/configuration.md)). Use a verified
+     sender whose domain is authenticated there, or a personal sender.
 
-   Open its link, then sign in.
+   Open its link, then sign in. Gift emails land in the same place, each
+   with its private `/r/<token>` link.
 
 Without the sign-in client, the API answers `503` on register and sign-in.
 

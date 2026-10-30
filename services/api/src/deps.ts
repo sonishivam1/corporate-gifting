@@ -1,8 +1,9 @@
-import { type ChannelRegistry, createChannelRegistry, emailChannel, logChannel, smtpTransport } from "@gifting/channels";
+import { type ChannelRegistry, createChannelRegistry, emailChannel } from "@gifting/channels";
 import { getClient, getDb } from "@gifting/db";
 import type { Logger } from "@gifting/logger";
 import type { Db, MongoClient } from "mongodb";
 
+import type { Mailer } from "./mail/mailer";
 import { seedOrg, type OrgDirectory } from "./modules/accounts/org";
 import { seedCatalog, type CatalogSource } from "./modules/catalog/source";
 
@@ -26,16 +27,17 @@ export type AppDeps = {
   log?: Logger;
 };
 
-/** The database is opened on first use, so building the app (and `pnpm build`) never connects. */
-/** SMTP_URL set: the email channel over SMTP (the local inbox, or a provider). Unset: the log channel, which sends nothing. */
-function defaultChannels(env: Record<string, string | undefined>): ChannelRegistry {
-  const email = env.SMTP_URL
-    ? emailChannel({ transport: smtpTransport(env.SMTP_URL), from: env.MAIL_FROM ?? "Digital Gifting <gifts@digital-gifting.example>" })
-    : logChannel("email");
-  return createChannelRegistry([email]);
+/** Gift emails go through the same mailer as account emails, so one setting decides where all email goes. */
+function defaultChannels(mailer: Mailer): ChannelRegistry {
+  return createChannelRegistry([emailChannel({ transport: { sendMail: (mail) => mailer.send(mail) } })]);
 }
 
-export function defaultDeps(env: Record<string, string | undefined> = process.env): AppDeps {
+/**
+ * The database is opened on first use, so building the app (and `pnpm build`)
+ * never connects. With no mailer (tests that send nothing), no channel is
+ * registered and gifts stay queued.
+ */
+export function defaultDeps(env: Record<string, string | undefined> = process.env, wiring: { mailer?: Mailer; log?: Logger } = {}): AppDeps {
   return {
     get client() {
       return getClient();
@@ -48,6 +50,7 @@ export function defaultDeps(env: Record<string, string | undefined> = process.en
     devAuth: env.DEV_AUTH === "1" && env.NODE_ENV !== "production",
     recipientBaseUrl: env.RECIPIENT_PUBLIC_URL ?? "http://localhost:3001",
     now: () => new Date(),
-    channels: defaultChannels(env),
+    ...(wiring.mailer ? { channels: defaultChannels(wiring.mailer) } : {}),
+    ...(wiring.log ? { log: wiring.log } : {}),
   };
 }
