@@ -60,6 +60,29 @@ how it was verified, and any lesson worth keeping.
 
 ## 29 Oct 2026
 
+### Gift redemption into commercetools orders (M4 backend)
+- **What:** a recipient's link opens a gift (`GET /v1/r/:token`, no sign-in;
+  the secret in the path is the credential) and choosing an item and address
+  (`POST /v1/r/:token/redeem`) claims the gift atomically, creates one order
+  `GFT-<giftId>` and, in one transaction, marks the gift redeemed, releases
+  its hold and captures what the order cost. A cost above the hold is
+  captured up to the hold and the overage is debited to the team as an
+  adjustment on the same gift; the recipient is never refused over money. The
+  order placer is part of the commerce connector contract (`orders`) and the
+  commercetools connector implements it (cart in the `gifting` store, vendor
+  supply channel, `company-balance` payment). Per-address rate limits guard
+  the recipient routes, and the request log records the route pattern, never
+  the URL.
+- **Why:** M4 is ours. The first version of this work used its own deposit and
+  settlement model and was reworked onto the ledger (hold, release, capture).
+- **Verified:** integration tests for one order and one capture under 20
+  parallel claims, refusals (used, expired, unknown, bad address), sold-out
+  and timeout recovery, orders over the hold, and the rate limit; unit tests
+  for the order placer on a fake commercetools API.
+- **Lessons:** a payment `interfaceId` must be unique per payment in
+  commercetools (use the order number). The link secret is stored only as a
+  hash, so a later delivery or resend mints a new link.
+
 ### Gift delivery by email (M3.4)
 - **What:** sending a campaign emails each recipient a private link
   (`/r/<token>`; SMTP in dev, Mailpit locally). Delivery is claimed with an

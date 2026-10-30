@@ -97,10 +97,18 @@ uses the link or QR channel. Only their SHA-256 hashes are stored, so they
 can't be listed again later; the sender app offers them as a CSV download
 on the spot.
 
-## Gift delivery (M3.4)
+## Recipient and delivery (M3.4, M4)
+
+The secret in the path is the credential, so `/v1/r/*` takes no session.
+Opening is limited to 60 requests a minute per address and choosing to 10.
+The request log records the route pattern, never the URL.
 
 | Method | Path | Who | Notes |
 | --- | --- | --- | --- |
+| GET | `/v1/r/:token` | link | Greeting; always 200 with `state` open, used, expired or invalid; first open marks the gift opened |
+| GET | `/v1/r/:token/items`, `/items/:sku` | link | What this gift may choose from; no prices |
+| POST | `/v1/r/:token/redeem` | link | `{ sku, address }` makes one order; `409 gift_used`, `409 item_unavailable`, `410 gift_expired`, `503 try_again` |
+| GET | `/v1/r/:token/order` | link | Order number and status |
 | POST | `/v1/gifts/:id/resend` | sender+ | New link by email; the old link stops working |
 | POST | `/v1/gifts/:id/cancel` | sender+ | Gift cancelled and its hold released |
 

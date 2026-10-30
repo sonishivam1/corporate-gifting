@@ -2,6 +2,7 @@ import path from "node:path";
 
 import type { CatalogConnector } from "@gifting/commerce";
 import { dbConfig, getDb } from "@gifting/db";
+import type { OrderPlacer } from "@gifting/domain";
 import { createLogger } from "@gifting/logger";
 import { z } from "zod";
 
@@ -29,12 +30,14 @@ const env = z
 
 let accounts: AccountsService | null = null;
 let catalog: CatalogConnector | null = null;
+let orders: OrderPlacer | undefined;
 try {
   const production = process.env.NODE_ENV === "production";
   // The commerce platform is a plug-in: COMMERCE_CONNECTOR names it, and it reads its own settings.
   const connector = await loadConnector({ env: process.env, log, production });
   catalog = connector?.catalog ?? null;
   if (connector) {
+    orders = connector.orders;
     if (!env.API_SESSION_SECRET) throw new Error("API_SESSION_SECRET is not set (openssl rand -hex 32).");
     const smtp = env.SMTP_HOST ? { host: env.SMTP_HOST, port: env.SMTP_PORT, user: env.SMTP_USER || undefined, pass: env.SMTP_PASS || undefined } : env.SMTP_URL || undefined;
     const mailer = createMailer({ smtp, from: env.MAIL_FROM, outboxDir: path.resolve(import.meta.dirname, "../../../.data/outbox"), production, log });
@@ -55,7 +58,7 @@ try {
   process.exit(1);
 }
 
-const app = await buildApp({ logger: log, accounts, catalog });
+const app = await buildApp({ logger: log, accounts, catalog, ...(orders ? { orders } : {}) });
 
 try {
   await app.listen({ port: env.API_PORT, host: "0.0.0.0" });
