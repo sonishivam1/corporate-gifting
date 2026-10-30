@@ -31,7 +31,7 @@ export function createGiftActions(deps: AppDeps, services: { ledger: LedgerServi
         const done = await tx.withTransaction(async () => {
           const moved = await c().gifts.findOneAndUpdate(
             { _id: gift._id, status: gift.status },
-            { $set: { status: "cancelled", updatedAt: deps.now() }, $inc: { version: 1 } },
+            { $set: { status: "cancelled", "statusAt.cancelled": deps.now(), updatedAt: deps.now() }, $inc: { version: 1 } },
             { session: tx, returnDocument: "after" },
           );
           if (!moved) return false;

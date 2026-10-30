@@ -42,11 +42,15 @@ export type RouteContext<S extends RouteSchema, A extends RouteAuth = "account">
   reply: FastifyReply;
 };
 
+export type RateLimit = { max: number; timeWindow: string };
+
 export type RouteDefinition<S extends RouteSchema = RouteSchema, A extends RouteAuth = RouteAuth> = {
   method: HTTPMethods;
   url: string;
   auth?: A;
   schema: S;
+  /** Requests allowed per client address in the window. Routes that take a secret or create something should set one. */
+  rateLimit?: RateLimit;
   handler: (ctx: RouteContext<S, A>) => Promise<Infer<S["response"]>>;
 };
 
@@ -92,7 +96,7 @@ export function registerRoutes(app: FastifyInstance, routes: readonly RouteDefin
     app.route({
       method: route.method,
       url: route.url,
-      config: { workspace: route.auth === "workspace" },
+      config: { workspace: route.auth === "workspace", ...(route.rateLimit ? { rateLimit: route.rateLimit } : {}) },
       handler: async (request, reply) => {
         const account = await authenticate(request, route.auth ?? "account");
         const result = await route.handler({

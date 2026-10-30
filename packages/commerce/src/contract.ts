@@ -17,6 +17,7 @@
  *   The catalog joined with M2 (optional, so v1 connectors without it still
  *   work); orders, payment and events join it with M4.
  */
+import type { OrderPlacer } from "@gifting/domain";
 import type { Logger } from "@gifting/logger";
 
 /** The contract version this package defines. A connector built for it keeps working within it. */
@@ -149,6 +150,8 @@ export type CommerceConnector = {
   accounts: AccountsConnector;
   /** Products, prices and stock. Without it, the product serves its demo catalog. */
   catalog?: CatalogConnector;
+  /** Creates the order when a recipient chooses a gift, and finds it again. A platform without it cannot redeem gifts. */
+  orders?: OrderPlacer;
   /** Checks settings and credentials before the API takes requests. Throws with a message that names no secret. */
   check?(): Promise<void>;
 };

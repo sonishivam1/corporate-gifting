@@ -110,6 +110,47 @@ how it was verified, and any lesson worth keeping.
 - **Note:** an existing project keeps its `identityIds` field.
   `ct:apply` adds missing fields but never removes any, which is harmless.
 
+### Recipient pages, and the shipping and tax estimate (M4)
+- **What:** the recipient app (`/r/[token]`): the gift page with its greeting
+  card and choices, the gift on its own page, the address form (checked again
+  on the server; the link never reaches the browser's own API calls), the
+  confirmation with the order number, and a plain notice for a used, expired
+  or unknown link. They use the shared UI kit and theme, and the security
+  headers (no referrer, no cache, no framing, CSP). The hold at send is now
+  the budget plus `GIFT_ESTIMATE_PERCENT` for shipping and tax, shown on the
+  sender's Review step as "estimated shipping and tax"; redemption captures
+  the real cost and releases the rest.
+- **Why:** shipping and tax are only known when the recipient chooses, so,
+  like other gifting platforms, the hold is an estimate that is settled at
+  redemption. It is a business decision how much to pad.
+- **Verified:** an integration test for the hold, the estimate and the
+  release at redemption; the whole flow run in a browser against the
+  commercetools sandbox (send, email, choose, address, order, ledger, sender
+  funnel and spend). See `docs/engineering/m4-test-report.md`.
+
+### Gift redemption into commercetools orders (M4 backend)
+- **What:** a recipient's link opens a gift (`GET /v1/r/:token`, no sign-in;
+  the secret in the path is the credential) and choosing an item and address
+  (`POST /v1/r/:token/redeem`) claims the gift atomically, creates one order
+  `GFT-<giftId>` and, in one transaction, marks the gift redeemed, releases
+  its hold and captures what the order cost. A cost above the hold is
+  captured up to the hold and the overage is debited to the team as an
+  adjustment on the same gift; the recipient is never refused over money. The
+  order placer is part of the commerce connector contract (`orders`) and the
+  commercetools connector implements it (cart in the `gifting` store, vendor
+  supply channel, `company-balance` payment). Per-address rate limits guard
+  the recipient routes, and the request log records the route pattern, never
+  the URL.
+- **Why:** M4 is ours. The first version of this work used its own deposit and
+  settlement model and was reworked onto the ledger (hold, release, capture).
+- **Verified:** integration tests for one order and one capture under 20
+  parallel claims, refusals (used, expired, unknown, bad address), sold-out
+  and timeout recovery, orders over the hold, and the rate limit; unit tests
+  for the order placer on a fake commercetools API.
+- **Lessons:** a payment `interfaceId` must be unique per payment in
+  commercetools (use the order number). The link secret is stored only as a
+  hash, so a later delivery or resend mints a new link.
+
 ### Gift delivery by email (M3.4)
 - **What:** sending a campaign emails each recipient a private link
   (`/r/<token>`; SMTP in dev, Mailpit locally). Delivery is claimed with an
