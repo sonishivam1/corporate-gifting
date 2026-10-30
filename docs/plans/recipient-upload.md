@@ -104,6 +104,33 @@ Built on 30 Oct 2026, as planned.
 - Break and restore: dropping `companyKey` from the match fails the
   other-company test.
 
+**Review fixes (30 Oct 2026)**
+- **A stray quote** (`"Bo,Kim` with no closing quote) used to swallow the
+  rest of the file without a word. A quote now opens a quoted field only
+  at the start of a field (`O"Malik` is a name), and one that never closes
+  is reported on its own line; every line after it is still read. Line
+  numbers follow the file when a quoted field spans lines.
+- **Excel's plain CSV on Windows** is Windows-1252, not UTF-8, so "José"
+  arrived as "Jos" plus an unreadable character, for good (there is no
+  directory edit, and a re-upload keeps the old name). `decodeCsv` reads
+  the bytes as UTF-8, falls back to Windows-1252, and reads UTF-16 by its
+  byte order mark. A name that still holds an unreadable character is
+  refused by the preview and by the API.
+- **Directories over 500 people:** the API read the first 500 by name and
+  then filtered, so search never found anyone past them. The search now
+  runs in MongoDB, the list says `more`, and the send flow searches the
+  server as the sender types when there is more than one page.
+- **A 500-row upload** was 500 round trips and could pass the sender
+  app's 10-second limit, leaving part of the list saved. It is now one
+  bulk write and one read; a retry finishes a half-saved list.
+- **Smaller:** "and 12 mores" in the preview; Cancel (and closing the
+  dialog) is disabled while the save runs, since it can't be called back.
+- **Verified:** 5 more parser and decoding tests; 3 more integration
+  tests (500 rows in one go, a directory past one page, a search with
+  regex characters) and an unreadable name in the refusals test. Break
+  and restore: reading to the end of the file on an unclosed quote fails
+  its test; dropping the search filter fails both directory tests.
+
 **Lesson**
 - The editing tools turned the escape for a byte order mark into the
   invisible character itself, which ESLint rejects. The code uses

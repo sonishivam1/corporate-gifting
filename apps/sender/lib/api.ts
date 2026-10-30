@@ -16,7 +16,7 @@ import {
   productView,
   recipientImportView,
   type RecipientImportInput,
-  recipientView,
+  recipientListView,
   type SendInput,
   submitResultView,
 } from "@gifting/domain";
@@ -162,8 +162,8 @@ export const getCollections = (budget?: number) =>
     (r) => r.collections,
   );
 
-export const getRecipients = () =>
-  call("/v1/recipients", z.object({ recipients: z.array(recipientView) })).then((r) => r.recipients);
+/** The company directory: the first page by name, or the people matching `q`. */
+export const getRecipients = (q?: string) => call(`/v1/recipients${q ? `?q=${encodeURIComponent(q)}` : ""}`, recipientListView);
 
 export const importRecipients = (input: RecipientImportInput) =>
   call("/v1/recipients/import", recipientImportView, { method: "POST", body: input });

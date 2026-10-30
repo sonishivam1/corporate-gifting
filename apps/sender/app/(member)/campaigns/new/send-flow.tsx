@@ -8,6 +8,7 @@ import {
   type MeView,
   type ProductView,
   type RecipientImportView,
+  type RecipientListView,
   type RecipientView,
   type SubmitResultView,
   variantName,
@@ -20,7 +21,7 @@ import { toast } from "@gifting/ui/lib/toast";
 import { cn } from "@gifting/ui/lib/utils";
 import { CheckIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 
 import { estimateAction, sendAction } from "@/app/(member)/campaigns/actions";
 import { ChannelIcons } from "@/components/channel-icons";
@@ -36,7 +37,7 @@ type Props = {
   balance: BalanceView;
   collections: CollectionView[];
   products: ProductView[];
-  recipients: RecipientView[];
+  recipients: RecipientListView;
   start: { sku?: string; collectionId?: string };
 };
 
@@ -48,15 +49,20 @@ export function SendFlow({ me, balance, collections, products, recipients, start
   const [estimate, setEstimate] = useState<{ for: string; value: EstimateView | null; error: string | null } | null>(null);
   const [result, setResult] = useState<SubmitResultView | null>(null);
   const [sending, startSending] = useTransition();
-  // The directory, plus anyone uploaded in this flow (they're saved to it on upload).
-  const [directory, setDirectory] = useState<RecipientView[]>(recipients);
+  // The directory's first page, plus anyone found by a search or uploaded in this flow.
+  const [directory, setDirectory] = useState<RecipientView[]>(recipients.recipients);
+
+  const addToDirectory = useCallback((people: readonly RecipientView[]) => {
+    setDirectory((current) => {
+      const known = new Set(current.map((r) => r.id));
+      const fresh = people.filter((r) => !known.has(r.id));
+      return fresh.length ? [...current, ...fresh].sort((a, b) => a.name.localeCompare(b.name)) : current;
+    });
+  }, []);
 
   /** Uploaded people join the list and are ticked for this campaign. */
   function onImported({ recipients: added }: RecipientImportView) {
-    setDirectory((current) => {
-      const known = new Set(current.map((r) => r.id));
-      return [...current, ...added.filter((r) => !known.has(r.id))].sort((a, b) => a.name.localeCompare(b.name));
-    });
+    addToDirectory(added);
     setDraft((d) => ({ ...d, recipientIds: [...new Set([...d.recipientIds, ...added.map((r) => r.id)])] }));
   }
 
@@ -179,7 +185,14 @@ export function SendFlow({ me, balance, collections, products, recipients, start
           <CardContent className="grid gap-8">
             {step === 0 ? <GiftStep draft={draft} update={update} collections={collections} products={products} /> : null}
             {step === 1 ? <GreetingStep draft={draft} update={update} /> : null}
-            {step === 2 ? <RecipientsStep draft={draft} update={update} recipients={directory} onImported={onImported} /> : null}
+            {step === 2 ? <RecipientsStep
+                draft={draft}
+                update={update}
+                recipients={directory}
+                more={recipients.more}
+                onFound={addToDirectory}
+                onImported={onImported}
+              /> : null}
             {step === 3 ? (
               <ReviewStep
                 draft={draft}

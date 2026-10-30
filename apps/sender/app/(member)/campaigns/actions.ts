@@ -1,9 +1,17 @@
 "use server";
 
-import type { DecisionResultView, EstimateView, RecipientImportInput, RecipientImportView, SendInput, SubmitResultView } from "@gifting/domain";
+import type {
+  DecisionResultView,
+  EstimateView,
+  RecipientImportInput,
+  RecipientImportView,
+  RecipientListView,
+  SendInput,
+  SubmitResultView,
+} from "@gifting/domain";
 import { revalidatePath } from "next/cache";
 
-import { ApiCallError, createCampaign, decideCampaign, estimateSend, importRecipients, submitCampaign } from "@/lib/api";
+import { ApiCallError, createCampaign, decideCampaign, estimateSend, getRecipients, importRecipients, submitCampaign } from "@/lib/api";
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; code: string; message: string };
 
@@ -32,6 +40,11 @@ export async function sendAction(input: SendInput, idempotencyKey: string): Prom
   });
   revalidatePath("/", "layout");
   return result;
+}
+
+/** The directory people matching a search, for a directory bigger than one page. */
+export async function searchRecipientsAction(q: string): Promise<ActionResult<RecipientListView>> {
+  return attempt(() => getRecipients(q));
 }
 
 /** A recipient list from a file: everyone joins the company's directory. */

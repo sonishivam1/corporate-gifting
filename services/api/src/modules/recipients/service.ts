@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 
 import { getCollections } from "@gifting/db";
-import { nameFromEmail, type Recipient, type RecipientView, type UploadRow, uploadRowName } from "@gifting/domain";
+import { DIRECTORY_PAGE, nameFromEmail, type Recipient, type RecipientView, type UploadRow, uploadRowName } from "@gifting/domain";
+import { MongoBulkWriteError } from "mongodb";
 
 import type { AppDeps } from "../../deps";
 import { ApiError } from "../../http/errors";
@@ -25,35 +26,36 @@ export function createRecipientsService(deps: AppDeps) {
    * One email is one person (unique {companyKey, emailLower}); an existing
    * person keeps their record, name included.
    */
+  function newRecipient(companyKey: string, email: string, fields: { name: string; source: Recipient["source"] }, now: Date) {
+    return {
+      _id: randomUUID(),
+      companyKey,
+      teamKey: null,
+      name: fields.name,
+      email,
+      phone: null,
+      slackId: null,
+      teamsId: null,
+      birthdayMonthDay: null,
+      startDate: null,
+      startMonthDay: null,
+      source: fields.source,
+      externalId: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
   async function ensure(
     companyKey: string,
     email: string,
     fields: { name: string; source: Recipient["source"] },
   ): Promise<{ recipient: Recipient; added: boolean }> {
-    const now = deps.now();
     const filter = { companyKey, emailLower: email };
     try {
       const res = await c().recipients.findOneAndUpdate(
         filter,
-        {
-          $setOnInsert: {
-            _id: randomUUID(),
-            companyKey,
-            teamKey: null,
-            name: fields.name,
-            email,
-            phone: null,
-            slackId: null,
-            teamsId: null,
-            birthdayMonthDay: null,
-            startDate: null,
-            startMonthDay: null,
-            source: fields.source,
-            externalId: null,
-            createdAt: now,
-            updatedAt: now,
-          },
-        },
+        { $setOnInsert: newRecipient(companyKey, email, fields, deps.now()) },
         { upsert: true, returnDocument: "after", includeResultMetadata: true },
       );
       return { recipient: res.value!, added: !res.lastErrorObject?.updatedExisting };
@@ -72,11 +74,16 @@ export function createRecipientsService(deps: AppDeps) {
   }
 
   return {
-    async search(companyKey: string, q?: string): Promise<RecipientView[]> {
-      const all = await c().recipients.find({ companyKey }).sort({ name: 1 }).limit(500).toArray();
+    /**
+     * Up to `DIRECTORY_PAGE` people by name. The search runs in the database,
+     * so it finds anyone in a directory of any size, not only the first page.
+     */
+    async search(companyKey: string, q?: string): Promise<{ recipients: RecipientView[]; more: boolean }> {
       const needle = q?.trim().toLowerCase();
-      const hits = needle ? all.filter((r) => `${r.name} ${r.email ?? ""}`.toLowerCase().includes(needle)) : all;
-      return hits.map(toView);
+      const pattern = needle ? new RegExp(needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") : null;
+      const filter = pattern ? { companyKey, $or: [{ name: pattern }, { emailLower: pattern }] } : { companyKey };
+      const found = await c().recipients.find(filter).sort({ name: 1 }).limit(DIRECTORY_PAGE + 1).toArray();
+      return { recipients: found.slice(0, DIRECTORY_PAGE).map(toView), more: found.length > DIRECTORY_PAGE };
     },
 
     byIds,
@@ -113,19 +120,40 @@ export function createRecipientsService(deps: AppDeps) {
     /**
      * A list uploaded in the send flow: everyone joins the company's
      * directory (matched by email), returned in file order. Rows are checked
-     * by the route's schema first, so this writes all of them.
+     * by the route's schema first, so this writes all of them: one bulk
+     * write and one read, so 500 rows take one round trip, not 500. Each
+     * write is an add-if-missing, so a retry finishes a list a lost
+     * connection left half saved, and adds nobody twice.
      */
     async importRows(companyKey: string, rows: readonly UploadRow[]): Promise<{ recipients: RecipientView[]; added: number; existing: number }> {
-      const seen = new Set<string>();
-      const recipients: RecipientView[] = [];
-      let added = 0;
-      for (const row of rows) {
-        if (seen.has(row.email)) continue;
-        seen.add(row.email);
-        const result = await ensure(companyKey, row.email, { name: uploadRowName(row), source: "csv" });
-        if (result.added) added += 1;
-        recipients.push(toView(result.recipient));
+      const unique = [...new Map(rows.map((r) => [r.email, r])).values()];
+      const now = deps.now();
+      let added: number;
+      try {
+        const res = await c().recipients.bulkWrite(
+          unique.map((row) => ({
+            updateOne: {
+              filter: { companyKey, emailLower: row.email },
+              update: { $setOnInsert: newRecipient(companyKey, row.email, { name: uploadRowName(row), source: "csv" }, now) },
+              upsert: true,
+            },
+          })),
+          { ordered: false },
+        );
+        added = res.upsertedCount;
+      } catch (err) {
+        // Another upload added some of the same emails at once: the unique index let theirs in; use them.
+        if (!(err instanceof MongoBulkWriteError) || !err.writeErrors || ![err.writeErrors].flat().every(isDuplicate)) throw err;
+        added = err.result.upsertedCount;
       }
+      const found = await c()
+        .recipients.find({ companyKey, emailLower: { $in: unique.map((r) => r.email) } })
+        .toArray();
+      const byEmail = new Map(found.map((r) => [r.emailLower, r]));
+      const recipients = unique.flatMap((r) => {
+        const recipient = byEmail.get(r.email);
+        return recipient ? [toView(recipient)] : [];
+      });
       return { recipients, added, existing: recipients.length - added };
     },
   };

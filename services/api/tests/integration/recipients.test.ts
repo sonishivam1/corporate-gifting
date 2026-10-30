@@ -1,4 +1,4 @@
-import { MAX_UPLOAD_ROWS } from "@gifting/domain";
+import { DIRECTORY_PAGE, MAX_UPLOAD_ROWS } from "@gifting/domain";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createAndSubmit, type Harness, MAYA, send, startHarness } from "./harness";
@@ -88,6 +88,7 @@ describe("recipient upload", () => {
     const bad = [
       [{ email: "fine@upload.example" }, { email: "not-an-email" }],
       [{ email: "long@upload.example", firstName: "x".repeat(81) }],
+      [{ email: "unreadable@upload.example", firstName: `Jos${String.fromCharCode(0xfffd)}` }],
       [],
       Array.from({ length: MAX_UPLOAD_ROWS + 1 }, (_, i) => ({ email: `many-${i}@upload.example` })),
     ];
@@ -103,5 +104,43 @@ describe("recipient upload", () => {
     const { submitted } = await createAndSubmit(h.app, MAYA, send({ recipientIds: recipients.map((r: { id: string }) => r.id) }));
     expect(submitted?.statusCode).toBe(200);
     expect(submitted?.json().gifts).toBe(2);
+  });
+});
+
+// Last: it fills the directory past one page.
+describe("a directory bigger than one page", () => {
+  const list = (q?: string) => h.app.inject({ method: "GET", url: `/v1/recipients${q ? `?q=${encodeURIComponent(q)}` : ""}`, headers: MAYA });
+
+  it("saves a full list of 500 in one go", async () => {
+    const rows = Array.from({ length: MAX_UPLOAD_ROWS }, (_, i) => ({
+      email: `bulk-${String(i).padStart(3, "0")}@upload.example`,
+      firstName: "Bulk",
+      lastName: `Person ${String(i).padStart(3, "0")}`,
+    }));
+    const started = Date.now();
+    const res = await upload(rows);
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ added: MAX_UPLOAD_ROWS, existing: 0 });
+    expect(res.json().recipients[MAX_UPLOAD_ROWS - 1]).toMatchObject({ name: "Bulk Person 499", email: "bulk-499@upload.example" });
+    // The sender app gives up after 10 seconds; one bulk write is far inside that.
+    expect(Date.now() - started).toBeLessThan(5000);
+  });
+
+  it("lists the first page, says there are more, and finds anyone by search", async () => {
+    await upload([{ email: "zara.quill@upload.example", firstName: "Zara", lastName: "Quill" }]);
+    const first = (await list()).json();
+    expect(first.recipients).toHaveLength(DIRECTORY_PAGE);
+    expect(first.more).toBe(true);
+    expect(first.recipients.map((r: { name: string }) => r.name)).not.toContain("Zara Quill");
+
+    const found = (await list("quill")).json();
+    expect(found).toEqual({ recipients: [expect.objectContaining({ name: "Zara Quill" })], more: false });
+    expect((await list("ZARA.QUILL@")).json().recipients).toHaveLength(1);
+  });
+
+  it("reads a search as plain text", async () => {
+    const res = await list("a.(*");
+    expect(res.statusCode).toBe(200);
+    expect(res.json().recipients).toEqual([]);
   });
 });

@@ -1,4 +1,4 @@
-import { recipientImportInput, recipientImportView, recipientView } from "@gifting/domain";
+import { recipientImportInput, recipientImportView, recipientListView } from "@gifting/domain";
 import { z } from "zod";
 
 import { defineRoute } from "../../http/route";
@@ -13,11 +13,11 @@ export function recipientsRoutes(recipients: RecipientsService) {
       auth: "workspace",
       schema: {
         query: z.object({ q: z.string().trim().max(80).optional() }),
-        response: z.object({ recipients: z.array(recipientView) }),
+        response: recipientListView,
       },
       handler: async ({ query, request }) => {
         const session = requireSession(request);
-        return { recipients: await recipients.search(session.companyKey, query.q) };
+        return recipients.search(session.companyKey, query.q);
       },
     }),
     defineRoute({

@@ -1,6 +1,6 @@
 "use client";
 
-import { MAX_UPLOAD_ROWS, parseRecipientCsv, type ParsedUpload, type RecipientImportView, UPLOAD_TEMPLATE, uploadRowName } from "@gifting/domain";
+import { decodeCsv, MAX_UPLOAD_ROWS, parseRecipientCsv, type ParsedUpload, type RecipientImportView, UPLOAD_TEMPLATE, uploadRowName } from "@gifting/domain";
 import { Alert, AlertDescription, AlertTitle } from "@gifting/ui/components/alert";
 import { Button } from "@gifting/ui/components/button";
 import {
@@ -42,6 +42,8 @@ export function RecipientUpload({ onImported }: { onImported: (result: Recipient
   const ready = file && !tooMany ? file.parsed.rows.length : 0;
 
   function reset(next: boolean) {
+    // The save can't be called back once sent, so the dialog stays until it answers.
+    if (!next && saving) return;
     setOpen(next);
     if (!next) {
       setFile(null);
@@ -56,7 +58,8 @@ export function RecipientUpload({ onImported }: { onImported: (result: Recipient
       setFile(null);
       return setError("Choose a .csv file. In Excel or Google Sheets, use Save as or Download as CSV.");
     }
-    setFile({ name: chosen.name, parsed: parseRecipientCsv(await chosen.text()) });
+    // Bytes, not chosen.text(): that reads only UTF-8, and Excel's plain CSV on Windows isn't.
+    setFile({ name: chosen.name, parsed: parseRecipientCsv(decodeCsv(new Uint8Array(await chosen.arrayBuffer()))) });
   }
 
   function confirm() {
@@ -115,7 +118,7 @@ export function RecipientUpload({ onImported }: { onImported: (result: Recipient
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => reset(false)}>
+          <Button variant="outline" onClick={() => reset(false)} disabled={saving}>
             Cancel
           </Button>
           <Button onClick={confirm} disabled={!ready || saving}>
@@ -155,7 +158,7 @@ function UploadPreview({ parsed }: { parsed: ParsedUpload }) {
             </TableBody>
           </Table>
           {rows.length > PREVIEW_ROWS ? (
-            <p className="border-t px-3 py-2 text-xs text-muted-foreground">and {plural(rows.length - PREVIEW_ROWS, "more")}</p>
+            <p className="border-t px-3 py-2 text-xs text-muted-foreground">and {rows.length - PREVIEW_ROWS} more</p>
           ) : null}
         </div>
       ) : null}
