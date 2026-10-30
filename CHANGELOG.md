@@ -5,6 +5,13 @@ change was built, see the [build log](docs/engineering/build-log.md).
 
 ## Unreleased
 
+### Live gift catalog
+- Browse gifts and the send flow can show the live catalog: every vendor's
+  products with photos, priced from the lowest option, and only what is in
+  stock.
+- A gift that comes in several options (size, flavour, tin) is one card;
+  when sending it, the sender picks the option everyone gets.
+
 ### Sender dashboard
 - Senders can browse gifts by budget, occasion and category, and send a
   campaign in four steps: gift, greeting, recipients and delivery, review.

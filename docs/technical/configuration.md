@@ -26,6 +26,10 @@ Zod at start-up and fails fast with the variable's name (never its value).
 | `CTP_STORE_KEY` | api | no (`gifting`) | `gifting` | |
 | `CTP_IMPORT_URL` | infra (seed) | no (from `CTP_API_URL`, `api.` → `import.`) | `https://import.us-central1.gcp.commercetools.com` | Import API host |
 | `CTP_SETUP_PROJECT_KEY` | infra | no | `corporate-gifting` | Lets `ct:apply` and `seed` write to this exact project although its key has no `sandbox` or `dev`. Only for the POC project; never a client's live project |
+| `CATALOG_SOURCE` | api | no (`seed`) | `commercetools` | `seed` serves `infra/seed` and needs no project (tests, CI, the build); `commercetools` reads the live catalog with the `CTP_API_*` client |
+| `CTP_API_CLIENT_ID` | api | with `CATALOG_SOURCE=commercetools` | — | The API's own client, apart from the setup client in `CTP_CLIENT_*`. Secret |
+| `CTP_API_CLIENT_SECRET` | api | with `CATALOG_SOURCE=commercetools` | — | Secret, never logged |
+| `CTP_API_SCOPES` | api | with `CATALOG_SOURCE=commercetools` | `view_published_products:corporate-gifting view_products:corporate-gifting` | Read-only until M4 adds orders and payments. These also cover reading the vendor channels |
 | `SMTP_URL` | worker | no (`smtp://localhost:1025`) | `smtp://localhost:1025` | Mailpit locally |
 | `DEV_AUTH` | api, apps | development only | `1` | Development sign-in switch; ignored when `NODE_ENV=production` |
 

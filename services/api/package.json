@@ -10,9 +10,12 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:integration": "vitest run --config vitest.integration.config.ts"
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "catalog:check": "tsx --env-file-if-exists=../../.env scripts/catalog-check.ts"
   },
   "dependencies": {
+    "@commercetools/platform-sdk": "9.7.0",
+    "@commercetools/ts-client": "5.1.1",
     "@gifting/channels": "workspace:*",
     "@gifting/ct": "workspace:*",
     "@gifting/db": "workspace:*",

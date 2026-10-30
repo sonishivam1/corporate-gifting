@@ -9,6 +9,7 @@ import {
   type MeView,
   OCCASION_LABELS,
   OCCASIONS,
+  findVariant,
   type ProductView,
   type RecipientView,
 } from "@gifting/domain";
@@ -35,7 +36,7 @@ import { z } from "zod";
 import { CollectionMosaic, ProductArt } from "@/components/product-art";
 import { BUDGETS, CHANNEL } from "@/lib/catalog";
 import { LET_THEM_CHOOSE } from "@/lib/features";
-import { money, plural, shortDate } from "@/lib/format";
+import { money, plural, priceLabel, shortDate } from "@/lib/format";
 
 import { type Draft, HEADLINES, itemsFor, recipientCount, tomorrow } from "./draft";
 
@@ -130,21 +131,56 @@ export function GiftStep({
           </Section>
         </>
       ) : (
-        <Section title={LET_THEM_CHOOSE ? "Pick the gift" : "Pick the gift everyone gets"}>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {products.map((p) => (
-              <ChoiceCard key={p.sku} selected={draft.sku === p.sku} onClick={() => update({ sku: p.sku })}>
-                <ProductArt category={p.category} className="size-12 shrink-0" />
-                <span className="grid min-w-0">
-                  <span className="text-xs text-muted-foreground uppercase">{p.brand}</span>
-                  <span className="truncate font-medium">{p.name}</span>
-                  <span className="text-xs tabular-nums">{money(p.priceCents)}</span>
-                </span>
-              </ChoiceCard>
-            ))}
-          </div>
-        </Section>
+        <>
+          <VariantPicker draft={draft} update={update} products={products} />
+          <Section title={LET_THEM_CHOOSE ? "Pick the gift" : "Pick the gift everyone gets"}>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {products.map((p) => {
+                const selected = p.variants.some((v) => v.sku === draft.sku);
+                return (
+                  <ChoiceCard key={p.key} selected={selected} onClick={() => selected || update({ sku: p.sku })}>
+                    <ProductArt category={p.category} imageUrl={p.imageUrl} sizes="3rem" className="size-12 shrink-0" />
+                    <span className="grid min-w-0">
+                      <span className="text-xs text-muted-foreground uppercase">{p.brand}</span>
+                      <span className="truncate font-medium">{p.name}</span>
+                      <span className="text-xs tabular-nums">{priceLabel(p)}</span>
+                    </span>
+                  </ChoiceCard>
+                );
+              })}
+            </div>
+          </Section>
+        </>
       )}
+    </div>
+  );
+}
+
+/** The chosen gift, and which of its options (size, flavour, tin) everyone gets. */
+function VariantPicker({ draft, update, products }: { draft: Draft; update: Update; products: readonly ProductView[] }) {
+  const found = draft.sku ? findVariant(products, draft.sku) : null;
+  if (!found) return null;
+  const { product, variant } = found;
+  return (
+    <div className="flex flex-wrap items-end gap-4 rounded-lg border bg-muted/40 p-3">
+      <ProductArt category={product.category} imageUrl={variant.imageUrl ?? product.imageUrl} sizes="4rem" className="size-16 shrink-0" />
+      <div className="grid min-w-0 flex-1 gap-0.5">
+        <span className="text-xs text-muted-foreground">Everyone gets</span>
+        <span className="truncate font-medium">{product.name}</span>
+        <span className="text-sm tabular-nums">{money(variant.priceCents)} each</span>
+      </div>
+      {product.variants.length > 1 ? (
+        <Field className="w-full sm:w-64">
+          <FieldLabel htmlFor="variant">Option</FieldLabel>
+          <NativeSelect id="variant" value={variant.sku} onChange={(e) => update({ sku: e.target.value })}>
+            {product.variants.map((v) => (
+              <NativeSelectOption key={v.sku} value={v.sku}>
+                {v.label} · {money(v.priceCents)}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+        </Field>
+      ) : null}
     </div>
   );
 }

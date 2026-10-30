@@ -48,7 +48,8 @@ end.
 | Vendors | One supply Channel per vendor (role `InventorySupply`), custom type `vendor`: contacts, fulfilment method, SLA |
 | Products | Every variant has `brand`, `vendorKey` and `tags` attributes; stock per vendor channel; one price per country in USD for the POC |
 | Catalog import | Vendor feeds, CSV or a storefront snapshot into the Import API (`infra/catalog`, `infra/seed`); product types `gift-item` and `cookie-tin` share the `brand`, `vendorKey` and `tags` attributes |
-| Collections | Rules resolved with product search: tags, brands, SKUs, price range, country, in stock at the vendor channel |
+| Collections | Rules resolved with one product search ([spike 2](../plans/spikes.md#spike-2-marketplace-catalog)): any of the tags, brands or SKUs; `variants.prices.centAmount` within the budget; and, per vendor, `vendorKey` with `isOnStockForChannel` at that vendor's channel. Search returns ids and matching variants; details come from the cached listing (`packages/ct/src/catalog.ts`) |
+| Catalog reads | The API lists published product projections (US price, stock per channel), cached for 60 s, and reads a single SKU live when it estimates or sends. Each product is one card with its variants |
 | Cart | Created only by the API in the gifting store: one line item, quantity 1, with the vendor's supply channel, the recipient's address, the marketplace shipping method, `inventoryMode: ReserveOnOrder` |
 | Tax | On the recipient's address. POC: platform tax with rates for the seeded states. Production: External tax mode with a tax provider (spike 3) |
 | Payment | Method `company-balance`, amount = cart total, one successful `Charge` transaction whose interaction id is the ledger capture key |
@@ -99,7 +100,7 @@ No client in a browser. Each runs with only the scopes it needs.
 
 | Client | Used by | Scopes |
 | --- | --- | --- |
-| `gifting-api` | `services/api` | `manage_orders`, `manage_payments`, `view_products`, `view_published_products`, `manage_business_units`, `manage_associate_roles`, `view_channels` |
+| `gifting-api` | `services/api` (`CTP_API_*`; read-only `view_published_products`, `view_products` until M4) | `manage_orders`, `manage_payments`, `view_products`, `view_published_products`, `manage_business_units`, `manage_associate_roles` (channels are readable with `view_products`) |
 | `gifting-events` | `services/worker` | `view_orders`, `manage_orders` (shipment state, deliveries) |
 | `gifting-import` | `infra/seed` | `manage_import_containers`, `manage_products`, `manage_channels` |
 | `gifting-setup` | `infra/ct-setup` | `manage_project` (sandbox only; never in a deployed environment) |

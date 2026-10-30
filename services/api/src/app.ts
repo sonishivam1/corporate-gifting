@@ -35,7 +35,7 @@ export async function buildApp(options: { logger?: Logger; deps?: AppDeps } = {}
 
   app.setNotFoundHandler((_request, reply) => reply.status(404).send(errorBody("not_found", "Not found.")));
 
-  const deps = options.deps ?? defaultDeps();
+  const deps = options.deps ?? defaultDeps(process.env, log);
   const modules = buildModules(deps);
   registerSession(app, deps);
   registerRoutes(app, [health, meta(modules), ...modules.flatMap((m) => m.routes)]);

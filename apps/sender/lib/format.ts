@@ -1,4 +1,4 @@
-import { formatCents } from "@gifting/domain";
+import { formatCents, type ProductView } from "@gifting/domain";
 
 /** "$50" for whole dollars, "$49.50" otherwise; negative amounts keep their sign. */
 export function money(cents: number): string {
@@ -14,6 +14,12 @@ export function shortDate(value: string | Date): string {
 
 export function pct(part: number, whole: number): number {
   return whole ? Math.round((part / whole) * 100) : 0;
+}
+
+/** "$28", or "From $28" when its variants cost different amounts. */
+export function priceLabel(product: Pick<ProductView, "priceCents" | "variants">): string {
+  const prices = new Set(product.variants.map((v) => v.priceCents));
+  return prices.size > 1 ? `From ${money(product.priceCents)}` : money(product.priceCents);
 }
 
 export const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;

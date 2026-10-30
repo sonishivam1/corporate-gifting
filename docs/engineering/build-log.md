@@ -13,6 +13,33 @@ how it was verified, and any lesson worth keeping.
 
 ## 29 Oct 2026
 
+### Marketplace catalog from commercetools (spike 2)
+- **What:** the API can read the catalog from commercetools, as agreed in
+  the [marketplace catalog plan](../plans/marketplace-catalog.md).
+  - `@gifting/domain`: `ProductView` gains `key`, `imageUrl` and
+    `variants`. New pure rules: `defaultVariant`, `withVariants`,
+    `findVariant`, `variantName`. `collectionItems` now works per variant.
+  - `@gifting/ct`: `catalog.ts` maps projections to product cards (price,
+    stock at the vendor's channel, photos, variant labels, category and
+    occasions from tags) and builds the collection search query.
+    `catalog-reader.ts` makes the read-only calls. `loadCtApiConfig` reads
+    the API's own client from `CTP_API_*`.
+  - API: `ctCatalog` lists with a 60 s cache, resolves collections by
+    search and reads a single SKU live. `CATALOG_SOURCE` chooses `seed` (the
+    default) or `commercetools`. A single gift is priced from its variant.
+    `pnpm --filter @gifting/api catalog:check` runs the real queries.
+  - Sender app: product photos, "From $X" prices, an option picker in the
+    product sheet and the send flow, and variant names on campaigns.
+- **Why:** spike 2, and the project now holds the real catalog.
+- **Verified:** unit tests (domain 42, ct 19, API 27); 33 integration
+  tests. Break and restore on both stock checks. `catalog:check` shows that
+  one search per collection finds exactly the reference set. The API was
+  also checked live on commercetools on a second port.
+- **Learned:** `isOnStock` without a channel finds nothing when every
+  inventory entry is at a supply channel; use `isOnStockForChannel`. A
+  comparison that re-filters its input proves nothing about the input.
+  Details: [spike 2 results](../plans/spikes.md#spike-2-marketplace-catalog).
+
 ### Sender dashboard merged with the commercetools catalog import
 - **What:** `develop` (commercetools setup, Christie Cookie catalog, five
   demo companies) merged into the sender dashboard branch. In

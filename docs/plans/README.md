@@ -16,6 +16,7 @@ work packages. Each milestone step gets its own plan here when it starts.
 | [Week-1 spikes](spikes.md) | commercetools, money | Planned |
 | [Christie Cookie catalog import](christie-catalog-import.md) | Catalog | ✅ Built (28 Oct 2026) |
 | [Sender dashboard: Home, Browse, Campaigns, send flow](sender-dashboard.md) | Sender app, campaigns | ✅ Built (28 Oct 2026) |
+| [Marketplace catalog from commercetools (spike 2)](marketplace-catalog.md) | Catalog, sender app | ✅ Built (29 Oct 2026) |
 
 ## Template
 

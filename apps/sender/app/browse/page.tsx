@@ -96,7 +96,7 @@ export default async function BrowsePage({ searchParams }: PageProps<"/browse">)
       {products.length ? (
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {products.map((p) => (
-            <ProductCard key={p.sku} product={p} />
+            <ProductCard key={p.key} product={p} />
           ))}
         </section>
       ) : (

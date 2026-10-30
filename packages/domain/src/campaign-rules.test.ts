@@ -9,7 +9,9 @@ import {
   estimateSend,
   hasShareableLinks,
 } from "./campaign-rules";
+import { defaultVariant, findVariant, variantName, withVariants } from "./catalog";
 import { collectionItems, matchesRules } from "./collections";
+import type { ProductView } from "./views";
 
 describe("estimateSend", () => {
   const base = { gifts: 10, holdCents: 5000, availableCents: 100_000, approvalThresholdCents: 100_000 };
@@ -81,10 +83,10 @@ describe("campaign display", () => {
 describe("collections", () => {
   const none = { tags: [], brands: [], skus: [], pinnedSkus: [] };
   const items = [
-    { sku: "A", brand: "North", tags: ["food"], priceCents: 2800, available: true },
-    { sku: "B", brand: "Cedar", tags: ["home"], priceCents: 4800, available: true },
-    { sku: "C", brand: "Cedar", tags: ["home"], priceCents: 3200, available: false },
-    { sku: "D", brand: "Trail", tags: ["outdoors"], priceCents: 7500, available: true },
+    product({ sku: "A", brand: "North", tags: ["food"], priceCents: 2800 }),
+    product({ sku: "B", brand: "Cedar", tags: ["home"], priceCents: 4800 }),
+    product({ sku: "C", brand: "Cedar", tags: ["home"], priceCents: 3200, available: false }),
+    product({ sku: "D", brand: "Trail", tags: ["outdoors"], priceCents: 7500 }),
   ];
 
   it("offers everything when there are no rules", () => {
@@ -101,4 +103,67 @@ describe("collections", () => {
     expect(collectionItems(none, items, 5000).map((i) => i.sku)).toEqual(["A", "B"]);
     expect(collectionItems({ ...none, pinnedSkus: ["B"], tags: ["food"] }, items, 5000).map((i) => i.sku)).toEqual(["B", "A"]);
   });
+
+  it("narrows a product to the variants that fit, and prices it from the cheapest", () => {
+    const tin = product({ sku: "T-12", brand: "North", tags: ["food"], priceCents: 2800 }, [
+      { sku: "T-24", label: "24", priceCents: 4500, available: true, imageUrl: null },
+      { sku: "T-48", label: "48", priceCents: 7900, available: true, imageUrl: null },
+    ]);
+    const [fit] = collectionItems(none, [tin], 5000);
+    expect(fit?.variants.map((v) => v.sku)).toEqual(["T-12", "T-24"]);
+    expect(fit).toMatchObject({ sku: "T-12", priceCents: 2800 });
+    // A SKU rule picks out one variant, not the whole product.
+    expect(collectionItems({ ...none, skus: ["T-24"] }, [tin], 5000)[0]?.variants.map((v) => v.sku)).toEqual(["T-24"]);
+  });
 });
+
+describe("variants", () => {
+  const tin = product({ sku: "T-12", brand: "North", tags: ["food"], priceCents: 2800, available: false }, [
+    { sku: "T-24", label: "24 pieces", priceCents: 4500, available: true, imageUrl: "https://img.example/24.jpg" },
+    { sku: "T-36", label: "36 pieces", priceCents: 6200, available: true, imageUrl: null },
+  ]);
+
+  it("defaults to the cheapest available variant", () => {
+    expect(defaultVariant(tin.variants)?.sku).toBe("T-24");
+    expect(defaultVariant([{ priceCents: 10, available: false }])?.priceCents).toBe(10);
+  });
+
+  it("works the default out again when variants are dropped", () => {
+    expect(withVariants(tin)).toMatchObject({ sku: "T-24", priceCents: 4500, available: true, imageUrl: "https://img.example/24.jpg" });
+    expect(withVariants(tin, (v) => v.sku === "T-12")).toMatchObject({ sku: "T-12", available: false });
+    expect(withVariants(tin, () => false)).toBeNull();
+  });
+
+  it("finds a variant by SKU and names it", () => {
+    const found = findVariant([tin], "T-36");
+    expect(found?.product.key).toBe("T-12");
+    expect(variantName(found!.product, found!.variant)).toBe("Tin T-12 (36 pieces)");
+    expect(variantName({ name: "Mug" }, { label: "" })).toBe("Mug");
+    expect(findVariant([tin], "nope")).toBeNull();
+  });
+});
+
+function product(
+  p: { sku: string; brand: string; tags: string[]; priceCents: number; available?: boolean },
+  more: ProductView["variants"] = [],
+): ProductView {
+  const first = { sku: p.sku, label: more.length ? "12 pieces" : "", priceCents: p.priceCents, available: p.available ?? true, imageUrl: null };
+  return {
+    key: p.sku,
+    sku: p.sku,
+    name: `Tin ${p.sku}`,
+    brand: p.brand,
+    description: "",
+    category: "food",
+    occasions: [],
+    tags: p.tags,
+    vendorKey: "vendor-x",
+    vendorName: "Vendor X",
+    slaDays: 3,
+    priceCents: p.priceCents,
+    currency: "USD",
+    available: first.available,
+    imageUrl: null,
+    variants: [first, ...more],
+  };
+}

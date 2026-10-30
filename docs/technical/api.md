@@ -15,9 +15,9 @@ Outside the caller's scope is `404`, never `403`.
 | GET | `/v1/meta` | none | `{ name, version, modules[] }` |
 | GET | `/v1/me` | member | User, company, current team (threshold, approvers), the user's teams; `devUsers` with development sign-in |
 | GET | `/v1/teams/:teamKey/balance` | member of that team | `{ teamKey, currency, availableCents, heldCents, spentCents }`, computed from the ledger |
-| GET | `/v1/catalog/products?budget&occasion&category&q` | member | `{ products[] }`: available items only |
+| GET | `/v1/catalog/products?budget&occasion&category&q` | member | `{ products[] }`: one per product, narrowed to the variants in stock (and within the budget). `sku`, `priceCents` and `imageUrl` are the default variant's (the cheapest); `variants[]` has `sku`, `label`, `priceCents`, `available`, `imageUrl`. A single-gift send takes a variant SKU |
 | GET | `/v1/collections?budget=` | member | `{ collections[] }` with `itemCount` at the budget (the band when none) |
-| GET | `/v1/collections/:id/items?budget=` | member | `{ items[] }` |
+| GET | `/v1/collections/:id/items?budget=` | member | `{ items[] }`, narrowed to the variants that fit. Catalog routes answer `503 catalog_unavailable` when commercetools can't be reached |
 | GET | `/v1/recipients?q=` | member | `{ recipients[] }`: the company directory |
 | POST | `/v1/campaigns/estimate` | member | Estimate for an unsaved send: gifts, hold, total, available, after, `needsApproval`, `short` |
 | GET | `/v1/campaigns?status=all\|active\|scheduled\|pending_approval` | member | `{ campaigns[], funnel, counts }` (drafts are not listed) |

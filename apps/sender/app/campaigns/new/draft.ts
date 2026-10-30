@@ -1,5 +1,5 @@
 import type { CardCover, ChannelKind, CollectionView, Occasion, ProductView, SendInput } from "@gifting/domain";
-import { collectionItems } from "@gifting/domain";
+import { collectionItems, findVariant } from "@gifting/domain";
 
 import { LET_THEM_CHOOSE } from "@/lib/features";
 
@@ -75,7 +75,7 @@ export const recipientCount = (d: Draft) => d.recipientIds.length + d.newEmails.
 
 /** Per-gift budget for the preview; the API re-reads it from the catalog. */
 export function perGiftCents(d: Draft, products: readonly ProductView[]): number {
-  if (d.mode === "single") return products.find((p) => p.sku === d.sku)?.priceCents ?? 0;
+  if (d.mode === "single") return (d.sku && findVariant(products, d.sku)?.variant.priceCents) || 0;
   return d.budgetCents;
 }
 

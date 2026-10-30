@@ -1,4 +1,5 @@
 export * from "./campaign-rules";
+export * from "./catalog";
 export * from "./collections";
 export * from "./gift-status";
 export * from "./keys";

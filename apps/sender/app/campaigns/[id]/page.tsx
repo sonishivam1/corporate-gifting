@@ -1,4 +1,4 @@
-import { OCCASION_LABELS } from "@gifting/domain";
+import { OCCASION_LABELS, variantName } from "@gifting/domain";
 import { Alert, AlertDescription, AlertTitle } from "@gifting/ui/components/alert";
 import { Button } from "@gifting/ui/components/button";
 import { CampaignStatusBadge } from "@gifting/ui/components/campaign-status-badge";
@@ -23,7 +23,7 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
     throw err;
   });
   const [campaign, gifts, products] = loaded;
-  const productName = new Map(products.map((p) => [p.sku, p.name]));
+  const productName = new Map(products.flatMap((p) => p.variants.map((v) => [v.sku, variantName(p, v)] as const)));
   const { funnel } = campaign;
   const pending = campaign.displayStatus === "pending_approval";
   const what =

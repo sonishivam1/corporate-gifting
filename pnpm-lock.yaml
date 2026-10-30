@@ -388,6 +388,12 @@ importers:
 
   services/api:
     dependencies:
+      '@commercetools/platform-sdk':
+        specifier: 9.7.0
+        version: 9.7.0
+      '@commercetools/ts-client':
+        specifier: 5.1.1
+        version: 5.1.1
       '@gifting/channels':
         specifier: workspace:*
         version: link:../../packages/channels
