@@ -2,6 +2,7 @@ import { type ChannelRegistry, createChannelRegistry, emailChannel, logChannel, 
 import type { CatalogConnector } from "@gifting/commerce";
 import { getClient, getDb } from "@gifting/db";
 import type { Logger } from "@gifting/logger";
+import { OrderError, type OrderPlacer } from "@gifting/domain";
 import type { Db, MongoClient } from "mongodb";
 
 import { seedOrg, type OrgDirectory } from "./modules/accounts/org";
@@ -25,6 +26,8 @@ export type AppDeps = {
   now: () => Date;
   // Delivery channels by kind. Defaults to none registered: nothing is delivered.
   channels?: ChannelRegistry;
+  // Creates the commerce order when a gift is redeemed. Defaults to refusing: order creation is off.
+  orders?: OrderPlacer;
   // Optional: logs delivery problems. Ids and codes only, never recipient details.
   log?: Logger;
 };
@@ -42,6 +45,17 @@ export function catalogFor(connector: CatalogConnector | null | undefined, log?:
     onError: (err) => log?.error({ err }, "catalog read failed"),
   });
 }
+
+/** The database is opened on first use, so building the app (and `pnpm build`) never connects. */
+/** Order creation is off until a connector provides it: redeeming a gift then says so plainly instead of pretending. */
+export const ordersOff: OrderPlacer = {
+  async place() {
+    throw new OrderError("not_supported", "Order creation is off. Set COMMERCE_CONNECTOR to a platform that creates orders (commercetools).");
+  },
+  async find() {
+    return null;
+  },
+};
 
 /** SMTP_URL set: the email channel over SMTP (the local inbox, or a provider). Unset: the log channel, which sends nothing. */
 function defaultChannels(env: Record<string, string | undefined>): ChannelRegistry {

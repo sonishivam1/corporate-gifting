@@ -17,6 +17,7 @@
   "dependencies": {
     "@commercetools/platform-sdk": "9.7.0",
     "@commercetools/ts-client": "5.1.1",
+    "@fastify/rate-limit": "^10.0.0",
     "@gifting/channels": "workspace:*",
     "@gifting/commerce": "workspace:*",
     "@gifting/commerce-commercetools": "workspace:*",

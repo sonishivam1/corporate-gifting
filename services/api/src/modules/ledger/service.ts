@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { getCollections } from "@gifting/db";
 import type { BudgetAccount, Cents, Currency } from "@gifting/domain";
-import { type Balance, canCover, computeBalance, holdEntry, releaseEntry } from "@gifting/ledger";
+import { type Balance, canCover, computeBalance, adjustmentEntry, holdEntry, redemptionEntries, releaseEntry } from "@gifting/ledger";
 import type { ClientSession } from "mongodb";
 
 import type { AppDeps } from "../../deps";
@@ -88,6 +88,58 @@ export function createLedgerService(deps: AppDeps) {
         }),
       }));
       await c().ledgerEntries.insertMany(entries, { session: input.session });
+    },
+
+    /**
+     * Redemption, inside the caller's transaction (the same one that marks the
+     * gift redeemed): release the whole hold, then capture what the order really
+     * cost. The entries have deterministic keys, so a retry writes nothing new.
+     */
+    async capture(input: {
+      teamKey: string;
+      giftId: string;
+      campaignId: string;
+      holdNo: number;
+      holdCents: Cents;
+      captureCents: Cents;
+      feeCents: Cents;
+      createdBy: string;
+      session: ClientSession;
+    }) {
+      const acct = await account(input.teamKey, input.session);
+      // An order can cost more than its hold (the estimate ran low). The capture is capped at the hold and the
+      // overage is a debit adjustment on the same gift, so the team is never refused or the recipient failed.
+      const overage = Math.max(0, input.captureCents - input.holdCents);
+      const entries = redemptionEntries({
+        accountId: acct._id,
+        currency: acct.currency,
+        now: deps.now(),
+        createdBy: input.createdBy,
+        giftId: input.giftId,
+        campaignId: input.campaignId,
+        holdNo: input.holdNo,
+        holdCents: input.holdCents,
+        captureCents: input.captureCents - overage,
+        feeCents: input.feeCents,
+      }).map((e) => ({ _id: randomUUID(), ...e }));
+      if (overage > 0) {
+        entries.push({
+          _id: randomUUID(),
+          ...adjustmentEntry({
+            accountId: acct._id,
+            currency: acct.currency,
+            now: deps.now(),
+            createdBy: input.createdBy,
+            adjustmentId: `overage-${input.giftId}-${input.holdNo}`,
+            amountCents: overage,
+            direction: "debit",
+            reason: "Order total above the gift's hold",
+            giftId: input.giftId,
+            campaignId: input.campaignId,
+          }),
+        });
+      }
+      await c().ledgerEntries.insertMany(entries, { session: input.session, ordered: true });
     },
 
     /** Cancellation or expiry, inside the caller's transaction: give the whole hold back. */

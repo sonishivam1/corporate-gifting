@@ -65,8 +65,8 @@ export function releaseEntry(ref: GiftRef & { holdCents: Cents }): NewLedgerEntr
 
 /**
  * Redemption: release the full hold, then charge what was actually chosen and
- * the fee. Refuses a total above the hold; the caller decides whether the team
- * pays the overage (a separate adjustment) or the item is refused.
+ * the fee. Refuses a total above the hold: the caller captures up to the hold
+ * and records the overage as a separate adjustment (see the API's ledger service).
  */
 export function redemptionEntries(
   ref: GiftRef & { holdCents: Cents; captureCents: Cents; feeCents: Cents },
@@ -85,7 +85,7 @@ export function refundEntry(ref: GiftRef & { capturedCents: Cents }): NewLedgerE
 }
 
 export function adjustmentEntry(
-  input: Base & { adjustmentId: string; amountCents: Cents; direction: "credit" | "debit"; reason: string },
+  input: Base & { adjustmentId: string; amountCents: Cents; direction: "credit" | "debit"; reason: string; giftId?: string; campaignId?: string },
 ): NewLedgerEntry {
   if (!input.reason.trim()) throw new RangeError("An adjustment needs a reason.");
   return entry({
@@ -95,8 +95,8 @@ export function adjustmentEntry(
     reason: input.reason,
     amountCents: input.amountCents,
     currency: input.currency,
-    giftId: null,
-    campaignId: null,
+    giftId: input.giftId ?? null,
+    campaignId: input.campaignId ?? null,
     idempotencyKey: ledgerKeys.adjustment(input.adjustmentId),
     createdAt: input.now,
     createdBy: input.createdBy,

@@ -39,6 +39,7 @@ Zod at start-up and fails fast with the variable's name (never its value).
 | `SENDER_PUBLIC_URL` | api | no (`http://localhost:3000`) | `https://app.gifting.example` | Links in account emails |
 | `MAIL_FROM` | api | no (`Gifting <no-reply@gifting.example>`) | `Gifting <you@yourcompany.com>` | Sender of account emails; with a real provider it must be a verified sender. Its domain must be authenticated with that provider (SPF, DKIM), or a domain with a strict DMARC policy gets the email quarantined. Until then, use a personal sender verified in the provider |
 | `OPS_EMAILS` | api | no | `priya@ops.example` | Comma-separated verified emails allowed on `ops` routes |
+| `CTP_SHIPPING_METHOD_KEY` | api | no (`vendor-standard`) | `vendor-standard` | The shipping method key used on gift orders; must exist in the commercetools project (`pnpm ct:apply` creates `vendor-standard`) |
 
 Planned, as features land:
 
