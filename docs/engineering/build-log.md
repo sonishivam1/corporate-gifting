@@ -11,6 +11,39 @@ how it was verified, and any lesson worth keeping.
 
 ---
 
+## 30 Oct 2026
+
+### develop merged; the catalog moves behind the commerce connector
+- **What:** `develop` (sign-in on commercetools customer accounts, commerce
+  connectors per ADR 0013, the Home overview, branded emails) merged into
+  the sender dashboard branch. The API may no longer import `@gifting/ct`,
+  so the catalog moved behind the connector, as ADR 0013 planned for M2:
+  - `@gifting/commerce`: an optional `catalog` in the contract
+    (`listItems`, `searchItems`, `getItem`) with neutral `CatalogItem`,
+    `CatalogSearch` and `CatalogMatch` types, still contract v1. The
+    conformance suite checks that a search returns exactly the variants
+    that fit.
+  - `@gifting/commerce-commercetools`: the mapping, query and reads moved
+    from `@gifting/ct` and the API. The catalog uses its own read-only
+    client (`CTP_API_*`); without it the connector has no catalog.
+  - `@gifting/commerce-memory`: `memoryCatalog(items)`, and a catalog option.
+  - `@gifting/domain`: `categoryFromTags` and `occasionsFromTags`.
+  - API: `connectorCatalog` (cache, cards, per-variant re-check) replaces
+    `ctCatalog`; `CATALOG_SOURCE` is gone. The demo catalog serves when the
+    connector has none.
+- **Why:** develop's connector rule, and ADR 0013 puts the catalog in the
+  contract with M2.
+- **Verified:** the conformance catalog checks pass on the memory
+  connector. On the real project the commercetools connector's search is
+  exact per variant, and `catalog:check` through `COMMERCE_CONNECTOR`
+  matches all five collections. Lint, typecheck, unit tests, build and
+  integration tests: see the plan's As built.
+- **Learned:** a connector can keep its platform's quirks (stock per
+  channel, ids in search results) entirely inside it; the contract only
+  needed keys, SKUs and a budget.
+
+---
+
 ## 29 Oct 2026
 
 ### Marketplace catalog from commercetools (spike 2)
@@ -40,6 +73,130 @@ how it was verified, and any lesson worth keeping.
   comparison that re-filters its input proves nothing about the input.
   Details: [spike 2 results](../plans/spikes.md#spike-2-marketplace-catalog).
 
+### Light for everyone
+- **What:** the shared theme provider forces the light theme in every app.
+  Before, it followed each device's light or dark setting.
+- **Why:** teammates on dark-mode machines saw a navy app while others saw
+  the light design. The prototype is light, and demos should look the same
+  everywhere (Shivam). The dark tokens stay in `globals.css`, unused.
+- **Verified:** with the device set to dark, the sign-in page renders light
+  (no `dark` class, white background). Lint, typecheck and the build pass.
+
+### Sender Home as an overview
+- **What:**
+  - Home keeps the prototype's features in the overview look Shivam
+    shared ([plan](../plans/sender-home-redesign.md)):
+    - four stat cards with the change against the previous period;
+    - a daily activity chart and a status donut;
+    - quick actions and a recent campaigns table;
+    - the prototype's seven-item menu (three marked "Soon"), campaign
+      search and an approvals bell.
+  - **New API:** `GET /v1/teams/:teamKey/overview`, the `reporting`
+    module's first route.
+  - **Data:** gifts now record `statusAt`.
+  - **Seed:** `pnpm seed:demo` adds 30 days of demo activity.
+- **Why:** the team wanted the dashboard to look like a real gifting
+  product, without adding features the prototype doesn't have.
+- **Verified:**
+  - 7 overview rule tests, 3 demo-activity tests, API scope tests and a
+    guard check;
+  - 32 integration tests;
+  - 238 unit tests, lint, typecheck and the build;
+  - the browser at desktop and phone widths, in light and dark.
+- **Lessons:**
+  - Never import a plain value from a `"use client"` module into a server
+    page.
+  - Chart entry animations can leave charts blank where animation frames
+    are paused.
+  - Check the palette for tokens that share a colour before mapping
+    statuses to it.
+
+### Branded account emails
+- **What:**
+  - `brandedEmail()` (`services/api/src/mail/layout.ts`): the wordmark, a
+    card with a heading, a button and a copy-paste link, a note, a footer,
+    a preheader and a plain-text version.
+  - The verification email uses it.
+  - Inline images (`cid:`) go over SMTP, and the outbox writes an `.html`
+    preview.
+- **Why:** the first verification email was a few bare paragraphs and a
+  button, and looked unfinished in the inbox.
+- **Verified:**
+  - 5 layout tests: the link in both places, escaping, no first name, the
+    logo attached as a real PNG, the preheader;
+  - the preview at desktop and phone widths, with no sideways scrolling.
+- **Lessons:** Gmail strips SVG and blocks `data:` images, so a logo in an
+  email must be an inline attachment or hosted.
+
+### Commerce connectors: the platform is a plug-in
+- **What:**
+  - The commerce platform became a connector
+    ([ADR 0013](../architecture/decisions/0013-commerce-adapters.md),
+    accepted; [plan](../plans/commerce-connectors.md)).
+  - `@gifting/commerce` holds the contract and a conformance suite.
+    `@gifting/commerce-commercetools` (moved out of the API) and
+    `@gifting/commerce-memory` implement it.
+  - `COMMERCE_CONNECTOR` picks one per deployment, from a list generated out
+    of the API's dependencies.
+  - The API now issues its own sessions and verification links; a
+    platform's tokens travel sealed inside them.
+  - A second sign-in mode, `hosted`, for platforms with their own sign-in
+    page. `GET /v1/auth/options` tells the app which mode applies.
+  - A lint rule keeps platform code inside connector packages.
+- **Why:** the product will be sold to clients on Shopify, BigCommerce and
+  others, and Shivam asked for plug and play from today: a new platform is a
+  new connector and configuration, never a change to the product.
+- **Verified:**
+  - The conformance suite on memory (three modes) and on the real
+    commercetools project.
+  - 37 API tests, guard checks on sign-out, the newest link and the import
+    rule.
+  - Lint, typecheck, 190 tests and the build.
+  - The hosted flow end to end in the browser, and the running API on
+    commercetools.
+- **Lessons:**
+  - A Next.js server action redirecting to a URL on the same site is handled
+    inside the app, so cookies set at the destination never reach the
+    browser. Hand over to another page with a full page load.
+  - A page that depends on the API's answer must render per request, or a
+    build made while the API was down freezes it.
+
+### Register and sign in with commercetools customer accounts (B2C)
+- **What:**
+  - Auth0 is replaced
+    ([ADR 0015](../architecture/decisions/0015-commerce-customer-accounts.md),
+    [plan](../plans/m1-register-sign-in.md)). Anyone can register,
+    verify their email from a link, and sign in with commercetools' OAuth
+    password flow.
+  - The API hides the platform behind an `IdentityProvider`, sends the
+    account emails itself, rate-limits, and refuses unverified accounts.
+  - The sender app keeps the tokens in an encrypted http-only cookie and
+    has register, verify and sign-in pages.
+- **Why:** the product is B2C, a corporate gifting platform for one
+  merchant, with accounts in the commerce platform.
+- **Verified:**
+  - 21 accounts tests, and a guard check on five guards.
+  - Register, verify and the duplicate email, against the real project.
+  - Lint, typecheck, 152 tests and the build.
+  - Real sign-in waits for the sign-in API client.
+- **Lessons:**
+  - A password-flow token inherits its API client's scopes: with an admin
+    client, every customer would hold full project access. Customer tokens
+    need their own `manage_my_profile` client, enforced at start-up.
+  - commercetools' password flow signs in unverified customers, so the
+    application must check `isEmailVerified` itself.
+
+### Real account emails through Brevo
+- **What:** separate `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER` and `SMTP_PASS`
+  settings, and Brevo's free plan for development email.
+- **Why:** verification emails only reached `.data/outbox`, and nobody could
+  test with a real inbox.
+- **Verified:** an SMTP login check, then a verification email received in a
+  personal inbox.
+- **Lessons:** a sender's domain must be authenticated with the provider.
+  `@royalcyber.com` (DMARC `p=quarantine`, no Brevo DKIM) was accepted by
+  Brevo and then silently quarantined by the receiver.
+
 ### Sender dashboard merged with the commercetools catalog import
 - **What:** `develop` (commercetools setup, Christie Cookie catalog, five
   demo companies) merged into the sender dashboard branch. In
@@ -55,6 +212,48 @@ how it was verified, and any lesson worth keeping.
 ---
 
 ## 28 Oct 2026
+
+### M1 sign-in, phase A: Auth0 sign-in and member access
+- **What:**
+  - **API:** checks Auth0 access tokens (`jose`, RS256, issuer, audience,
+    expiry). Every route declares `auth: "member" | "ops" | "public"`.
+    Members are found in commercetools by verified email, scoped to their
+    company and teams, and returned by `GET /v1/me`.
+  - **Sender app:**
+    - `@auth0/nextjs-auth0` 4.32.0, with a `proxy.ts` that redirects to
+      `/sign-in`;
+    - a member-only route group with the account menu, and a no-access
+      page;
+    - the sign-in page in the prototype's look.
+  - **`@gifting/ui`:** the prototype's colours, DM Sans and Sora.
+  - **commercetools:** a `member-profile` type and company `emailDomains`.
+  - `pnpm member:add`, and an Auth0 setup checklist in `infra/auth0`.
+  - Details: the [plan's As built section](../plans/m1-sign-in.md#as-built).
+- **Why:** sign-in is the base of every M1 to M7 flow, and the team needed
+  the screens to match the prototype.
+- **Verified:**
+  - 31 API tests for every refusal, and a guard check on five guards.
+  - The member queries ran against the commercetools project.
+  - The built sender app's pages, at 390px and in light and dark.
+  - A real sign-in waits for the Auth0 tenant.
+- **Lessons:**
+  - `next/font` variables must sit on `<html>`. On `<body>`, `--font-sans`
+    (resolved on `:root`) silently falls back to the system font.
+  - `defineRoute` called inline in an array infers its access mode from
+    the array's type, not the default. Define routes as constants.
+  - The Import API can't re-import a team unit that inherits its stores.
+
+### Proposed: M1 sign-in plan; ADR 0009 accepted (Auth0)
+- **What:** [M1: sign-in, invitations and member access](../plans/m1-sign-in.md),
+  proposed:
+  - Auth0 Free plan, with Google and email and password;
+  - invite-only and work emails only;
+  - members in commercetools Business Units;
+  - the Gifting API decides access from the member record.
+
+  ADR 0009 is accepted as Auth0, and open question 7 is answered.
+- **Why:** sign-in is the base of every M1 to M7 flow. The prototype has no
+  auth screens, so the plan sets them out in its look.
 
 ### Prototype palette and single-gift sends
 - **What:** the theme tokens in `packages/ui/src/styles/globals.css` now use

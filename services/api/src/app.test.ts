@@ -16,6 +16,7 @@ beforeAll(async () => {
     defineRoute({
       method: "POST",
       url: "/v1/test/echo",
+      auth: "public",
       schema: { body: z.object({ amountCents: z.number().int() }), response: z.object({ amountCents: z.number() }) },
       handler: async ({ body }) => {
         const withInternalField = { amountCents: body.amountCents, internal: "never leaves" };
@@ -25,6 +26,7 @@ beforeAll(async () => {
     defineRoute({
       method: "GET",
       url: "/v1/test/gift",
+      auth: "public",
       schema: {},
       handler: async () => {
         throw new ApiError(404, "gift_not_found", "Gift not found.");
@@ -33,9 +35,19 @@ beforeAll(async () => {
     defineRoute({
       method: "GET",
       url: "/v1/test/crash",
+      auth: "public",
       schema: {},
       handler: async () => {
         throw new Error("driver said sam@example.com");
+      },
+    }),
+    defineRoute({
+      method: "GET",
+      url: "/v1/test/db-down",
+      auth: "public",
+      schema: {},
+      handler: async () => {
+        throw Object.assign(new Error("connect ECONNREFUSED mongodb://user:secret@localhost:27017"), { name: "MongoServerSelectionError" });
       },
     }),
   ]);
@@ -102,6 +114,15 @@ describe("error shape", () => {
     expect(res.statusCode).toBe(500);
     expect(res.body).not.toContain("sam@example.com");
     expect(res.json().error.code).toBe("internal_error");
+  });
+});
+
+describe("database down", () => {
+  it("answers 503 database_unavailable with a hint, never the driver's message", async () => {
+    const res = await app.inject({ method: "GET", url: "/v1/test/db-down" });
+    expect(res.statusCode).toBe(503);
+    expect(res.json()).toEqual({ error: { code: "database_unavailable", message: "The database isn't reachable. Start it with pnpm db:up." } });
+    expect(res.body).not.toContain("secret");
   });
 });
 

@@ -1,6 +1,7 @@
 import type { AppDeps } from "../deps";
-import type { RouteDefinition } from "../http/route";
+import type { RouteAuth, RouteDefinition, RouteSchema } from "../http/route";
 import { accountsRoutes } from "./accounts/routes";
+import { workspaceRoutes } from "./accounts/workspace";
 import { campaignsRoutes } from "./campaigns/routes";
 import { createCampaignsService } from "./campaigns/service";
 import { catalogRoutes } from "./catalog/routes";
@@ -11,6 +12,8 @@ import { ledgerRoutes } from "./ledger/routes";
 import { createLedgerService } from "./ledger/service";
 import { recipientsRoutes } from "./recipients/routes";
 import { createRecipientsService } from "./recipients/service";
+import { reportingRoutes } from "./reporting/routes";
+import { createReportingService } from "./reporting/service";
 
 /**
  * The ten modules (docs/architecture/overview.md). Each has its own folder
@@ -20,7 +23,7 @@ import { createRecipientsService } from "./recipients/service";
 export type ApiModule = {
   name: string;
   milestone: string;
-  routes: readonly RouteDefinition[];
+  routes: readonly RouteDefinition<RouteSchema, RouteAuth>[];
 };
 
 export function buildModules(deps: AppDeps): ApiModule[] {
@@ -29,9 +32,10 @@ export function buildModules(deps: AppDeps): ApiModule[] {
   const recipients = createRecipientsService(deps);
   const gifts = createGiftsService(deps, { recipients });
   const campaigns = createCampaignsService(deps, { catalog, ledger, recipients, gifts });
+  const reporting = createReportingService(deps, { gifts, ledger, campaigns });
 
   return [
-    { name: "accounts", milestone: "M1", routes: accountsRoutes(deps) },
+    { name: "accounts", milestone: "M1", routes: [...accountsRoutes, ...workspaceRoutes(deps)] },
     { name: "ledger", milestone: "M1", routes: ledgerRoutes(ledger) },
     { name: "catalog", milestone: "M2", routes: catalogRoutes(catalog) },
     { name: "campaigns", milestone: "M3", routes: campaignsRoutes(campaigns) },
@@ -40,6 +44,6 @@ export function buildModules(deps: AppDeps): ApiModule[] {
     { name: "fulfillment", milestone: "M4", routes: [] },
     { name: "channels", milestone: "M3", routes: [] },
     { name: "integrations", milestone: "M1", routes: [] },
-    { name: "reporting", milestone: "M6", routes: [] },
+    { name: "reporting", milestone: "M6", routes: reportingRoutes(reporting) },
   ];
 }

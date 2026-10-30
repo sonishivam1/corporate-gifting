@@ -112,6 +112,8 @@ export function customerImport(customer: DemoCustomer): CustomerImport {
     authenticationMode: "ExternalAuth",
     isEmailVerified: true,
     locale: "en-US",
+    // Seeded members are already active; real members start as invited (M1 sign-in plan).
+    custom: { type: { typeId: "type", key: "member-profile" }, fields: { status: { type: "Enum", value: "active" } } },
     addresses: [
       {
         key: `${customer.key}-home`,

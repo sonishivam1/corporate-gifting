@@ -321,6 +321,11 @@ export function createCampaignsService(
       });
     },
 
+    /** Campaigns in the session's team waiting for an approver (the Home's bell and greeting). */
+    async pendingApprovalCount(session: Session): Promise<number> {
+      return c().campaigns.countDocuments({ companyKey: session.companyKey, teamKey: session.teamKey, status: "pending_approval" });
+    },
+
     async list(session: Session, query: { status: ListStatus; limit: number }): Promise<CampaignListView> {
       const all = await c()
         .campaigns.find({ companyKey: session.companyKey, teamKey: session.teamKey, status: { $ne: "draft" } })

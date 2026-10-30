@@ -20,10 +20,12 @@
     "ct:plan": "pnpm --filter @gifting/ct-setup plan",
     "ct:apply": "pnpm --filter @gifting/ct-setup apply",
     "seed": "pnpm --filter @gifting/seed seed",
+    "member:add": "pnpm --filter @gifting/seed run add-member",
     "seed:demo": "pnpm --filter @gifting/seed seed:demo",
     "catalog:extract": "pnpm --filter @gifting/catalog run extract",
     "catalog:import": "pnpm --filter @gifting/catalog run import",
-    "catalog:remove": "pnpm --filter @gifting/catalog run remove"
+    "catalog:remove": "pnpm --filter @gifting/catalog run remove",
+    "test:conformance": "pnpm --filter @gifting/commerce-commercetools run test:conformance"
   },
   "devDependencies": {
     "@eslint/js": "^9",

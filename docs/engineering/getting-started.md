@@ -22,6 +22,7 @@ Docker and need no accounts.
 
 ```bash
 pnpm db:up        # MongoDB (27017) and Mailpit (8025)
+pnpm seed:demo    # the demo company, and 30 days of campaigns and gifts for the Home overview
 pnpm db:indexes   # create the indexes
 pnpm dev          # all apps and the API
 ```
@@ -63,6 +64,31 @@ The POC project's key has neither, so `.env` names it in
 `CTP_SETUP_PROJECT_KEY`. Both scripts are safe to re-run: `ct:apply` skips
 what exists, and `seed` updates the same products (keys are SKUs).
 
+## Register and sign in
+
+Accounts are commercetools customers
+([ADR 0015](../architecture/decisions/0015-commerce-customer-accounts.md)).
+
+1. **Create a sign-in API client** in the Merchant Center (Settings →
+   Developer settings → Create new API client) with **only** the
+   `manage_my_profile` scope. Put its id and secret in the root `.env` as
+   `CTP_SIGNIN_CLIENT_ID` and `CTP_SIGNIN_CLIENT_SECRET`. The API refuses an
+   admin client.
+2. **Set up the sender app:** copy `apps/sender/.env.example` to
+   `apps/sender/.env.local`, and set `SESSION_SECRET` (`openssl rand -hex 32`).
+3. **Run** `pnpm dev`, open http://localhost:3000/register, and register.
+4. **Find the verification email:**
+   - in Mailpit (http://localhost:8025) when `pnpm db:up` is running;
+   - otherwise in `.data/outbox/` as an `.eml` file;
+   - or in a real inbox, when `SMTP_HOST` names a provider such as Brevo
+     (see [configuration](../technical/configuration.md)). Allow your IP in
+     the provider, and use a verified sender whose domain is authenticated
+     there, or a personal sender.
+
+   Open its link, then sign in.
+
+Without the sign-in client, the API answers `503` on register and sign-in.
+
 ## The worker
 
 ```bash
@@ -78,3 +104,18 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm build
 ## Troubleshooting
 
 See the gotchas table in [CLAUDE.md](../../CLAUDE.md#gotchas).
+
+## Moving the demo activity to today
+
+`pnpm seed:demo` dates its demo campaigns and gifts relative to its first
+run, and never rewrites them (the ledger is append-only, even for demo
+data). After a few weeks the Home's last-30-days view empties. To start
+over, drop the local database and seed again:
+
+```bash
+docker exec gifting-mongo mongosh gifting --quiet --eval "db.dropDatabase()"
+```
+
+```bash
+pnpm seed:demo
+```

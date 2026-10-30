@@ -1,8 +1,8 @@
 /**
- * Where products come from. commercetools owns them (ADR 0001): `ctCatalog`
- * reads them with product search; `seedCatalog` serves `infra/seed` for tests,
- * CI and local work without a project. Products are read, never copied into
- * MongoDB.
+ * Where products come from. The commerce platform owns them (ADR 0013):
+ * `connectorCatalog` reads them through the connector; `seedCatalog` serves
+ * `infra/seed` when the connector has no catalog (tests, CI, local work).
+ * Products are read, never copied into MongoDB.
  */
 import {
   type Cents,

@@ -21,6 +21,57 @@ money moving twice. Both are blocked in the database, not only in code.
 | Stolen commercetools or provider credentials | Server-only, scoped per client, in a secrets manager; never in a browser, log or repo |
 | Ledger tampering | Insert and find only for the production ledger user; corrections only as `adjustment` with a reason |
 
+## Register and sign in
+
+[ADR 0015](decisions/0015-commerce-customer-accounts.md):
+
+- **Accounts are commercetools customers** in the `gifting` store, signed in
+  with commercetools' OAuth 2.0 password flow.
+  - Anyone may register (B2C), and must verify their email from a link
+    (valid an hour) before they can sign in.
+  - commercetools would sign in unverified accounts, so the API refuses
+    them and revokes the tokens.
+- **Customer tokens come from a dedicated API client with only
+  `manage_my_profile`.**
+  - The API refuses to start if that client holds admin scopes. With the
+    admin client, every customer token would carry full project access.
+- **Sessions are the API's own** (ADR 0013 section 6), the same on every
+  commerce platform:
+  - encrypted tokens (A256GCM with `API_SESSION_SECRET`), each with a kind,
+    so a refresh token or a link can't stand in for an access token;
+  - access tokens last 15 minutes, a session at most 7 days;
+  - sign-out stops the session at once and ends the platform's own session
+    (commercetools' tokens are revoked);
+  - the list of ended sessions is kept in memory (one API instance in the
+    POC) and moves to MongoDB before there's more than one.
+- **The API checks every signed-in call** by opening its own token, then
+  reads the customer from the platform at most once a minute per session.
+  The person comes from the token, never from the request.
+- **A platform's own sign-in page** (hosted mode): the API issues a state
+  that expires in 10 minutes, the app keeps it in a cookie and checks it on
+  return, and each code works once.
+- **What answers reveal:**
+  - Register says when an email is taken (`409`, a product decision on 29
+    Oct 2026). That lets someone check whether an email has an account.
+  - Sign-in and resend never reveal one: a wrong email or password gives one
+    generic message.
+- **Passwords:**
+  - 10 to 128 characters, with an uppercase letter, a lowercase letter, a
+    number and a special character;
+  - never containing the email name;
+  - checked in the app and again in the API (`@gifting/domain`);
+  - stored only by commercetools.
+- **Rate limits:** 5 failed sign-ins per email in 15 minutes, and 3 account
+  emails per address an hour. They're held in memory (one API instance in
+  the POC).
+- **The browser never holds a token.**
+  - The sender app keeps the access and refresh tokens in one encrypted
+    (A256GCM), http-only, `SameSite=Lax` cookie, which lasts at most 7 days.
+  - It renews the access token in `proxy.ts`.
+  - Sign-out is a form post (a server action), and revokes both tokens.
+- **Logs never include emails, passwords, tokens or links.** They log
+  customer ids.
+
 ## Roles and what they can do
 
 | Action | Owner | Admin | Sender | Approver | Vendor | Ops |

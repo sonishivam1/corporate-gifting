@@ -1,3 +1,4 @@
+import type { CatalogConnector } from "@gifting/commerce";
 import { createLogger, type Logger } from "@gifting/logger";
 import Fastify, { type FastifyBaseLogger, type FastifyInstance } from "fastify";
 import { ZodError } from "zod";
@@ -6,10 +7,22 @@ import { type AppDeps, defaultDeps } from "./deps";
 import { ApiError, errorBody } from "./http/errors";
 import { registerRoutes } from "./http/route";
 import { registerSession } from "./http/session";
+import type { AccountsService } from "./modules/accounts/service";
 import { buildModules } from "./modules/index";
 import { health, meta } from "./system-routes";
 
-export async function buildApp(options: { logger?: Logger; deps?: AppDeps } = {}): Promise<FastifyInstance> {
+/**
+ * - `accounts` registers people and checks who is calling (ADR 0015).
+ *   Without it, the sign-in routes and every signed-in route answer 503
+ *   `auth_not_configured`, so the API still starts (and `/health` works)
+ *   before a commerce connector is configured.
+ * - `deps` is what the dashboard's "workspace" routes run against
+ *   (database, demo company, development session); integration tests pass a
+ *   throwaway database.
+ */
+export async function buildApp(
+  options: { logger?: Logger; deps?: AppDeps; accounts?: AccountsService | null; catalog?: CatalogConnector | null } = {},
+): Promise<FastifyInstance> {
   const log = options.logger ?? createLogger("api");
   const app = Fastify({
     // pino is what Fastify uses underneath; widen to its base logger type.
@@ -17,6 +30,7 @@ export async function buildApp(options: { logger?: Logger; deps?: AppDeps } = {}
     disableRequestLogging: false,
     genReqId: () => crypto.randomUUID(),
   });
+  app.decorate("accounts", options.accounts ?? null);
 
   app.setErrorHandler((err, request, reply) => {
     if (err instanceof ApiError) {
@@ -24,6 +38,11 @@ export async function buildApp(options: { logger?: Logger; deps?: AppDeps } = {}
     }
     if (err instanceof ZodError) {
       return reply.status(400).send(errorBody("invalid_request", "The request is not valid."));
+    }
+    // The database is down or unreachable: say so, instead of a generic 500.
+    if (/^Mongo(ServerSelection|Network|NotConnected|Topology)/.test((err as Error).name ?? "")) {
+      request.log.warn({ errName: (err as Error).name }, "database unavailable");
+      return reply.status(503).send(errorBody("database_unavailable", "The database isn't reachable. Start it with pnpm db:up."));
     }
     const status = (err as { statusCode?: number }).statusCode;
     if (status && status >= 400 && status < 500) {
@@ -35,7 +54,7 @@ export async function buildApp(options: { logger?: Logger; deps?: AppDeps } = {}
 
   app.setNotFoundHandler((_request, reply) => reply.status(404).send(errorBody("not_found", "Not found.")));
 
-  const deps = options.deps ?? defaultDeps(process.env, log);
+  const deps = options.deps ?? defaultDeps(process.env, { log, catalog: options.catalog });
   const modules = buildModules(deps);
   registerSession(app, deps);
   registerRoutes(app, [health, meta(modules), ...modules.flatMap((m) => m.routes)]);

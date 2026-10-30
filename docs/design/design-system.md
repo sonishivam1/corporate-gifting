@@ -29,7 +29,7 @@ colour).
 | `packages/ui/src/components/*.tsx` | Every shadcn component, plus our composed ones |
 | `packages/ui/src/hooks/*.ts` | `use-mobile`, `use-highlighted-code` |
 | `packages/ui/src/lib/` | `utils.ts` (`cn`), `highlighter.tsx` |
-| `packages/ui/src/styles/globals.css` | Tailwind 4, shadcn tokens (light and dark), base styles; `@source` covers every app |
+| `packages/ui/src/styles/globals.css` | Tailwind 4, shadcn tokens (light; a dark set kept but unused), base styles; `@source` covers every app |
 | `apps/*/components.json` | Points the CLI at `packages/ui` |
 | `apps/*/postcss.config.mjs` | Re-exports `@gifting/ui/postcss.config` |
 | `apps/*/app/layout.tsx` | Imports `@gifting/ui/globals.css`; wraps pages in `ThemeProvider` and `TooltipProvider`; renders `Toaster` |
@@ -86,7 +86,7 @@ Ours, built on them:
 | --- | --- |
 | `app-shell` | Page frame: product and app name, title |
 | `gift-status-badge` | A gift's status in the tone below |
-| `theme-provider` | Light and dark mode (next-themes, `class` strategy, follows the system) |
+| `theme-provider` | Light for everyone (next-themes with `forcedTheme="light"`), whatever the device's setting. The dark tokens stay in the stylesheet, turned off |
 
 ## Likely use per app
 
@@ -110,12 +110,49 @@ Ours, built on them:
   `warning`, `info`, each with a `-soft` background) used by the status
   badges, and one `tile-<category>` pair per catalog category for product
   art.
-- System font stack (`--font-sans`); no web fonts in the POC (the
-  prototype's Sora and DM Sans are not used).
+- DM Sans for text (`font-sans`) and Sora for headings (`font-heading`,
+  applied to `h1` to `h3`). Both are self-hosted by `next/font`
+  (`@gifting/ui/lib/fonts`). Each app's root layout puts `fontVariables` on
+  `<html>`, where `--font-sans` is resolved; on `<body>` the fonts silently
+  fall back to the system stack.
+- Shared account pieces:
+  - `AuthCard`: the wordmark over one card, for the register, sign-in
+    and email pages;
+  - `PasswordInput`: show/hide button and Caps Lock warning;
+  - `Checklist`: live rules, with met items in `text-success`;
+  - `UserMenu`: sign-out is a form post;
+  - the `Wordmark`.
+
+  `AppShell` and `SidebarShell` take header `actions` (the dashboard puts
+  the `UserMenu` there). `SidebarShell` also has a `topBar` slot (search),
+  and nav items can be `soon` (shown with a badge, not a link). Its menu
+  uses 40px rows, 18px icons and a primary-tinted active item under a
+  "Menu" heading. The page uses wide screens up to 1600px.
+- Overview pieces:
+  - `StatCard`: an icon in a soft tone, a label, a value, the change
+    against the previous period, and an optional footer;
+  - `GiftActivityChart` and `GiftStatusDonut`, built on the shadcn `chart`
+    component.
+
+  Each gift status has one colour: waiting slate, opened amber, chose
+  blue, shipped purple, delivered green, expired red. The activity chart
+  uses the same colours. Charts don't animate in.
 - The recipient app sets `--primary` (and `--primary-foreground`) from the
   company's `brandColor` (Business Unit `company-settings`) and shows its
   `logoUrl` in the header. If the brand colour fails contrast, the default
   `--primary` stays.
+
+## Emails
+
+Emails can't use the component library, so they have their own layout in
+`services/api/src/mail/layout.ts` (`brandedEmail()`), with the same palette:
+- the wordmark (the gift icon as an inline PNG, `cid:`; email clients strip
+  SVG and block `data:` images), then one white card with a heading,
+  paragraphs, a button and a copy-paste link, a note, and a footer;
+- tables and inline styles only, light only (`color-scheme`), a hidden
+  preheader for the inbox preview line, and a plain-text version;
+- every account email uses it. Outside production the outbox writes an
+  `.html` preview next to each `.eml`, to see the design without sending.
 
 ## Gift status colours
 

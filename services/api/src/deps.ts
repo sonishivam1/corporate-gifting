@@ -1,10 +1,10 @@
-import { createCtApi, loadCtApiConfig } from "@gifting/ct";
+import type { CatalogConnector } from "@gifting/commerce";
 import { getClient, getDb } from "@gifting/db";
-import { AppError, type Logger } from "@gifting/logger";
+import type { Logger } from "@gifting/logger";
 import type { Db, MongoClient } from "mongodb";
 
 import { seedOrg, type OrgDirectory } from "./modules/accounts/org";
-import { ctCatalog, ctReader } from "./modules/catalog/ct-source";
+import { connectorCatalog } from "./modules/catalog/connector-source";
 import { type CatalogSource, seedCatalog, seedOccasions } from "./modules/catalog/source";
 
 /**
@@ -14,7 +14,7 @@ import { type CatalogSource, seedCatalog, seedOccasions } from "./modules/catalo
 export type AppDeps = {
   client: MongoClient;
   db: Db;
-  // The catalog comes from commercetools or the seed file (CATALOG_SOURCE).
+  // The commerce connector's catalog, or the demo catalog (see catalogFor).
   catalog: CatalogSource;
   // A stand-in for commercetools Business Units until M1.
   org: OrgDirectory;
@@ -24,29 +24,26 @@ export type AppDeps = {
   now: () => Date;
 };
 
-const CATALOG_SOURCES = ["seed", "commercetools"] as const;
-
 /**
- * `seed` (the default) needs no commercetools project, so tests, CI and the
- * build run without one. `commercetools` reads the project with the API's
- * own read-only client (`CTP_API_*`).
+ * The commerce connector's catalog when it has one (ADR 0013), else the demo
+ * catalog from `infra/seed`. Tests, CI and the build use the demo catalog and
+ * need no platform.
  */
-export function catalogFromEnv(env: Record<string, string | undefined>, log?: Logger): CatalogSource {
-  const name = env.CATALOG_SOURCE?.trim() || "seed";
-  if (name === "seed") return seedCatalog;
-  if (name !== "commercetools") {
-    throw new AppError("config_invalid", `CATALOG_SOURCE must be one of ${CATALOG_SOURCES.join(", ")}.`);
-  }
-  return ctCatalog({
-    reader: ctReader(createCtApi(loadCtApiConfig(env))),
+export function catalogFor(connector: CatalogConnector | null | undefined, log?: Logger): CatalogSource {
+  if (!connector) return seedCatalog;
+  return connectorCatalog({
+    catalog: connector,
     fallbackOccasions: (sku) => seedOccasions.get(sku),
-    onError: (err) => log?.error({ err }, "commercetools catalog read failed"),
+    onError: (err) => log?.error({ err }, "catalog read failed"),
   });
 }
 
 /** The database is opened on first use, so building the app (and `pnpm build`) never connects. */
-export function defaultDeps(env: Record<string, string | undefined> = process.env, log?: Logger): AppDeps {
-  const catalog = catalogFromEnv(env, log);
+export function defaultDeps(
+  env: Record<string, string | undefined> = process.env,
+  options: { log?: Logger; catalog?: CatalogConnector | null } = {},
+): AppDeps {
+  const catalog = catalogFor(options.catalog, options.log);
   return {
     get client() {
       return getClient();

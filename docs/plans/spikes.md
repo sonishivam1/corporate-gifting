@@ -79,7 +79,9 @@ with `pnpm --filter @gifting/api catalog:check`. Plan:
 
 - **One query is enough.** For every demo collection, a single product
   search found exactly the products the rules select when applied in memory
-  to the whole catalog: 192, 5, 220, 4 and 196 products.
+  to the whole catalog: 192, 5, 220, 4 and 196 products. With
+  `markMatchingVariants` it is exact per variant too (checked 30 Oct at
+  budgets of $25, $50 and $75).
 - **The query** (`collectionSearchQuery` in `packages/ct/src/catalog.ts`):
   `and` of `variants.prices.centAmount` up to the budget; an `or` over vendors
   of `variants.attributes.vendorKey = <vendor>` and

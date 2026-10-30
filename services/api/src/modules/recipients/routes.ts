@@ -10,6 +10,7 @@ export function recipientsRoutes(recipients: RecipientsService) {
     defineRoute({
       method: "GET",
       url: "/v1/recipients",
+      auth: "workspace",
       schema: {
         query: z.object({ q: z.string().trim().max(80).optional() }),
         response: z.object({ recipients: z.array(recipientView) }),

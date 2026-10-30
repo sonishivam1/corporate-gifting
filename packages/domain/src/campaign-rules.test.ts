@@ -9,7 +9,7 @@ import {
   estimateSend,
   hasShareableLinks,
 } from "./campaign-rules";
-import { defaultVariant, findVariant, variantName, withVariants } from "./catalog";
+import { categoryFromTags, defaultVariant, findVariant, occasionsFromTags, variantName, withVariants } from "./catalog";
 import { collectionItems, matchesRules } from "./collections";
 import type { ProductView } from "./views";
 
@@ -114,6 +114,19 @@ describe("collections", () => {
     expect(fit).toMatchObject({ sku: "T-12", priceCents: 2800 });
     // A SKU rule picks out one variant, not the whole product.
     expect(collectionItems({ ...none, skus: ["T-24"] }, [tin], 5000)[0]?.variants.map((v) => v.sku)).toEqual(["T-24"]);
+  });
+});
+
+describe("tags", () => {
+  it("picks the most specific category", () => {
+    expect(categoryFromTags(["food", "drink", "wellness"])).toBe("drink");
+    expect(categoryFromTags(["outdoors", "home"])).toBe("outdoors");
+    expect(categoryFromTags(["sweet"])).toBe("food");
+  });
+
+  it("reads occasions from storefront tags, in the app's order", () => {
+    expect(occasionsFromTags(["holiday-gifts-under-50", "thank-you", "under-50", "graduation"])).toEqual(["holiday", "thanks", "appreciation"]);
+    expect(occasionsFromTags(["small"])).toEqual([]);
   });
 });
 

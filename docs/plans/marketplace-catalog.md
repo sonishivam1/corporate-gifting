@@ -107,6 +107,12 @@ view fields), `docs/technical/configuration.md` (`CATALOG_SOURCE`,
 `CTP_API_*`), `docs/product/features.md`, `docs/product/roadmap.md`, the
 build log, and this plan's As built section.
 
+## Changes after agreement
+
+| # | Date | Change | Why | Agreed by |
+| --- | --- | --- | --- | --- |
+| 1 | 30 Oct 2026 | The catalog moved behind the commerce connector (ADR 0013): an optional `catalog` in the contract (`listItems`, `searchItems`, `getItem`), built in `@gifting/commerce-commercetools` and `@gifting/commerce-memory`, with catalog checks in the conformance suite. `CATALOG_SOURCE` is gone: the API uses the connector's catalog, or the demo catalog when it has none | `develop` made commerce a plug-in, and the API may no longer import `@gifting/ct` | Bhuvaneshwari |
+
 ## As built
 
 Built on 29 Oct 2026, not yet committed. Spike results:
@@ -152,11 +158,20 @@ Built on 29 Oct 2026, not yet committed. Spike results:
   then gets no token (`invalid_scope`). The page then says the API or
   database didn't answer, which hides the cause.
 
-**Not done yet**
-- The pages haven't been viewed with the commercetools source, because a
-  second Next.js dev server can't run beside the one on port 3000. Set
-  `CATALOG_SOURCE=commercetools` and restart `pnpm dev` once the client
-  exists.
+**After the connector move (30 Oct)**
+- On the real project, the commercetools connector's search returns
+  exactly the variants that fit (budgets of $25, $50 and $75: 37, 300 and
+  359 variants), as well as exactly the right products. The SKU rule and
+  the tag-or-brand rule are exact too.
+- `catalog:check` now runs through `COMMERCE_CONNECTOR`; all five demo
+  collections match the reference, with and without the product's own
+  re-check.
+- The pages were viewed against the live catalog on 29 Oct (photos, the
+  option picker); the hosts are in `apps/sender/lib/images.ts`.
+- After the merge and the move: lint and typecheck pass in all 19
+  packages; every unit test passes (API 64, domain 69, commercetools
+  connector 9, memory connector 28 with its catalog conformance); the
+  build passes; 36 integration tests pass.
 
 **Lessons**
 - Product photos come from three hosts (Cloudinary, the commercetools image

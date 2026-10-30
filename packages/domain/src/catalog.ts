@@ -4,7 +4,36 @@
  * `imageUrl` always describe its default variant, so a list can show a
  * "from" price without looking at the variants.
  */
-import type { ProductView, VariantView } from "./views";
+import { OCCASIONS, type Occasion } from "./models";
+import type { ProductCategory, ProductView, VariantView } from "./views";
+
+/** Tags that decide a card's category, most specific first ("food" alone is the fallback). */
+const CATEGORY_BY_TAG: [string, ProductCategory][] = [
+  ["drink", "drink"],
+  ["outdoors", "outdoors"],
+  ["home", "home"],
+  ["food", "food"],
+];
+
+export function categoryFromTags(tags: readonly string[]): ProductCategory {
+  return CATEGORY_BY_TAG.find(([tag]) => tags.includes(tag))?.[1] ?? "food";
+}
+
+/** Storefront tags that name an occasion. Others (`under-50`, `small`) say nothing about one. */
+const OCCASION_BY_TAG: [RegExp, Occasion][] = [
+  [/^birthday/, "birthday"],
+  [/^thank-?you/, "thanks"],
+  [/^(holiday|christmas|thanksgiving)/, "holiday"],
+  [/^(congratulations|graduation)/, "appreciation"],
+  [/^(welcome|new-?hire)/, "newhire"],
+  [/^anniversary/, "anniversary"],
+];
+
+/** The occasions a product's tags name, in the app's order. */
+export function occasionsFromTags(tags: readonly string[]): Occasion[] {
+  const found = new Set(tags.flatMap((tag) => OCCASION_BY_TAG.filter(([re]) => re.test(tag)).map(([, o]) => o)));
+  return OCCASIONS.filter((o) => found.has(o));
+}
 
 /** The variant a send picks unless the sender chooses another: the cheapest available, else the cheapest. */
 export function defaultVariant<V extends Pick<VariantView, "priceCents" | "available">>(variants: readonly V[]): V | undefined {

@@ -28,7 +28,14 @@ must respect.
 - **Built ahead of plan (28 Oct):** the [sender dashboard](docs/plans/sender-dashboard.md):
   Home, Browse gifts, Campaigns and the send flow, on real API routes and
   MongoDB. Products and the demo company come from `infra/seed` until
-  commercetools is set up; sign-in is development-only (`DEV_AUTH=1`).
+  commercetools is set up.
+- **Built (29 Oct):** real register and sign-in (B2C, commercetools customer
+  accounts, [ADR 0015](docs/architecture/decisions/0015-commerce-customer-accounts.md))
+  behind plug-in commerce connectors
+  ([ADR 0013](docs/architecture/decisions/0013-commerce-adapters.md)). The
+  dashboard sits behind that sign-in; its company and team still come from
+  the development session (`DEV_AUTH=1`, "workspace" routes) until the B2C
+  workspace model is decided.
 - **Next:** the week-1 [spikes](docs/plans/spikes.md). Spike 1, the
   company-balance order, gates everything in M4. After the spikes comes M1:
   accounts and money.
@@ -50,13 +57,15 @@ Node 24 and pnpm 10. On Windows with fnm, prefix commands with
 | `pnpm build` | Production build of every app and service; must never need a database or commercetools |
 | `pnpm db:up` / `pnpm db:down` | Local MongoDB (Atlas Local) and Mailpit in Docker; `db:up` waits until MongoDB accepts writes |
 | `pnpm db:indexes` | Create the MongoDB indexes (`packages/db`) |
-| `pnpm seed:demo` | Write the demo company's accounts, top-ups, collections and directory to MongoDB; safe to repeat |
+| `pnpm seed:demo` | Write the demo company's accounts, top-ups, collections and directory, and 30 days of demo campaigns and gifts, to MongoDB; safe to repeat |
 | `pnpm ct:plan` | Print the commercetools setup drafts (store, channels, types); no calls |
 | `pnpm ct:apply` | Set up the project from `.env`: types, product types, tax, zone and shipping, channels, store, associate roles, gift categories. Creates what's missing and adds missing fields and attributes; safe to re-run |
 | `pnpm seed` | Import the fictional products and stock, 250 demo customers, and 5 demo companies with 10 teams (Business Units) through the Import API (run `ct:apply` first) |
+| `pnpm member:add -- --email … --company … [--team …] --role … [--company-name …]` | Add a real person (work email) to a company so they can sign in (M1 phase A; invitations come in phase B). `--company-name` creates the company, with a General team, if its key is new |
 | `pnpm catalog:extract` | Read the Christie Cookie storefront into `.data/catalogs/christie-cookie.json` (gitignored; with the client's permission) |
 | `pnpm catalog:import` / `pnpm catalog:remove` | Import that snapshot into the project (vendor channel, categories, products with images, stock), or delete it all again |
 | `pnpm worker` | Start the worker (today: lists the registered jobs) |
+| `pnpm test:conformance` | The connector conformance suite against the commercetools project in `.env` (creates and deletes `.example` test customers; never in CI) |
 
 | App or service | Port |
 | --- | --- |
@@ -87,11 +96,13 @@ scripts/build-service.mjs              bundles a service; fails on undeclared de
 packages/domain/src/                   Zod models and pure rules: money, gift states, keys
 packages/ledger/src/                   ledger entry builders and the balance rule (pure)
 packages/db/src/                       MongoDB client, collections, indexes, test-db guard
-packages/ct/src/                       commercetools client and helpers (server only)
+packages/commerce/src/                 the connector contract and conformance suite
+packages/commerce-<platform>/src/      one connector per platform (commercetools, memory)
+packages/ct/src/                       commercetools client and helpers (connector and infra only)
 packages/channels/src/                 Channel interface, registry, adapters
 packages/logger/src/                   createLogger() with redaction
 packages/ui/src/components/            every shadcn/ui component, plus app-shell, gift-status-badge, theme-provider
-packages/ui/src/styles/globals.css     the one stylesheet: Tailwind, shadcn tokens, light and dark
+packages/ui/src/styles/globals.css     the one stylesheet: Tailwind, shadcn tokens (every app is light only)
 infra/ct-setup/                        drafts and scripts for the commercetools project
 infra/seed/                            fictional vendors, products and demo customers
 infra/catalog/                         client catalog extract and import (code only; data in .data/, gitignored)
@@ -106,13 +117,22 @@ that module's exported service, never its collections.
 
 ## Rules every change follows
 
-**commercetools owns commerce** ([ADR 0001](docs/architecture/decisions/0001-commerce-in-commercetools.md))
-- Products, prices, stock, carts, orders, payments, tax, shipments,
-  companies and teams (Business Units) and vendors (supply Channels) live in
-  commercetools. Never copy them into MongoDB. Keep the key (`companyKey`,
-  `teamKey`, `vendorKey`, `ctOrderNumber`) and read the rest live.
-- Only `services/api`, `services/worker` and `infra/*` import `@gifting/ct`.
-  Apps never call commercetools, and no commercetools credential reaches a
+**Commerce goes through connectors** ([ADR 0013](docs/architecture/decisions/0013-commerce-adapters.md), [plan](docs/plans/commerce-connectors.md))
+- The commerce platform is a plug-in. The product talks to it only through
+  the contract in `@gifting/commerce`. Each platform is a package,
+  `packages/commerce-<platform>`, and `COMMERCE_CONNECTOR` picks one per
+  deployment. Taking on a platform means writing its connector, never
+  changing the product ([writing a connector](docs/engineering/writing-a-connector.md)).
+- Only connector packages and `infra/*` import `@gifting/ct` or a platform
+  SDK; ESLint enforces it. Tests stand in a platform with
+  `@gifting/commerce-memory`. A connector is done when it passes the
+  conformance suite (`@gifting/commerce/conformance`).
+- Differences between platforms are `capabilities` (today: `signIn` is
+  `password` or `hosted`). Check those, never a platform's name.
+- Products, prices, stock, carts, orders, payments, tax and shipments live
+  in the platform. Never copy them into MongoDB. Keep the reference
+  (`{ connection, id }`) and read the rest live.
+- Apps never call a commerce platform, and no platform credential reaches a
   browser.
 - Each concern gets its own scoped API client (API, import, event consumer).
   Scopes are listed in [commercetools design](docs/architecture/commercetools.md).
@@ -171,6 +191,12 @@ that module's exported service, never its collections.
 - Routes live under `/v1/…`, built with `defineRoute()` with Zod schemas
   for input and output. Only `/health` is unversioned. Within v1, changes
   are additive.
+- Every route says who may call it: `auth: "account"` (the default),
+  `"ops"` or `"public"` ([register and sign-in plan](docs/plans/m1-register-sign-in.md)).
+  Handlers take the person from `ctx.account`, never from the request.
+  Apps call the API from the server with the customer's commercetools
+  access token, kept in an encrypted http-only cookie; no token reaches a
+  browser ([ADR 0015](docs/architecture/decisions/0015-commerce-customer-accounts.md)).
 - Errors are `{ error: { code, message } }`. Raise expected failures with
   `ApiError(status, code, message)`.
 
@@ -258,6 +284,12 @@ that module's exported service, never its collections.
 | `build-service: the bundle imports packages missing from package.json` | A workspace package the service uses imports a third-party package; add it to the service's own `dependencies` (the bundle keeps third-party code external) |
 | After `shadcn add`, an app's `package.json` gained packages, or a component imports `@/hooks/…` | The CLI writes dependencies and hooks into the app it runs from. Move them to `packages/ui` (`package.json`, `src/hooks`, `src/lib`) and import `@gifting/ui/hooks/…` |
 | A Tailwind class used in an app or `packages/ui` has no style | `@source` in `packages/ui/src/styles/globals.css` must cover the file; it scans `apps/**` and `packages/ui/src/**` |
+| `next/font` fonts don't apply (the page shows the system font) | Put `fontVariables` on `<html>`, not `<body>`: `--font-sans` is resolved on `:root` |
+| A Next.js app can't see a variable from the root `.env` | By design: apps read only their own `.env.local` (see `apps/<app>/.env.example`) |
+| `pnpm --filter <pkg> import` runs pnpm's own import command | Call scripts named like pnpm commands with `pnpm --filter <pkg> run <script>` |
+| Re-importing a team unit fails: "Store mode does not allow editing stores" | The Import API can't update a Division that inherits stores; `pnpm seed` creates missing teams and leaves existing ones |
+| Brevo accepts an account email (API answers 202, nothing in `.data/outbox`) but it never arrives | `MAIL_FROM`'s domain isn't authenticated in Brevo and has a strict DMARC policy (royalcyber.com does), so the receiver quarantines it. Use a personal verified sender, or authenticate the domain |
+| `COMMERCE_CONNECTOR=<name> is not installed` | Add `@gifting/commerce-<name>` to `services/api/package.json`; `src/commerce/installed.ts` is regenerated before dev, build, typecheck and test |
 | `gifting-mongo` exits with `ReplicaSetNoPrimary` / `RSGhost` | The replica set config stores the container hostname. `docker-compose.yml` now pins `hostname: gifting-mongo`; a volume created before that needs resetting once (`docker compose down -v`, then `pnpm dev:all`) |
 | A write fails with code 10107 (not primary) | Atlas Local answers pings before it elects a primary. `pnpm db:up` now waits for a writable primary (`--wait` and the compose healthcheck); a plain `docker compose up -d` doesn't |
 | `next build` tries to prerender a page and fails calling the API | Something caught the error `cookies()` throws to mark a page dynamic. Read cookies outside `try`, and catch only `ApiCallError` |
