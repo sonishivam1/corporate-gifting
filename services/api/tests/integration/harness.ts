@@ -4,8 +4,9 @@ import type { FastifyInstance } from "fastify";
 import { type Db, MongoClient } from "mongodb";
 
 import { buildApp } from "../../src/app";
+import type { AppDeps } from "../../src/deps";
 import { seedOrg } from "../../src/modules/accounts/org";
-import { type CatalogSource, seedCatalog } from "../../src/modules/catalog/source";
+import { seedCatalog } from "../../src/modules/catalog/source";
 
 /** 28 Oct 2026, the same "today" the demo uses. */
 export const NOW = new Date("2026-10-28T10:00:00Z");
@@ -22,7 +23,7 @@ export type Harness = {
  * it. assertTestDb() refuses any other database name before anything is
  * written; the database is dropped afterwards.
  */
-export async function startHarness(options: { catalog?: CatalogSource } = {}): Promise<Harness> {
+export async function startHarness(extra: Partial<AppDeps> = {}): Promise<Harness> {
   const client = new MongoClient(process.env.MONGODB_URI ?? "mongodb://localhost:27017/?directConnection=true");
   await waitForPrimary(client);
   const name = testDbName();
@@ -30,7 +31,7 @@ export async function startHarness(options: { catalog?: CatalogSource } = {}): P
   const db = client.db(name);
   await writeDemoData(db, NOW);
   const app = await buildApp({
-    deps: { client, db, catalog: options.catalog ?? seedCatalog, org: seedOrg, devAuth: true, recipientBaseUrl: "http://gifts.test", now: () => NOW },
+    deps: { client, db, catalog: seedCatalog, org: seedOrg, devAuth: true, recipientBaseUrl: "http://gifts.test", now: () => NOW, ...extra },
   });
   await app.ready();
   return {

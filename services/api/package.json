@@ -21,6 +21,7 @@
     "@gifting/commerce": "workspace:*",
     "@gifting/commerce-commercetools": "workspace:*",
     "@gifting/commerce-memory": "workspace:*",
+    "@gifting/content": "workspace:*",
     "@gifting/db": "workspace:*",
     "@gifting/domain": "workspace:*",
     "@gifting/ledger": "workspace:*",

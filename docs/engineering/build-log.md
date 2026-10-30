@@ -46,6 +46,18 @@ how it was verified, and any lesson worth keeping.
 
 ## 29 Oct 2026
 
+### Gift delivery by email (M3.4)
+- **What:** sending a campaign emails each recipient a private link
+  (`/r/<token>`; SMTP in dev, Mailpit locally). Delivery is claimed with an
+  atomic `queued` to `sending` update, so a retry never sends twice. The
+  sender can send a gift again (new link, old one stops) or cancel it (hold
+  released); both are API routes for now. New: `@gifting/content` (every
+  user-facing string) and the email channel adapter in `@gifting/channels`.
+- **Why:** the email half of M3.4 is ours.
+- **Verified:** integration tests for one email per recipient, no raw link
+  stored, a failed email left retryable, resend and cancel, and scoping to the
+  caller's team; unit tests for the email adapter and the strings.
+
 ### Marketplace catalog from commercetools (spike 2)
 - **What:** the API can read the catalog from commercetools, as agreed in
   the [marketplace catalog plan](../plans/marketplace-catalog.md).

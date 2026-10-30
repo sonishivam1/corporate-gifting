@@ -97,6 +97,13 @@ uses the link or QR channel. Only their SHA-256 hashes are stored, so they
 can't be listed again later; the sender app offers them as a CSV download
 on the spot.
 
+## Gift delivery (M3.4)
+
+| Method | Path | Who | Notes |
+| --- | --- | --- | --- |
+| POST | `/v1/gifts/:id/resend` | sender+ | New link by email; the old link stops working |
+| POST | `/v1/gifts/:id/cancel` | sender+ | Gift cancelled and its hold released |
+
 ## Planned
 
 | Method | Path | Who | Module | Milestone |
@@ -107,11 +114,7 @@ on the spot.
 | POST | `/v1/webhooks/stripe` | Stripe (signed) | integrations | M1 |
 | POST | `/v1/collections` (company collections), `?country=` on items | sender+, ops | catalog | M2 |
 | GET | `/v1/campaigns/:id/links.csv` (would need links re-issued: only hashes are stored) | sender+ | channels | M3 |
-| POST | `/v1/gifts/:id/resend`, `/extend`, `/cancel` | sender+ | gifts | M3 |
-| GET | `/v1/r/:token` | recipient (token) | gifts | M4 |
-| GET | `/v1/r/:token/items` | recipient (token) | catalog | M4 |
-| POST | `/v1/r/:token/redeem` | recipient (token) | gifts | M4 |
-| GET | `/v1/r/:token/order` | recipient (token) | fulfillment | M4 |
+| POST | `/v1/gifts/:id/extend` | sender+ | gifts | M3 |
 | GET | `/v1/vendor/orders` | vendor | fulfillment | M4 |
 | POST | `/v1/vendor/orders/:orderNumber/ship` | vendor | fulfillment | M4 |
 | POST | `/v1/recipients`, `/v1/recipients/import` | admin+ | recipients | M5 |

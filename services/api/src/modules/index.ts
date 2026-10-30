@@ -4,9 +4,12 @@ import { accountsRoutes } from "./accounts/routes";
 import { workspaceRoutes } from "./accounts/workspace";
 import { campaignsRoutes } from "./campaigns/routes";
 import { createCampaignsService } from "./campaigns/service";
+import { createChannelsService } from "./channels/service";
 import { catalogRoutes } from "./catalog/routes";
 import { createCatalogService } from "./catalog/service";
+import { createGiftActions } from "./gifts/actions";
 import { giftsRoutes } from "./gifts/routes";
+import { senderGiftRoutes } from "./gifts/sender-routes";
 import { createGiftsService } from "./gifts/service";
 import { ledgerRoutes } from "./ledger/routes";
 import { createLedgerService } from "./ledger/service";
@@ -31,7 +34,9 @@ export function buildModules(deps: AppDeps): ApiModule[] {
   const catalog = createCatalogService(deps);
   const recipients = createRecipientsService(deps);
   const gifts = createGiftsService(deps, { recipients });
-  const campaigns = createCampaignsService(deps, { catalog, ledger, recipients, gifts });
+  const channels = createChannelsService(deps, { recipients });
+  const giftActions = createGiftActions(deps, { ledger });
+  const campaigns = createCampaignsService(deps, { catalog, ledger, recipients, gifts, channels });
   const reporting = createReportingService(deps, { gifts, ledger, campaigns });
 
   return [
@@ -40,7 +45,7 @@ export function buildModules(deps: AppDeps): ApiModule[] {
     { name: "catalog", milestone: "M2", routes: catalogRoutes(catalog) },
     { name: "campaigns", milestone: "M3", routes: campaignsRoutes(campaigns) },
     { name: "recipients", milestone: "M5", routes: recipientsRoutes(recipients) },
-    { name: "gifts", milestone: "M3", routes: giftsRoutes(gifts, campaigns) },
+    { name: "gifts", milestone: "M3", routes: [...giftsRoutes(gifts, campaigns), ...senderGiftRoutes(channels, giftActions)] },
     { name: "fulfillment", milestone: "M4", routes: [] },
     { name: "channels", milestone: "M3", routes: [] },
     { name: "integrations", milestone: "M1", routes: [] },

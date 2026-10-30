@@ -165,7 +165,8 @@ export const giftNotification = z.object({
   kind: z.enum(["send", "reminder"]),
   reminderNo: z.number().int().nonnegative(),
   providerMessageId: z.string().nullable(),
-  status: z.enum(["queued", "sent", "delivered", "failed"]),
+  // sending: claimed by one deliverer, so two workers never send the same message.
+  status: z.enum(["queued", "sending", "sent", "delivered", "failed"]),
   at: z.date(),
 });
 
