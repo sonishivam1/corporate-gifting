@@ -44,7 +44,24 @@ export const balanceView = z.object({
 });
 export type BalanceView = z.infer<typeof balanceView>;
 
+/** One orderable version of a product (a size, flavour or colour). A send picks a variant by SKU. */
+export const variantView = z.object({
+  sku: z.string(),
+  // What tells it apart from the product's other variants; empty when it is the only one.
+  label: z.string(),
+  priceCents: cents,
+  available: z.boolean(),
+  imageUrl: z.string().nullable(),
+});
+export type VariantView = z.infer<typeof variantView>;
+
+/**
+ * A product as one card. `sku`, `priceCents`, `available` and `imageUrl`
+ * describe its default variant: the cheapest available one (see
+ * `withVariants`).
+ */
 export const productView = z.object({
+  key: z.string(),
   sku: z.string(),
   name: z.string(),
   brand: z.string(),
@@ -58,6 +75,8 @@ export const productView = z.object({
   priceCents: cents,
   currency: z.enum(CURRENCIES),
   available: z.boolean(),
+  imageUrl: z.string().nullable(),
+  variants: z.array(variantView).min(1),
 });
 export type ProductView = z.infer<typeof productView>;
 

@@ -26,6 +26,9 @@ Zod at start-up and fails fast with the variable's name (never its value).
 | `CTP_STORE_KEY` | api | no (`gifting`) | `gifting` | |
 | `CTP_IMPORT_URL` | infra (seed) | no (from `CTP_API_URL`, `api.` → `import.`) | `https://import.us-central1.gcp.commercetools.com` | Import API host |
 | `CTP_SETUP_PROJECT_KEY` | infra | no | `corporate-gifting` | Lets `ct:apply` and `seed` write to this exact project although its key has no `sandbox` or `dev`. Only for the POC project; never a client's live project |
+| `CTP_API_CLIENT_ID` | api (commercetools connector) | for the live catalog | — | The catalog's read-only client, apart from the setup client in `CTP_CLIENT_*`. Without it the connector has no catalog and the API serves the demo catalog from `infra/seed`. Secret |
+| `CTP_API_CLIENT_SECRET` | api (commercetools connector) | with `CTP_API_CLIENT_ID` | — | Secret, never logged |
+| `CTP_API_SCOPES` | api (commercetools connector) | with `CTP_API_CLIENT_ID` | `view_published_products:corporate-gifting view_products:corporate-gifting` | Read-only until M4 adds orders and payments. These also cover reading the vendor channels |
 | `SMTP_URL` | api, worker | no (`smtp://localhost:1025`) | `smtp://localhost:1025` | Mailpit locally. If no SMTP server answers outside production, account emails go to `.data/outbox` |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` | api | no (port `587`) | `smtp-relay.brevo.com`, `587` | A real email provider, used instead of `SMTP_URL` when `SMTP_HOST` is set. Port 465 is TLS; 587 upgrades with STARTTLS. `SMTP_PASS` is secret |
 | `COMMERCE_CONNECTOR` | api | yes, for sign-in | `commercetools` | The commerce platform: `@gifting/commerce-<name>` must be installed in the API. `memory` keeps customers in memory for local work (refused in production). Unset: register and sign-in answer 503 |

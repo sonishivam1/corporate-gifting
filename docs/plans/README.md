@@ -20,6 +20,7 @@ work packages. Each milestone step gets its own plan here when it starts.
 | [Commerce connectors from day one: accounts first](commerce-connectors.md) | Platform, accounts | ✅ Built (29 Oct 2026) |
 | [Sender Home: the prototype's features, in the overview look](sender-home-redesign.md) | Sender app | ✅ Built (29 Oct 2026) |
 | [Sender dashboard: Home, Browse, Campaigns, send flow](sender-dashboard.md) | Sender app, campaigns | ✅ Built (28 Oct 2026) |
+| [Marketplace catalog from commercetools (spike 2)](marketplace-catalog.md) | Catalog, sender app | ✅ Built (29 Oct 2026) |
 
 ## Template
 

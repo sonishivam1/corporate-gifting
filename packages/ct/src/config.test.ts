@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isSandboxProject, loadCtConfig, maySetUpProject } from "./config";
+import { isSandboxProject, loadCtApiConfig, loadCtConfig, maySetUpProject } from "./config";
 
 const env = {
   CTP_PROJECT_KEY: "gifting-sandbox",
@@ -28,6 +28,19 @@ describe("commercetools config", () => {
     } catch (err) {
       expect(String(err)).not.toContain("very-secret-value");
     }
+  });
+});
+
+describe("API client config", () => {
+  const api = { CTP_API_CLIENT_ID: "api-id", CTP_API_CLIENT_SECRET: "api-secret-value", CTP_API_SCOPES: "view_published_products:gifting-sandbox" };
+
+  it("uses the API client's own credentials and the shared project", () => {
+    const config = loadCtApiConfig({ ...env, ...api });
+    expect(config).toMatchObject({ clientId: "api-id", projectKey: "gifting-sandbox", scopes: ["view_published_products:gifting-sandbox"] });
+  });
+
+  it("never falls back to the setup client", () => {
+    expect(() => loadCtApiConfig(env)).toThrow("CTP_API_CLIENT_ID is not set. CTP_API_CLIENT_SECRET is not set. CTP_API_SCOPES is not set.");
   });
 });
 

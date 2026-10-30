@@ -1,5 +1,6 @@
 import path from "node:path";
 
+import type { CatalogConnector } from "@gifting/commerce";
 import { dbConfig, getDb } from "@gifting/db";
 import { createLogger } from "@gifting/logger";
 import { z } from "zod";
@@ -27,10 +28,12 @@ const env = z
   .parse(process.env);
 
 let accounts: AccountsService | null = null;
+let catalog: CatalogConnector | null = null;
 try {
   const production = process.env.NODE_ENV === "production";
   // The commerce platform is a plug-in: COMMERCE_CONNECTOR names it, and it reads its own settings.
   const connector = await loadConnector({ env: process.env, log, production });
+  catalog = connector?.catalog ?? null;
   if (connector) {
     if (!env.API_SESSION_SECRET) throw new Error("API_SESSION_SECRET is not set (openssl rand -hex 32).");
     const smtp = env.SMTP_HOST ? { host: env.SMTP_HOST, port: env.SMTP_PORT, user: env.SMTP_USER || undefined, pass: env.SMTP_PASS || undefined } : env.SMTP_URL || undefined;
@@ -52,7 +55,7 @@ try {
   process.exit(1);
 }
 
-const app = await buildApp({ logger: log, accounts });
+const app = await buildApp({ logger: log, accounts, catalog });
 
 try {
   await app.listen({ port: env.API_PORT, host: "0.0.0.0" });
@@ -80,6 +83,8 @@ try {
 } catch {
   log.warn({ host: dbHost() }, "MongoDB is not reachable; run pnpm db:up (or pnpm dev:all)");
 }
+
+log.info({ catalog: catalog ? (process.env.COMMERCE_CONNECTOR?.trim() ?? "connector") : "demo" }, "Catalog source");
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.once(signal, () => {

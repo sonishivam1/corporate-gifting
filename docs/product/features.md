@@ -18,8 +18,8 @@ Twenty capabilities across ten modules. Sixteen are in the POC.
 | 4 | Prepaid balance, invoice and card top-ups | Billing + Ledger | sender | Yes (Stripe test mode) | M1 | Planned |
 | 5 | Hold at send, true-up at claim, release at expiry | Ledger | — | Yes | M3, M4, M6 | Partly built: hold at send |
 | 6 | Monthly statement | Billing | sender | Yes | M6 | Planned |
-| 7 | Multi-brand catalog with vendors | Catalog (commercetools) | ops | Yes, 3 to 5 seeded vendors | M0, M2 | Seed data scaffolded |
-| 8 | Budget collections (pick anything up to $X) | Collections | sender, recipient | Yes | M2 | Partly built: platform collections over the seed catalog |
+| 7 | Multi-brand catalog with vendors | Catalog (commercetools) | ops | Yes, 3 to 5 seeded vendors | M0, M2 | Partly built: the API reads the commercetools catalog (5 vendors, variants, photos) |
+| 8 | Budget collections (pick anything up to $X) | Collections | sender, recipient | Yes | M2 | Partly built: platform collections resolved by commercetools product search |
 | 9 | Build-your-own collection (tags, brands, pinned items) | Collections | sender | Yes | M2 | Planned |
 | 10 | One-time, scheduled and automated campaigns | Campaigns + Automation | sender | Yes | M3, M5 | Partly built: one-time and scheduled (no send worker yet) |
 | 11 | HR-system sync for birthdays and anniversaries | Integrations | sender | Yes: CSV plus one HR system | M5 | Planned |

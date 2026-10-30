@@ -7,8 +7,7 @@ import {
   type EstimateView,
   EXPIRY_DAYS,
   type MeView,
-  OCCASION_LABELS,
-  OCCASIONS,
+  findVariant,
   type ProductView,
   type RecipientView,
 } from "@gifting/domain";
@@ -34,10 +33,10 @@ import { z } from "zod";
 
 import { CollectionMosaic, ProductArt } from "@/components/product-art";
 import { BUDGETS, CHANNEL } from "@/lib/catalog";
-import { LET_THEM_CHOOSE } from "@/lib/features";
-import { money, plural, shortDate } from "@/lib/format";
+import { CHANNEL_CHOICE, LET_THEM_CHOOSE } from "@/lib/features";
+import { money, plural, priceLabel, shortDate } from "@/lib/format";
 
-import { type Draft, HEADLINES, itemsFor, recipientCount, tomorrow } from "./draft";
+import { defaultName, type Draft, itemsFor, recipientCount, tomorrow } from "./draft";
 
 type Update = (change: Partial<Draft>) => void;
 
@@ -65,6 +64,12 @@ export function GiftStep({
   products: readonly ProductView[];
 }) {
   const budgets = [...new Set([...BUDGETS, draft.budgetCents])].sort((a, b) => a - b);
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  // Name, brand, vendor and option labels ("Red tin", "24 pieces").
+  const shown = q
+    ? products.filter((p) => [p.name, p.brand, p.vendorName, ...p.variants.map((v) => v.label)].join(" ").toLowerCase().includes(q))
+    : products;
   return (
     <div className="grid gap-6">
       <h2 className="text-xl font-semibold">What are you sending?</h2>
@@ -130,21 +135,75 @@ export function GiftStep({
           </Section>
         </>
       ) : (
-        <Section title={LET_THEM_CHOOSE ? "Pick the gift" : "Pick the gift everyone gets"}>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {products.map((p) => (
-              <ChoiceCard key={p.sku} selected={draft.sku === p.sku} onClick={() => update({ sku: p.sku })}>
-                <ProductArt category={p.category} className="size-12 shrink-0" />
-                <span className="grid min-w-0">
-                  <span className="text-xs text-muted-foreground uppercase">{p.brand}</span>
-                  <span className="truncate font-medium">{p.name}</span>
-                  <span className="text-xs tabular-nums">{money(p.priceCents)}</span>
-                </span>
-              </ChoiceCard>
-            ))}
-          </div>
-        </Section>
+        <>
+          <VariantPicker draft={draft} update={update} products={products} />
+          <Section
+            title={LET_THEM_CHOOSE ? "Pick the gift" : "Pick the gift everyone gets"}
+            aside={
+              <span className="text-xs text-muted-foreground" aria-live="polite">
+                {q ? `${shown.length} of ${plural(products.length, "gift")}` : plural(products.length, "gift")}
+              </span>
+            }
+          >
+            <div className="relative">
+              <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                className="pl-8"
+                placeholder="Search gifts, brands or options"
+                aria-label="Search gifts"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
+            {shown.length === 0 ? <p className="text-sm text-muted-foreground">No gift matches “{query.trim()}”. Try a brand or a shorter word.</p> : null}
+            <div className="grid gap-2 sm:grid-cols-2">
+              {shown.map((p) => {
+                const selected = p.variants.some((v) => v.sku === draft.sku);
+                return (
+                  <ChoiceCard key={p.key} selected={selected} onClick={() => selected || update({ sku: p.sku })}>
+                    <ProductArt category={p.category} imageUrl={p.imageUrl} sizes="3rem" className="size-12 shrink-0" />
+                    <span className="grid min-w-0">
+                      <span className="text-xs text-muted-foreground uppercase">{p.brand}</span>
+                      <span className="truncate font-medium">{p.name}</span>
+                      <span className="text-xs tabular-nums">{priceLabel(p)}</span>
+                    </span>
+                  </ChoiceCard>
+                );
+              })}
+            </div>
+          </Section>
+        </>
       )}
+    </div>
+  );
+}
+
+/** The chosen gift, and which of its options (size, flavour, tin) everyone gets. */
+function VariantPicker({ draft, update, products }: { draft: Draft; update: Update; products: readonly ProductView[] }) {
+  const found = draft.sku ? findVariant(products, draft.sku) : null;
+  if (!found) return null;
+  const { product, variant } = found;
+  return (
+    <div className="flex flex-wrap items-end gap-4 rounded-lg border bg-muted/40 p-3">
+      <ProductArt category={product.category} imageUrl={variant.imageUrl ?? product.imageUrl} sizes="4rem" className="size-16 shrink-0" />
+      <div className="grid min-w-0 flex-1 gap-0.5">
+        <span className="text-xs text-muted-foreground">Everyone gets</span>
+        <span className="truncate font-medium">{product.name}</span>
+        <span className="text-sm tabular-nums">{money(variant.priceCents)} each</span>
+      </div>
+      {product.variants.length > 1 ? (
+        <Field className="w-full sm:w-64">
+          <FieldLabel htmlFor="variant">Option</FieldLabel>
+          <NativeSelect id="variant" value={variant.sku} onChange={(e) => update({ sku: e.target.value })}>
+            {product.variants.map((v) => (
+              <NativeSelectOption key={v.sku} value={v.sku}>
+                {v.label} · {money(v.priceCents)}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+        </Field>
+      ) : null}
     </div>
   );
 }
@@ -153,28 +212,6 @@ export function GreetingStep({ draft, update }: { draft: Draft; update: Update }
   return (
     <div className="grid gap-6">
       <h2 className="text-xl font-semibold">Write the greeting</h2>
-      <Section title="Occasion">
-        <ToggleGroup
-          type="single"
-          variant="outline"
-          value={draft.occasion}
-          onValueChange={(v) => {
-            if (!v) return;
-            const occasion = v as Draft["occasion"];
-            // Keep a headline the sender wrote; replace one we suggested.
-            const suggested = draft.headline === HEADLINES[draft.occasion];
-            update({ occasion, ...(suggested ? { headline: HEADLINES[occasion] } : {}) });
-          }}
-          aria-label="Occasion"
-          className="flex-wrap"
-        >
-          {OCCASIONS.map((o) => (
-            <ToggleGroupItem key={o} value={o}>
-              {OCCASION_LABELS[o]}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
-      </Section>
       <Section title="Card design">
         <div className="flex gap-3" role="radiogroup" aria-label="Card design">
           {CARD_COVERS.map((c) => (
@@ -335,25 +372,27 @@ export function RecipientsStep({ draft, update, recipients }: { draft: Draft; up
         ) : null}
       </Section>
 
-      <Section title="Delivery">
-        <p className="-mt-1 text-sm text-muted-foreground">
-          Pick one or more. Each person gets the first direct channel you pick; links and QR codes are for you to hand out.
-        </p>
-        <div className="grid gap-2 sm:grid-cols-3">
-          {CHANNEL_KINDS.map((c) => {
-            const channel = CHANNEL[c];
-            return (
-              <ChoiceCard key={c} selected={draft.channels.includes(c)} onClick={() => toggleChannel(c)}>
-                <channel.icon className="size-5 shrink-0 text-primary" />
-                <span className="grid">
-                  <span className="font-medium">{channel.label}</span>
-                  <span className="text-xs text-muted-foreground">{channel.note}</span>
-                </span>
-              </ChoiceCard>
-            );
-          })}
-        </div>
-      </Section>
+      {CHANNEL_CHOICE ? (
+        <Section title="Delivery">
+          <p className="-mt-1 text-sm text-muted-foreground">
+            Pick one or more. Each person gets the first direct channel you pick; links and QR codes are for you to hand out.
+          </p>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {CHANNEL_KINDS.map((c) => {
+              const channel = CHANNEL[c];
+              return (
+                <ChoiceCard key={c} selected={draft.channels.includes(c)} onClick={() => toggleChannel(c)}>
+                  <channel.icon className="size-5 shrink-0 text-primary" />
+                  <span className="grid">
+                    <span className="font-medium">{channel.label}</span>
+                    <span className="text-xs text-muted-foreground">{channel.note}</span>
+                  </span>
+                </ChoiceCard>
+              );
+            })}
+          </div>
+        </Section>
+      ) : null}
 
       <div className="grid gap-6 sm:grid-cols-2">
         <Section title="When">
@@ -425,7 +464,6 @@ export function ReviewStep({
   goTo: (step: number) => void;
 }) {
   const n = recipientCount(draft);
-  const sendDate = draft.when === "later" ? draft.sendAt : new Date().toISOString().slice(0, 10);
   const rows: { label: string; value: string; step: number }[] = [
     { label: "Gift", value: giftLabel, step: 0 },
     { label: "Greeting", value: `${draft.headline} · from ${draft.fromName}`, step: 1 },
@@ -446,7 +484,7 @@ export function ReviewStep({
         <Input
           id="campaign-name"
           maxLength={120}
-          placeholder={`${OCCASION_LABELS[draft.occasion]} · ${shortDate(sendDate)}`}
+          placeholder={defaultName(draft)}
           value={draft.name}
           onChange={(e) => update({ name: e.target.value })}
         />

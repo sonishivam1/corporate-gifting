@@ -1,10 +1,12 @@
 import { type ChannelRegistry, createChannelRegistry, emailChannel, logChannel, smtpTransport } from "@gifting/channels";
+import type { CatalogConnector } from "@gifting/commerce";
 import { getClient, getDb } from "@gifting/db";
 import type { Logger } from "@gifting/logger";
 import type { Db, MongoClient } from "mongodb";
 
 import { seedOrg, type OrgDirectory } from "./modules/accounts/org";
-import { seedCatalog, type CatalogSource } from "./modules/catalog/source";
+import { connectorCatalog } from "./modules/catalog/connector-source";
+import { type CatalogSource, seedCatalog, seedOccasions } from "./modules/catalog/source";
 
 /**
  * What the API runs against. Production wiring reads the environment;
@@ -13,8 +15,9 @@ import { seedCatalog, type CatalogSource } from "./modules/catalog/source";
 export type AppDeps = {
   client: MongoClient;
   db: Db;
-  // Stand-ins for commercetools until M1 (Business Units) and M2 (product search).
+  // The commerce connector's catalog, or the demo catalog (see catalogFor).
   catalog: CatalogSource;
+  // A stand-in for commercetools Business Units until M1.
   org: OrgDirectory;
   // Development sign-in (see http/session.ts). Never on in production.
   devAuth: boolean;
@@ -26,7 +29,20 @@ export type AppDeps = {
   log?: Logger;
 };
 
-/** The database is opened on first use, so building the app (and `pnpm build`) never connects. */
+/**
+ * The commerce connector's catalog when it has one (ADR 0013), else the demo
+ * catalog from `infra/seed`. Tests, CI and the build use the demo catalog and
+ * need no platform.
+ */
+export function catalogFor(connector: CatalogConnector | null | undefined, log?: Logger): CatalogSource {
+  if (!connector) return seedCatalog;
+  return connectorCatalog({
+    catalog: connector,
+    fallbackOccasions: (sku) => seedOccasions.get(sku),
+    onError: (err) => log?.error({ err }, "catalog read failed"),
+  });
+}
+
 /** SMTP_URL set: the email channel over SMTP (the local inbox, or a provider). Unset: the log channel, which sends nothing. */
 function defaultChannels(env: Record<string, string | undefined>): ChannelRegistry {
   const email = env.SMTP_URL
@@ -35,7 +51,12 @@ function defaultChannels(env: Record<string, string | undefined>): ChannelRegist
   return createChannelRegistry([email]);
 }
 
-export function defaultDeps(env: Record<string, string | undefined> = process.env): AppDeps {
+/** The database is opened on first use, so building the app (and `pnpm build`) never connects. */
+export function defaultDeps(
+  env: Record<string, string | undefined> = process.env,
+  options: { log?: Logger; catalog?: CatalogConnector | null } = {},
+): AppDeps {
+  const catalog = catalogFor(options.catalog, options.log);
   return {
     get client() {
       return getClient();
@@ -43,7 +64,7 @@ export function defaultDeps(env: Record<string, string | undefined> = process.en
     get db() {
       return getDb();
     },
-    catalog: seedCatalog,
+    catalog,
     org: seedOrg,
     devAuth: env.DEV_AUTH === "1" && env.NODE_ENV !== "production",
     recipientBaseUrl: env.RECIPIENT_PUBLIC_URL ?? "http://localhost:3001",

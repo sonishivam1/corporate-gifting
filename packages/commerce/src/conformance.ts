@@ -10,7 +10,7 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { type CommerceConnector, connectorProblem } from "./contract";
+import { type CatalogItem, type CommerceConnector, connectorProblem } from "./contract";
 
 export type ConformanceOptions = {
   /** The connector under test. */
@@ -108,6 +108,53 @@ export function describeConnectorConformance(name: string, options: ConformanceO
         expect(typeof renewed).toBe("string");
         await connector.accounts.endPlatformSession!(renewed!);
         expect(await connector.accounts.renewPlatformSession(renewed!)).toBeNull();
+      });
+    });
+
+    describe("catalog (connectors that have one)", () => {
+      const variants = (items: CatalogItem[]) => items.flatMap((item) => item.variants.map((variant) => ({ item, variant })));
+
+      it("lists items with priced variants and unique SKUs", { timeout }, async (ctx) => {
+        if (!connector.catalog) return ctx.skip();
+        const items = await connector.catalog.listItems();
+        expect(items.length).toBeGreaterThan(0);
+        for (const item of items) {
+          expect(item.variants.length, item.key).toBeGreaterThan(0);
+          for (const v of item.variants) expect(Number.isInteger(v.priceCents) && v.priceCents >= 0, v.sku).toBe(true);
+        }
+        const skus = variants(items).map(({ variant }) => variant.sku);
+        expect(new Set(skus).size).toBe(skus.length);
+      });
+
+      it("reads one SKU, and answers an unknown one with null", { timeout }, async (ctx) => {
+        if (!connector.catalog) return ctx.skip();
+        const [first] = variants(await connector.catalog.listItems());
+        const item = await connector.catalog.getItem(first!.variant.sku);
+        expect(item?.key).toBe(first!.item.key);
+        expect(item?.variants.some((v) => v.sku === first!.variant.sku)).toBe(true);
+        expect(await connector.catalog.getItem(`no-such-sku-${UNKNOWN_ID}`)).toBeNull();
+      });
+
+      it("searches exactly what fits the budget and is in stock", { timeout: timeout * 3 }, async (ctx) => {
+        if (!connector.catalog) return ctx.skip();
+        const all = variants(await connector.catalog.listItems());
+        const prices = all.map(({ variant }) => variant.priceCents).sort((a, b) => a - b);
+        const budgetCents = prices[Math.floor(prices.length / 2)]!;
+        const expected = all.filter(({ variant }) => variant.available && variant.priceCents <= budgetCents).map(({ variant }) => variant.sku).sort();
+        const matches = await connector.catalog.searchItems({ tags: [], brands: [], skus: [], budgetCents });
+        const byKey = new Map(all.map(({ item }) => [item.key, item]));
+        // A match without SKUs means all of the item's variants matched.
+        const found = matches.flatMap((m) => m.skus ?? byKey.get(m.key)?.variants.map((v) => v.sku) ?? [`unknown item ${m.key}`]);
+        expect([...new Set(found)].sort()).toEqual(expected);
+      });
+
+      it("matches a rule on one SKU", { timeout }, async (ctx) => {
+        if (!connector.catalog) return ctx.skip();
+        const all = variants(await connector.catalog.listItems());
+        const pick = all.find(({ variant }) => variant.available);
+        if (!pick) return ctx.skip();
+        const matches = await connector.catalog.searchItems({ tags: [], brands: [], skus: [pick.variant.sku], budgetCents: pick.variant.priceCents });
+        expect(matches.map((m) => m.key)).toEqual([pick.item.key]);
       });
     });
 

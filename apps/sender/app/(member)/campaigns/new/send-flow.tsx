@@ -1,6 +1,16 @@
 "use client";
 
-import type { BalanceView, CollectionView, EstimateView, MeView, ProductView, RecipientView, SubmitResultView } from "@gifting/domain";
+import {
+  type BalanceView,
+  type CollectionView,
+  type EstimateView,
+  findVariant,
+  type MeView,
+  type ProductView,
+  type RecipientView,
+  type SubmitResultView,
+  variantName,
+} from "@gifting/domain";
 import { Button } from "@gifting/ui/components/button";
 import { Card, CardContent } from "@gifting/ui/components/card";
 import { GreetingCard } from "@gifting/ui/components/greeting-card";
@@ -56,9 +66,12 @@ export function SendFlow({ me, balance, collections, products, recipients, start
     };
   }, [step, inputKey, input]);
 
+  const picked = draft.sku ? findVariant(products, draft.sku) : null;
   const giftLabel =
     draft.mode === "single"
-      ? (products.find((p) => p.sku === draft.sku)?.name ?? "No gift picked")
+      ? picked
+        ? variantName(picked.product, picked.variant)
+        : "No gift picked"
       : `${collections.find((c) => c.id === draft.collectionId)?.name ?? "Collection"}, up to ${money(draft.budgetCents)}`;
 
   function submit() {

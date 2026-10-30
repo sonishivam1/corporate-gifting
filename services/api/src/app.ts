@@ -1,3 +1,4 @@
+import type { CatalogConnector } from "@gifting/commerce";
 import { createLogger, type Logger } from "@gifting/logger";
 import Fastify, { type FastifyBaseLogger, type FastifyInstance } from "fastify";
 import { ZodError } from "zod";
@@ -19,7 +20,9 @@ import { health, meta } from "./system-routes";
  *   (database, demo company, development session); integration tests pass a
  *   throwaway database.
  */
-export async function buildApp(options: { logger?: Logger; deps?: AppDeps; accounts?: AccountsService | null } = {}): Promise<FastifyInstance> {
+export async function buildApp(
+  options: { logger?: Logger; deps?: AppDeps; accounts?: AccountsService | null; catalog?: CatalogConnector | null } = {},
+): Promise<FastifyInstance> {
   const log = options.logger ?? createLogger("api");
   const app = Fastify({
     // pino is what Fastify uses underneath; widen to its base logger type.
@@ -51,7 +54,7 @@ export async function buildApp(options: { logger?: Logger; deps?: AppDeps; accou
 
   app.setNotFoundHandler((_request, reply) => reply.status(404).send(errorBody("not_found", "Not found.")));
 
-  const deps = options.deps ?? defaultDeps();
+  const deps = options.deps ?? defaultDeps(process.env, { log, catalog: options.catalog });
   const modules = buildModules(deps);
   registerSession(app, deps);
   registerRoutes(app, [health, meta(modules), ...modules.flatMap((m) => m.routes)]);
