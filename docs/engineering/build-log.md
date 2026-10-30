@@ -30,6 +30,27 @@ how it was verified, and any lesson worth keeping.
 - **Note:** an existing project keeps its `identityIds` field.
   `ct:apply` adds missing fields but never removes any, which is harmless.
 
+### Gift delivery by email (M3.4)
+- **What:** sending a campaign emails each recipient a private link
+  (`/r/<token>`; SMTP in dev, Mailpit locally). Delivery is claimed with an
+  atomic `queued` to `sending` update, so a retry never sends twice. The
+  sender can send a gift again (new link, old one stops) or cancel it (hold
+  released); both are API routes for now. New: `@gifting/content` (every
+  user-facing string) and the email channel adapter in `@gifting/channels`.
+- **Why:** the email half of M3.4 is ours.
+- **Verified:** integration tests for one email per recipient, no raw link
+  stored, a failed email left retryable, resend and cancel, and scoping to the
+  caller's team; unit tests for the email adapter and the strings.
+
+### Light for everyone
+- **What:** the shared theme provider forces the light theme in every app.
+  Before, it followed each device's light or dark setting.
+- **Why:** teammates on dark-mode machines saw a navy app while others saw
+  the light design. The prototype is light, and demos should look the same
+  everywhere (Shivam). The dark tokens stay in `globals.css`, unused.
+- **Verified:** with the device set to dark, the sign-in page renders light
+  (no `dark` class, white background). Lint, typecheck and the build pass.
+
 ### Sender Home as an overview
 - **What:**
   - Home keeps the prototype's features in the overview look Shivam

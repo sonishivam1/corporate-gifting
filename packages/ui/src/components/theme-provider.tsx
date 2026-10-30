@@ -12,10 +12,15 @@ import type { ComponentProps } from "react";
  */
 const scriptProps = typeof window === "undefined" ? undefined : ({ type: "text/plain" } as const);
 
-/** Light and dark mode for every app: follows the system, switches by the `dark` class. */
+/**
+ * Light for everyone, whatever the device's setting (Shivam, 29 Oct 2026):
+ * the prototype is a light design and demos should look the same on every
+ * machine. The dark palette stays in globals.css; to offer it again, drop
+ * `forcedTheme` and set `defaultTheme="system"` with `enableSystem`.
+ */
 function ThemeProvider({ children, ...props }: ComponentProps<typeof NextThemesProvider>) {
   return (
-    <NextThemesProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange scriptProps={scriptProps} {...props}>
+    <NextThemesProvider attribute="class" defaultTheme="light" forcedTheme="light" enableSystem={false} disableTransitionOnChange scriptProps={scriptProps} {...props}>
       {children}
     </NextThemesProvider>
   );

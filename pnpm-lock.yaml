@@ -252,12 +252,22 @@ importers:
 
   packages/channels:
     dependencies:
+      '@gifting/content':
+        specifier: workspace:*
+        version: link:../content
       '@gifting/domain':
         specifier: workspace:*
         version: link:../domain
       '@gifting/logger':
         specifier: workspace:*
         version: link:../logger
+      nodemailer:
+        specifier: 10.1.1
+        version: 10.1.1
+    devDependencies:
+      '@types/nodemailer':
+        specifier: 8.0.2
+        version: 8.0.2
 
   packages/commerce:
     dependencies:
@@ -291,6 +301,8 @@ importers:
       '@gifting/commerce':
         specifier: workspace:*
         version: link:../commerce
+
+  packages/content: {}
 
   packages/ct:
     dependencies:
@@ -451,6 +463,9 @@ importers:
       '@gifting/commerce-memory':
         specifier: workspace:*
         version: link:../../packages/commerce-memory
+      '@gifting/content':
+        specifier: workspace:*
+        version: link:../../packages/content
       '@gifting/db':
         specifier: workspace:*
         version: link:../../packages/db
