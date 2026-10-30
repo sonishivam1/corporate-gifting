@@ -15,6 +15,7 @@ import {
   estimateSend,
   type Gift,
   hasShareableLinks,
+  estimateExtraCents,
   type SendRequest,
   type SubmitResultView,
 } from "@gifting/domain";
@@ -42,19 +43,21 @@ const LIST_FILTERS: Record<ListStatus, (c: Campaign) => boolean> = {
 
 export type CampaignsService = ReturnType<typeof createCampaignsService>;
 
-/**
- * Per-gift hold. Shipping, tax and the fee are open questions
- * (docs/business/open-questions.md); they are zero until decided and slot in
- * here without changing the flow.
- */
-const holdFor = (budgetCents: number) =>
-  holdAmount({ budgetCents, shippingAllowanceCents: 0, taxEstimateCents: 0, feeCents: 0 });
-
 export function createCampaignsService(
   deps: AppDeps,
   services: { catalog: CatalogService; ledger: LedgerService; recipients: RecipientsService; gifts: GiftsService; channels: ChannelsService },
 ) {
   const c = () => getCollections(deps.db);
+
+  /**
+   * Per-gift hold: the budget plus an estimate for shipping and tax (ADR 0005),
+   * because both are only known when the recipient chooses. The estimate is
+   * GIFT_ESTIMATE_PERCENT of the budget. At redemption the real cost is
+   * captured and the rest released; a cost above the hold is settled on the
+   * ledger and never refused. The fee is not charged yet.
+   */
+  const extraFor = (budgetCents: number) => estimateExtraCents(budgetCents, deps.giftEstimatePercent ?? 0);
+  const holdFor = (budgetCents: number) => holdAmount({ budgetCents, shippingAllowanceCents: 0, taxEstimateCents: extraFor(budgetCents), feeCents: 0 });
 
   async function team(session: Session): Promise<OrgTeam> {
     const found = await deps.org.team(session.companyKey, session.teamKey);
@@ -91,6 +94,7 @@ export function createCampaignsService(
         availableCents: balance.availableCents,
         approvalThresholdCents: t.approvalThresholdCents,
       }),
+      estimateCents: extraFor(gift.budgetCents),
       approvalThresholdCents: t.approvalThresholdCents,
       approverNames: await approverNames(t),
     };

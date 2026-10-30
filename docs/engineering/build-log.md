@@ -60,6 +60,24 @@ how it was verified, and any lesson worth keeping.
 
 ## 29 Oct 2026
 
+### Recipient pages, and the shipping and tax estimate (M4)
+- **What:** the recipient app (`/r/[token]`): the gift page with its greeting
+  card and choices, the gift on its own page, the address form (checked again
+  on the server; the link never reaches the browser's own API calls), the
+  confirmation with the order number, and a plain notice for a used, expired
+  or unknown link. They use the shared UI kit and theme, and the security
+  headers (no referrer, no cache, no framing, CSP). The hold at send is now
+  the budget plus `GIFT_ESTIMATE_PERCENT` for shipping and tax, shown on the
+  sender's Review step as "estimated shipping and tax"; redemption captures
+  the real cost and releases the rest.
+- **Why:** shipping and tax are only known when the recipient chooses, so,
+  like other gifting platforms, the hold is an estimate that is settled at
+  redemption. It is a business decision how much to pad.
+- **Verified:** an integration test for the hold, the estimate and the
+  release at redemption; the whole flow run in a browser against the
+  commercetools sandbox (send, email, choose, address, order, ledger, sender
+  funnel and spend). See `docs/engineering/m4-test-report.md`.
+
 ### Gift redemption into commercetools orders (M4 backend)
 - **What:** a recipient's link opens a gift (`GET /v1/r/:token`, no sign-in;
   the secret in the path is the credential) and choosing an item and address

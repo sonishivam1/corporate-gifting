@@ -40,6 +40,7 @@ Zod at start-up and fails fast with the variable's name (never its value).
 | `MAIL_FROM` | api | no (`Gifting <no-reply@gifting.example>`) | `Gifting <you@yourcompany.com>` | Sender of account emails; with a real provider it must be a verified sender. Its domain must be authenticated with that provider (SPF, DKIM), or a domain with a strict DMARC policy gets the email quarantined. Until then, use a personal sender verified in the provider |
 | `OPS_EMAILS` | api | no | `priya@ops.example` | Comma-separated verified emails allowed on `ops` routes |
 | `CTP_SHIPPING_METHOD_KEY` | api | no (`vendor-standard`) | `vendor-standard` | The shipping method key used on gift orders; must exist in the commercetools project (`pnpm ct:apply` creates `vendor-standard`) |
+| `GIFT_ESTIMATE_PERCENT` | api | no (0) | `25` | Percent of the gift budget held on top at send, as an estimate for shipping and tax. At redemption the real cost is captured and the rest released; a cost above the hold is debited to the team as an adjustment, never refused. Shown to the sender as "estimated shipping and tax" |
 
 Planned, as features land:
 

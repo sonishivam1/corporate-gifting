@@ -58,3 +58,10 @@ export interface OrderPlacer {
   /** Looks an order up by number, for retries and the stuck-claim reconciler. Null if there is none. */
   find(orderNumber: string): Promise<PlacedOrder | null>;
 }
+
+/** Extra percent of the gift budget held at send to cover shipping and tax, which are only known at redemption. */
+export function estimateExtraCents(budgetCents: number, percent: number): number {
+  if (!Number.isSafeInteger(budgetCents) || budgetCents < 0) throw new RangeError("budgetCents must be a non-negative integer.");
+  if (!(percent >= 0 && percent <= 100)) throw new RangeError("The estimate percent must be from 0 to 100.");
+  return Math.ceil((budgetCents * percent) / 100);
+}
