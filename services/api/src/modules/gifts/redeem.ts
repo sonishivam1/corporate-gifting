@@ -80,7 +80,7 @@ export function createRedeemService(deps: AppDeps, services: { catalog: CatalogS
       await tx.withTransaction(async () => {
         const moved = await c().gifts.findOneAndUpdate(
           { _id: gift._id, status: "redeeming" },
-          { $set: { status: "redeemed", ctOrderNumber: order.orderNumber, "claim.status": "ordered", updatedAt: deps.now() }, $inc: { version: 1 } },
+          { $set: { status: "redeemed", "statusAt.redeemed": deps.now(), ctOrderNumber: order.orderNumber, "claim.status": "ordered", updatedAt: deps.now() }, $inc: { version: 1 } },
           { session: tx, returnDocument: "after" },
         );
         if (!moved) return; // already finished by another request: nothing more to write
@@ -109,7 +109,7 @@ export function createRedeemService(deps: AppDeps, services: { catalog: CatalogS
       const { gift, campaign } = found;
       if (gift.status === "sent") {
         assertTransition("sent", "opened");
-        await c().gifts.updateOne({ _id: gift._id, status: "sent" }, { $set: { status: "opened", updatedAt: deps.now() }, $inc: { version: 1 } });
+        await c().gifts.updateOne({ _id: gift._id, status: "sent" }, { $set: { status: "opened", "statusAt.opened": deps.now(), updatedAt: deps.now() }, $inc: { version: 1 } });
       }
       return {
         state: "open",
@@ -163,7 +163,7 @@ export function createRedeemService(deps: AppDeps, services: { catalog: CatalogS
         const claimed = await c().gifts.findOneAndUpdate(
           { _id: gift._id, status: { $in: [...CLAIMABLE_STATUSES] }, expiresAt: { $gt: deps.now() } },
           {
-            $set: { status: "redeeming", claim: { sku: product.sku, idempotencyKey: orderNumber, status: "pending", startedAt: deps.now(), failureCode: null }, updatedAt: deps.now() },
+            $set: { status: "redeeming", "statusAt.redeeming": deps.now(), claim: { sku: product.sku, idempotencyKey: orderNumber, status: "pending", startedAt: deps.now(), failureCode: null }, updatedAt: deps.now() },
             $inc: { version: 1 },
           },
           { returnDocument: "after" },
