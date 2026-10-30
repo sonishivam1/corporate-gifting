@@ -13,6 +13,20 @@ how it was verified, and any lesson worth keeping.
 
 ## 30 Oct 2026
 
+### Sender: no occasion choice; email the only delivery
+- **What:** Browse gifts loses its occasion filter, and the greeting step
+  its occasion choice. Campaigns still carry an occasion (the API requires
+  one), fixed at "thanks". An unnamed campaign is named after its headline
+  and send date ("Happy birthday! · 30 Oct") instead of the occasion. The
+  delivery channel cards are hidden behind `CHANNEL_CHOICE` in
+  `apps/sender/lib/features.ts`, and every campaign goes by email.
+- **Why:** review feedback: occasions added a choice that didn't change the
+  gift, and email is the only channel that sends today.
+- **Also:** the gift step has a search over name, brand, vendor and option
+  labels, with a count of what matches. The live catalog lists up to 261
+  products.
+- **Verified:** typecheck and lint for `apps/sender`.
+
 ### develop merged; the catalog moves behind the commerce connector
 - **What:** `develop` (sign-in on commercetools customer accounts, commerce
   connectors per ADR 0013, the Home overview, branded emails) merged into

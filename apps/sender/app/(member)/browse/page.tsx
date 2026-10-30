@@ -1,4 +1,4 @@
-import { OCCASION_LABELS, OCCASIONS, PRODUCT_CATEGORIES, productQuery } from "@gifting/domain";
+import { PRODUCT_CATEGORIES, productQuery } from "@gifting/domain";
 import { Button } from "@gifting/ui/components/button";
 import { Card, CardContent } from "@gifting/ui/components/card";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@gifting/ui/components/empty";
@@ -19,7 +19,7 @@ const BUDGET_CHOICES = [
   { value: 10_000, label: "Up to $100" },
 ];
 
-type Filters = { budget?: number; occasion?: string; category?: string; q?: string };
+type Filters = { budget?: number; category?: string; q?: string };
 
 function hrefWith(current: Filters, change: Filters): string {
   const next = { ...current, ...change };
@@ -34,7 +34,6 @@ export default async function BrowsePage({ searchParams }: PageProps<"/browse">)
   // Unknown values are dropped rather than refused: it's a shareable URL.
   const parsed = productQuery.safeParse({
     budget: one(raw.budget),
-    occasion: one(raw.occasion),
     category: one(raw.category),
     q: one(raw.q) || undefined,
   });
@@ -57,16 +56,6 @@ export default async function BrowsePage({ searchParams }: PageProps<"/browse">)
               </Chip>
             ))}
           </FilterRow>
-          <FilterRow label="Occasion">
-            <Chip href={hrefWith(filters, { occasion: undefined })} active={!filters.occasion}>
-              All
-            </Chip>
-            {OCCASIONS.map((o) => (
-              <Chip key={o} href={hrefWith(filters, { occasion: o })} active={filters.occasion === o}>
-                {OCCASION_LABELS[o]}
-              </Chip>
-            ))}
-          </FilterRow>
           <FilterRow label="Category">
             <Chip href={hrefWith(filters, { category: undefined })} active={!filters.category}>
               All
@@ -79,7 +68,6 @@ export default async function BrowsePage({ searchParams }: PageProps<"/browse">)
           </FilterRow>
           <form action="/browse" className="flex max-w-md gap-2" role="search">
             {filters.budget ? <input type="hidden" name="budget" value={filters.budget} /> : null}
-            {filters.occasion ? <input type="hidden" name="occasion" value={filters.occasion} /> : null}
             {filters.category ? <input type="hidden" name="category" value={filters.category} /> : null}
             <Input name="q" type="search" placeholder="Search gifts or brands" aria-label="Search gifts" defaultValue={filters.q ?? ""} />
             <Button type="submit" variant="outline">
@@ -106,7 +94,7 @@ export default async function BrowsePage({ searchParams }: PageProps<"/browse">)
               <SearchIcon />
             </EmptyMedia>
             <EmptyTitle>No gifts match these filters</EmptyTitle>
-            <EmptyDescription>Try a higher budget or another occasion.</EmptyDescription>
+            <EmptyDescription>Try a higher budget or another category.</EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
             <Button asChild variant="outline" size="sm">
