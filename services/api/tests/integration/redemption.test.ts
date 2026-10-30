@@ -44,7 +44,7 @@ describe("opening a link", () => {
     const { id, tokens } = await sendCampaign(1);
     const opened = await h.app.inject({ method: "GET", url: `/v1/r/${tokens[0]}` });
     expect(opened.json()).toMatchObject({ state: "open", from: "Maya Chen", headline: "Thank you!" });
-    expect((await h.c.gifts.findOne({ campaignId: id }))?.status).toBe("opened");
+    expect(await h.c.gifts.findOne({ campaignId: id })).toMatchObject({ status: "opened", statusAt: { opened: expect.any(Date) } });
   });
 
   it("never shows a price", async () => {
@@ -77,6 +77,8 @@ describe("choosing a gift", () => {
     const gift = (await h.c.gifts.findOne({ campaignId: id }))!;
     expect(res.json()).toEqual({ orderNumber: `GFT-${gift._id}`, sku });
     expect(gift).toMatchObject({ status: "redeemed", ctOrderNumber: `GFT-${gift._id}`, claim: { sku, status: "ordered" } });
+    // The Home overview reads when each status was reached.
+    expect(gift).toMatchObject({ statusAt: { redeeming: expect.any(Date), redeemed: expect.any(Date) } });
 
     // The hold (5000) was released and the order's full total (4500) captured.
     const types = (await h.c.ledgerEntries.find({ giftId: gift._id }).toArray()).map((e) => [e.type, e.amountCents]).sort();
