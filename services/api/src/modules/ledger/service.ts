@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { getCollections } from "@gifting/db";
 import type { BudgetAccount, Cents, Currency } from "@gifting/domain";
-import { type Balance, canCover, computeBalance, holdEntry } from "@gifting/ledger";
+import { type Balance, canCover, computeBalance, holdEntry, releaseEntry } from "@gifting/ledger";
 import type { ClientSession } from "mongodb";
 
 import type { AppDeps } from "../../deps";
@@ -88,6 +88,27 @@ export function createLedgerService(deps: AppDeps) {
         }),
       }));
       await c().ledgerEntries.insertMany(entries, { session: input.session });
+    },
+
+    /** Cancellation or expiry, inside the caller's transaction: give the whole hold back. */
+    async release(input: { teamKey: string; giftId: string; campaignId: string; holdNo: number; holdCents: Cents; createdBy: string; session: ClientSession }) {
+      const acct = await account(input.teamKey, input.session);
+      await c().ledgerEntries.insertOne(
+        {
+          _id: randomUUID(),
+          ...releaseEntry({
+            accountId: acct._id,
+            currency: acct.currency,
+            now: deps.now(),
+            createdBy: input.createdBy,
+            giftId: input.giftId,
+            campaignId: input.campaignId,
+            holdNo: input.holdNo,
+            holdCents: input.holdCents,
+          }),
+        },
+        { session: input.session },
+      );
     },
 
     /** What each campaign has spent: captures and fees, less refunds. */
