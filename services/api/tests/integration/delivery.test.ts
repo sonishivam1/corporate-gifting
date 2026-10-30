@@ -75,7 +75,8 @@ describe("the sender sends again or cancels", () => {
 
     expect((await h.app.inject({ method: "POST", url: `/v1/gifts/${gift._id}/cancel`, headers: MAYA })).json()).toEqual({ cancelled: true });
 
-    expect((await h.c.gifts.findOne({ _id: gift._id }))?.status).toBe("cancelled");
+    // The Home overview reads when each status was reached.
+    expect(await h.c.gifts.findOne({ _id: gift._id })).toMatchObject({ status: "cancelled", statusAt: { cancelled: expect.any(Date) } });
     expect(await h.c.ledgerEntries.countDocuments({ giftId: gift._id, type: "release" })).toBe(1);
     expect((await balance()).heldCents).toBe(before.heldCents - gift.holdCents);
     expect((await h.app.inject({ method: "POST", url: `/v1/gifts/${gift._id}/cancel`, headers: MAYA })).statusCode).toBe(409);
