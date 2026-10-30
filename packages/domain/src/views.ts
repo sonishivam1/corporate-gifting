@@ -139,6 +139,8 @@ export type SendRequest = z.output<typeof sendInput>;
 export const estimateView = z.object({
   gifts: z.number().int().nonnegative(),
   holdCents: cents,
+  /** Part of each hold that is an estimate for shipping and tax, settled for the real cost at redemption. */
+  estimateCents: cents,
   totalCents: cents,
   availableCents: signedCents,
   afterCents: signedCents,

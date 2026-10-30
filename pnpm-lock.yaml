@@ -78,6 +78,9 @@ importers:
 
   apps/recipient:
     dependencies:
+      '@gifting/content':
+        specifier: workspace:*
+        version: link:../../packages/content
       '@gifting/domain':
         specifier: workspace:*
         version: link:../../packages/domain

@@ -518,7 +518,8 @@ export function ReviewStep({
           <div className="grid gap-2 rounded-lg bg-muted/50 p-4 text-sm tabular-nums">
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">
-                {plural(estimate.gifts, "gift")} × {draft.mode === "single" ? "price" : "budget"} {money(estimate.holdCents)}
+                {plural(estimate.gifts, "gift")} × {draft.mode === "single" ? "price" : "budget"} {money(estimate.holdCents - estimate.estimateCents)}
+                {estimate.estimateCents > 0 ? ` + ${money(estimate.estimateCents)} estimated shipping and tax` : ""}
               </span>
               <b>{money(estimate.totalCents)}</b>
             </div>
@@ -532,8 +533,9 @@ export function ReviewStep({
               <span>{money(estimate.afterCents)}</span>
             </div>
             <p className="text-xs text-muted-foreground">
-              We hold the full amount when gifts go out. When someone chooses, we charge the real price and release the rest.
-              Gifts nobody opens release their hold when they expire. Shipping and tax aren&apos;t added yet.
+              We hold this amount when gifts go out. When someone chooses, we charge the real cost, including shipping and tax,
+              and release the rest. If the real cost is higher, the difference comes out of the team budget.
+              Gifts nobody opens release their hold when they expire.
             </p>
           </div>
           {estimate.short ? (
