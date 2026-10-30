@@ -21,6 +21,7 @@ work packages. Each milestone step gets its own plan here when it starts.
 | [Sender Home: the prototype's features, in the overview look](sender-home-redesign.md) | Sender app | ✅ Built (29 Oct 2026) |
 | [Sender dashboard: Home, Browse, Campaigns, send flow](sender-dashboard.md) | Sender app, campaigns | ✅ Built (28 Oct 2026) |
 | [Marketplace catalog from commercetools (spike 2)](marketplace-catalog.md) | Catalog, sender app | ✅ Built (29 Oct 2026) |
+| [Recipient upload in the send flow](recipient-upload.md) | Recipients, sender app | ✅ Built (30 Oct 2026) |
 
 ## Template
 

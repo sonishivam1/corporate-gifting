@@ -72,6 +72,9 @@ export function itemsFor(draft: Draft, collections: readonly CollectionView[], p
   return collection ? collectionItems(collection.rules, products, budgetCents) : [];
 }
 
+/** The most directory people one campaign can go to (the API's limit). */
+export const MAX_RECIPIENTS = 500;
+
 export const recipientCount = (d: Draft) => d.recipientIds.length + d.newEmails.length;
 
 /** Per-gift budget for the preview; the API re-reads it from the catalog. */
@@ -91,6 +94,7 @@ export function stepProblem(step: number, d: Draft, collections: readonly Collec
   }
   if (step === 2) {
     if (recipientCount(d) === 0) return "Add at least one recipient.";
+    if (d.recipientIds.length > MAX_RECIPIENTS) return `A campaign can go to up to ${MAX_RECIPIENTS} people from the directory.`;
     if (d.channels.length === 0) return "Pick at least one channel.";
     if (d.when === "later" && !(d.sendAt >= tomorrow())) return "Pick a send date after today.";
   }

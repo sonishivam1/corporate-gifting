@@ -13,6 +13,47 @@ how it was verified, and any lesson worth keeping.
 
 ## 30 Oct 2026
 
+### Recipient upload: review fixes
+- **What:** fixes from the review of the recipient upload PR (details in
+  the plan's [As built](../plans/recipient-upload.md#as-built)):
+  - a quote that never closes is reported on its line instead of
+    swallowing the rest of the file;
+  - files are decoded from bytes (`decodeCsv`): UTF-8, else Windows-1252
+    (Excel's plain CSV on Windows), else UTF-16 by its byte order mark, so
+    accents survive; names with an unreadable character are refused;
+  - directory search runs in MongoDB, `GET /v1/recipients` adds `more`,
+    and the send flow searches the server for directories past 500;
+  - the import is one bulk write, so 500 rows fit well inside the sender
+    app's 10-second limit, and a retry finishes a half-saved list;
+  - "and 12 mores"; Cancel disabled while saving.
+- **Why:** people silently missing from a list, and names corrupted with
+  no way to repair them.
+- **Verified:** parser, decoding and integration tests; break and restore
+  for the unclosed quote and the database search; lint, typecheck, unit
+  and integration tests, and the build.
+
+### Recipient list upload in the send flow
+- **What:** "Upload a list" on the recipients step, as agreed in the
+  [recipient upload plan](../plans/recipient-upload.md).
+  - `@gifting/domain`: `parseRecipientCsv` (headers in any order and case,
+    quoted fields, a byte order mark, problems by line, repeats used once),
+    `uploadRowName`, `nameFromEmail` (moved from the API), and the
+    `recipientImportInput` and `recipientImportView` schemas.
+  - API: `POST /v1/recipients/import`. Each row joins the company's
+    directory through one `ensure()` that adds or matches by email, shared
+    with "Add someone by email". It logs counts only.
+  - Sender app: a dialog that reads the file in the browser, previews the
+    people and the skipped lines, and on confirm adds them to the list and
+    ticks them. Template download.
+- **Why:** sending to a whole team meant typing every address, with names
+  guessed from emails.
+- **Verified:** 7 parser tests and 7 integration tests (new people with
+  names and `source: "csv"`, an existing email matched and its name kept,
+  a repeat upload adding nobody, two racing uploads adding one person, the
+  company scope, refusals writing nothing, a campaign sent to uploaded
+  people). Break and restore: dropping `companyKey` from the match fails
+  the scope test.
+
 ### One mailer for every email
 - **What:** the Mailpit removal was checked against the new gift delivery
   (M3.4), and left gift emails with nowhere to go. Account and gift emails were

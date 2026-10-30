@@ -9,5 +9,6 @@ export * from "./members";
 export * from "./models";
 export * from "./money";
 export * from "./orders";
+export * from "./recipient-upload";
 export * from "./views";
 export * from "./overview";

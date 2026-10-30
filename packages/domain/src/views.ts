@@ -10,6 +10,7 @@ import { GIFT_STATUSES } from "./gift-status";
 import { MEMBER_ROLES } from "./members";
 import { CAMPAIGN_STATUSES, CAMPAIGN_TYPES, CARD_COVERS, CHANNEL_KINDS, OCCASIONS } from "./models";
 import { CURRENCIES } from "./money";
+import { MAX_UPLOAD_ROWS, uploadRow } from "./recipient-upload";
 
 const cents = z.number().int().nonnegative();
 const signedCents = z.number().int();
@@ -108,6 +109,23 @@ export type CollectionView = z.infer<typeof collectionView>;
 
 export const recipientView = z.object({ id: z.string(), name: z.string(), email: z.string().nullable() });
 export type RecipientView = z.infer<typeof recipientView>;
+
+/** The most people one directory listing returns; `more` says there are others to search for. */
+export const DIRECTORY_PAGE = 500;
+export const recipientListView = z.object({ recipients: z.array(recipientView), more: z.boolean() });
+export type RecipientListView = z.infer<typeof recipientListView>;
+
+/** A recipient list from a file (plan: recipient-upload.md). The rows are checked again here. */
+export const recipientImportInput = z.object({ rows: z.array(uploadRow).min(1).max(MAX_UPLOAD_ROWS) });
+export type RecipientImportInput = z.input<typeof recipientImportInput>;
+
+export const recipientImportView = z.object({
+  // Everyone in the list, in file order: new people and those already in the directory.
+  recipients: z.array(recipientView),
+  added: z.number().int().nonnegative(),
+  existing: z.number().int().nonnegative(),
+});
+export type RecipientImportView = z.infer<typeof recipientImportView>;
 
 const greeting = z.object({
   occasion: z.enum(OCCASIONS),

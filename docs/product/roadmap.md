@@ -33,6 +33,7 @@ app). Then M1 starts.
 | Planned | Collection rules, product search resolution, build-your-own collection UI | M2 |
 | Planned | One-time and scheduled campaigns, estimates, approvals, holds, email, links and QR | M3 |
 | Planned | Recipient experience, company-balance order, vendor routing, vendor portal-lite, tracking | M4 |
+| ✅ Done | Recipient list upload (CSV of email and names) in the send flow ([plan](../plans/recipient-upload.md)) | M5 (ahead) |
 | Planned | Recipient directory, CSV dates, one HR system, milestone worker, SMS, Slack, Teams | M5 |
 | Planned | Expiry releases, refunds, statements, reconciliation, dashboard and exports | M6 |
 | Planned | Concurrency and ledger tests, security pass, demo script and data, cloud environment | M7 |

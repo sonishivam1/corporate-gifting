@@ -9,6 +9,7 @@ import {
   type MeView,
   findVariant,
   type ProductView,
+  type RecipientImportView,
   type RecipientView,
 } from "@gifting/domain";
 import { Alert, AlertDescription, AlertTitle } from "@gifting/ui/components/alert";
@@ -28,10 +29,12 @@ import { Textarea } from "@gifting/ui/components/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@gifting/ui/components/toggle-group";
 import { cn } from "@gifting/ui/lib/utils";
 import { CalendarIcon, CircleAlertIcon, GiftIcon, InfoIcon, LayersIcon, SearchIcon, XIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 
+import { searchRecipientsAction } from "@/app/(member)/campaigns/actions";
 import { CollectionMosaic, ProductArt } from "@/components/product-art";
+import { RecipientUpload } from "@/components/recipient-upload";
 import { BUDGETS, CHANNEL } from "@/lib/catalog";
 import { CHANNEL_CHOICE, LET_THEM_CHOOSE } from "@/lib/features";
 import { money, plural, priceLabel, shortDate } from "@/lib/format";
@@ -252,11 +255,41 @@ export function GreetingStep({ draft, update }: { draft: Draft; update: Update }
 
 const emailSchema = z.email();
 
-export function RecipientsStep({ draft, update, recipients }: { draft: Draft; update: Update; recipients: readonly RecipientView[] }) {
+export function RecipientsStep({
+  draft,
+  update,
+  recipients,
+  more,
+  onFound,
+  onImported,
+}: {
+  draft: Draft;
+  update: Update;
+  recipients: readonly RecipientView[];
+  /** The directory has more people than the first page holds. */
+  more: boolean;
+  onFound: (people: readonly RecipientView[]) => void;
+  onImported: (result: RecipientImportView) => void;
+}) {
   const [query, setQuery] = useState("");
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
   const q = query.trim().toLowerCase();
+
+  // A directory bigger than one page is searched on the server too, so anyone can be found.
+  useEffect(() => {
+    if (!more || q.length < 2) return;
+    let live = true;
+    const timer = setTimeout(() => {
+      void searchRecipientsAction(q).then((r) => {
+        if (live && r.ok) onFound(r.data.recipients);
+      });
+    }, 300);
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
+  }, [more, q, onFound]);
   const shown = q ? recipients.filter((r) => `${r.name} ${r.email ?? ""}`.toLowerCase().includes(q)) : recipients;
   const allPicked = draft.recipientIds.length === recipients.length;
 
@@ -291,13 +324,16 @@ export function RecipientsStep({ draft, update, recipients }: { draft: Draft; up
           </>
         }
         aside={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => update({ recipientIds: allPicked ? [] : recipients.map((r) => r.id) })}
-          >
-            {allPicked ? "Clear all" : "Select all"}
-          </Button>
+          <div className="flex gap-2">
+            <RecipientUpload onImported={onImported} />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => update({ recipientIds: allPicked ? [] : recipients.map((r) => r.id) })}
+            >
+              {allPicked ? "Clear all" : "Select all"}
+            </Button>
+          </div>
         }
       >
         <div className="relative">
@@ -311,6 +347,11 @@ export function RecipientsStep({ draft, update, recipients }: { draft: Draft; up
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
+        {more && !q ? (
+          <p className="-mt-1 text-xs text-muted-foreground">
+            Your directory is large, so the first {recipients.length} people by name are listed. Search to find anyone else.
+          </p>
+        ) : null}
         <ScrollArea className="h-72 rounded-lg border">
           <div className="grid gap-1 p-1">
             {shown.length === 0 ? (
