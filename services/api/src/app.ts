@@ -6,6 +6,7 @@ import Fastify, { type FastifyBaseLogger, type FastifyInstance } from "fastify";
 import { ZodError } from "zod";
 
 import { type AppDeps, defaultDeps } from "./deps";
+import type { Mailer } from "./mail/mailer";
 import { ApiError, errorBody } from "./http/errors";
 import { registerRoutes } from "./http/route";
 import { registerSession } from "./http/session";
@@ -28,6 +29,7 @@ export async function buildApp(
     deps?: AppDeps;
     accounts?: AccountsService | null;
     catalog?: CatalogConnector | null;
+    mailer?: Mailer | null;
     orders?: OrderPlacer;
   } = {},
 ): Promise<FastifyInstance> {
@@ -83,7 +85,7 @@ export async function buildApp(
 
   app.setNotFoundHandler((_request, reply) => reply.status(404).send(errorBody("not_found", "Not found.")));
 
-  const deps = options.deps ?? defaultDeps(process.env, { log, catalog: options.catalog });
+  const deps = options.deps ?? defaultDeps(process.env, { log, catalog: options.catalog, mailer: options.mailer });
   // The commerce connector creates gift orders. Assigned, not spread: the default deps open the database lazily.
   if (options.orders && !deps.orders) deps.orders = options.orders;
   const modules = buildModules(deps);

@@ -29,7 +29,7 @@ message id and is stored on the gift's `notifications`.
 
 | Channel | POC provider | Notes | Milestone |
 | --- | --- | --- | --- |
-| Email | SendGrid; Mailpit locally | Branded template per company; SPF, DKIM and DMARC on the sending domain; bounce webhooks | M3 |
+| Email | SendGrid (SMTP); `.data/outbox` locally | Branded template per company; SPF, DKIM and DMARC on the sending domain; bounce webhooks | M3 |
 | Links | Generated CSV | For senders who hand out links themselves; no reminders | M3 |
 | QR codes | Generated PNG and SVG per gift link | For printed cards and events; no reminders | M3 |
 | SMS | Twilio | Short fixed template with the link. US sending needs A2P 10DLC registration, which takes weeks: start in week 1 | M5 |

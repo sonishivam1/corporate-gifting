@@ -1,10 +1,11 @@
-import { type ChannelRegistry, createChannelRegistry, emailChannel, logChannel, smtpTransport } from "@gifting/channels";
+import { type ChannelRegistry, createChannelRegistry, emailChannel } from "@gifting/channels";
 import type { CatalogConnector } from "@gifting/commerce";
 import { getClient, getDb } from "@gifting/db";
 import type { Logger } from "@gifting/logger";
 import { OrderError, type OrderPlacer } from "@gifting/domain";
 import type { Db, MongoClient } from "mongodb";
 
+import type { Mailer } from "./mail/mailer";
 import { seedOrg, type OrgDirectory } from "./modules/accounts/org";
 import { connectorCatalog } from "./modules/catalog/connector-source";
 import { type CatalogSource, seedCatalog, seedOccasions } from "./modules/catalog/source";
@@ -48,7 +49,6 @@ export function catalogFor(connector: CatalogConnector | null | undefined, log?:
   });
 }
 
-/** The database is opened on first use, so building the app (and `pnpm build`) never connects. */
 /** Order creation is off until a connector provides it: redeeming a gift then says so plainly instead of pretending. */
 export const ordersOff: OrderPlacer = {
   async place() {
@@ -59,12 +59,9 @@ export const ordersOff: OrderPlacer = {
   },
 };
 
-/** SMTP_URL set: the email channel over SMTP (the local inbox, or a provider). Unset: the log channel, which sends nothing. */
-function defaultChannels(env: Record<string, string | undefined>): ChannelRegistry {
-  const email = env.SMTP_URL
-    ? emailChannel({ transport: smtpTransport(env.SMTP_URL), from: env.MAIL_FROM ?? "Digital Gifting <gifts@digital-gifting.example>" })
-    : logChannel("email");
-  return createChannelRegistry([email]);
+/** Gift emails go through the same mailer as account emails, so one setting decides where all email goes. */
+function defaultChannels(mailer: Mailer): ChannelRegistry {
+  return createChannelRegistry([emailChannel({ transport: { sendMail: (mail) => mailer.send(mail) } })]);
 }
 
 /** GIFT_ESTIMATE_PERCENT: 0 to 100. A bad value stops the API at start, not at the first send. */
@@ -76,10 +73,14 @@ function estimatePercent(env: Record<string, string | undefined>): number {
   return value;
 }
 
-/** The database is opened on first use, so building the app (and `pnpm build`) never connects. */
+/**
+ * The database is opened on first use, so building the app (and `pnpm build`)
+ * never connects. With no mailer (tests that send nothing), no channel is
+ * registered and gifts stay queued.
+ */
 export function defaultDeps(
   env: Record<string, string | undefined> = process.env,
-  options: { log?: Logger; catalog?: CatalogConnector | null } = {},
+  options: { log?: Logger; catalog?: CatalogConnector | null; mailer?: Mailer | null } = {},
 ): AppDeps {
   const catalog = catalogFor(options.catalog, options.log);
   return {
@@ -94,7 +95,8 @@ export function defaultDeps(
     devAuth: env.DEV_AUTH === "1" && env.NODE_ENV !== "production",
     recipientBaseUrl: env.RECIPIENT_PUBLIC_URL ?? "http://localhost:3001",
     now: () => new Date(),
-    channels: defaultChannels(env),
     giftEstimatePercent: estimatePercent(env),
+    ...(options.mailer ? { channels: defaultChannels(options.mailer) } : {}),
+    ...(options.log ? { log: options.log } : {}),
   };
 }

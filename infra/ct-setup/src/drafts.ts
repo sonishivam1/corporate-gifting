@@ -102,13 +102,12 @@ export const typeDrafts: TypeDraft[] = [
     fieldDefinitions: [numberField("approvalThresholdCents", "Approval threshold (cents)"), stringSetField("approverIds", "Approvers")],
   },
   {
-    // M1 sign-in: links a commercetools customer (a company member) to the
-    // identities they sign in with, and records their access status.
+    // A company member's access status (B2B demo data; sign-in itself is
+    // commercetools customer accounts, ADR 0015).
     key: "member-profile",
     name: en("Member profile"),
     resourceTypeIds: ["customer"],
     fieldDefinitions: [
-      stringSetField("identityIds", "Sign-in identities (Auth0 user ids)"),
       {
         name: "status",
         label: en("Access status"),

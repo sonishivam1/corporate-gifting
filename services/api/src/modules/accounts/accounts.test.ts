@@ -18,7 +18,12 @@ const SECRET = "ab".repeat(32);
 
 function recordingMailer() {
   const sent: Email[] = [];
-  const mailer: Mailer = { send: async (email) => void sent.push(email) };
+  const mailer: Mailer = {
+    send: async (email) => {
+      sent.push(email);
+      return { messageId: null };
+    },
+  };
   return { mailer, sent };
 }
 
