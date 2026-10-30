@@ -14,7 +14,8 @@
  * - real differences between platforms are `capabilities`, which the product
  *   checks instead of a platform's name;
  * - it is versioned like the API: within a version, changes only add.
- *   Catalog, orders, payment and events join it with M2 and M4.
+ *   The catalog joined with M2 (optional, so v1 connectors without it still
+ *   work); orders, payment and events join it with M4.
  */
 import type { Logger } from "@gifting/logger";
 
@@ -85,12 +86,69 @@ export type AccountsConnector = {
   endPlatformSession?(platformSession: string): Promise<void>;
 };
 
+/** One orderable version of a catalog item (a size, flavour or colour). */
+export type CatalogVariant = {
+  sku: string;
+  /** What tells it apart from the item's other variants; empty when it is the only one. */
+  label: string;
+  /** In the market's currency, as integer cents. */
+  priceCents: number;
+  /** In stock at the vendor that ships it. */
+  available: boolean;
+  imageUrl: string | null;
+};
+
+/**
+ * A product as the product sees it, on any platform. Vendors are named by
+ * key; how a platform models them (supply channels, locations) stays inside
+ * the connector.
+ */
+export type CatalogItem = {
+  /** The platform's stable key for the product. */
+  key: string;
+  name: string;
+  brand: string;
+  description: string;
+  tags: string[];
+  vendorKey: string;
+  vendorName: string;
+  /** Days from order to dispatch. */
+  slaDays: number;
+  /** ISO 4217, for example "USD". */
+  currency: string;
+  /** Variants with a price in the market; at least one. */
+  variants: CatalogVariant[];
+};
+
+/** A collection's rules at a budget: any of the tags, brands or SKUs (everything when all are empty). */
+export type CatalogSearch = {
+  tags: string[];
+  brands: string[];
+  skus: string[];
+  /** Only variants that cost no more than this, and are in stock at their vendor. */
+  budgetCents: number;
+};
+
+/** An item a search matched, and which of its variants (null when all did). */
+export type CatalogMatch = { key: string; skus: string[] | null };
+
+export type CatalogConnector = {
+  /** Every item on sale in the deployment's market. The product caches this for a short while. */
+  listItems(): Promise<CatalogItem[]>;
+  /** The items a collection offers: what matches its rules, fits the budget and is in stock. */
+  searchItems(search: CatalogSearch): Promise<CatalogMatch[]>;
+  /** The item that has this SKU, read live (estimates and sends price from it). Null when unknown. */
+  getItem(sku: string): Promise<CatalogItem | null>;
+};
+
 export type CommerceConnector = {
   /** The connector's name, as set in COMMERCE_CONNECTOR, for example "commercetools". */
   id: string;
   contractVersion: typeof CONTRACT_VERSION;
   capabilities: ConnectorCapabilities;
   accounts: AccountsConnector;
+  /** Products, prices and stock. Without it, the product serves its demo catalog. */
+  catalog?: CatalogConnector;
   /** Checks settings and credentials before the API takes requests. Throws with a message that names no secret. */
   check?(): Promise<void>;
 };

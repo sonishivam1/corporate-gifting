@@ -1,12 +1,12 @@
 import path from "node:path";
 
+import type { CatalogConnector } from "@gifting/commerce";
 import { dbConfig, getDb } from "@gifting/db";
 import { AppError, createLogger } from "@gifting/logger";
 import { z } from "zod";
 
 import { buildApp } from "./app";
 import { loadConnector } from "./commerce/load";
-import { defaultDeps } from "./deps";
 import { createMailer, type Mailer } from "./mail/mailer";
 import { type AccountsService, createAccountsService } from "./modules/accounts/service";
 
@@ -29,12 +29,14 @@ const env = z
 
 let accounts: AccountsService | null = null;
 let mailer: Mailer;
+let catalog: CatalogConnector | null = null;
 try {
   const production = process.env.NODE_ENV === "production";
   const smtp = env.SMTP_HOST ? { host: env.SMTP_HOST, port: env.SMTP_PORT, user: env.SMTP_USER || undefined, pass: env.SMTP_PASS || undefined } : env.SMTP_URL || undefined;
   mailer = createMailer({ smtp, from: env.MAIL_FROM, outboxDir: path.resolve(import.meta.dirname, "../../../.data/outbox"), production, log });
   // The commerce platform is a plug-in: COMMERCE_CONNECTOR names it, and it reads its own settings.
   const connector = await loadConnector({ env: process.env, log, production });
+  catalog = connector?.catalog ?? null;
   if (connector) {
     if (!env.API_SESSION_SECRET) throw new AppError("config_invalid", "API_SESSION_SECRET is not set (openssl rand -hex 32).");
     accounts = createAccountsService({
@@ -54,7 +56,7 @@ try {
   process.exit(1);
 }
 
-const app = await buildApp({ logger: log, accounts, deps: defaultDeps(process.env, { mailer, log }) });
+const app = await buildApp({ logger: log, accounts, catalog, mailer });
 
 try {
   await app.listen({ port: env.API_PORT, host: "0.0.0.0" });
@@ -82,6 +84,8 @@ try {
 } catch {
   log.warn({ host: dbHost() }, "MongoDB is not reachable; run pnpm db:up (or pnpm dev:all)");
 }
+
+log.info({ catalog: catalog ? (process.env.COMMERCE_CONNECTOR?.trim() ?? "connector") : "demo" }, "Catalog source");
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.once(signal, () => {

@@ -43,7 +43,53 @@ how it was verified, and any lesson worth keeping.
   - unit tests; each guard broken, seen to fail, and restored;
   - lint, typecheck, unit and integration tests, and the build.
 - **Note:** a machine that ran Mailpit keeps its container until
-  `docker compose up -d --remove-orphans`.
+  `docker compose up -d --remove-orphans`. `buildApp` takes the mailer the way
+  it takes the catalog, so passing one never drops the other (a test checks).
+
+### Sender: no occasion choice; email the only delivery
+- **What:** Browse gifts loses its occasion filter, and the greeting step
+  its occasion choice. Campaigns still carry an occasion (the API requires
+  one), fixed at "thanks". An unnamed campaign is named after its headline
+  and send date ("Happy birthday! · 30 Oct") instead of the occasion. The
+  delivery channel cards are hidden behind `CHANNEL_CHOICE` in
+  `apps/sender/lib/features.ts`, and every campaign goes by email.
+- **Why:** review feedback: occasions added a choice that didn't change the
+  gift, and email is the only channel that sends today.
+- **Also:** the gift step has a search over name, brand, vendor and option
+  labels, with a count of what matches. The live catalog lists up to 261
+  products.
+- **Verified:** typecheck and lint for `apps/sender`.
+
+### develop merged; the catalog moves behind the commerce connector
+- **What:** `develop` (sign-in on commercetools customer accounts, commerce
+  connectors per ADR 0013, the Home overview, branded emails) merged into
+  the sender dashboard branch. The API may no longer import `@gifting/ct`,
+  so the catalog moved behind the connector, as ADR 0013 planned for M2:
+  - `@gifting/commerce`: an optional `catalog` in the contract
+    (`listItems`, `searchItems`, `getItem`) with neutral `CatalogItem`,
+    `CatalogSearch` and `CatalogMatch` types, still contract v1. The
+    conformance suite checks that a search returns exactly the variants
+    that fit.
+  - `@gifting/commerce-commercetools`: the mapping, query and reads moved
+    from `@gifting/ct` and the API. The catalog uses its own read-only
+    client (`CTP_API_*`); without it the connector has no catalog.
+  - `@gifting/commerce-memory`: `memoryCatalog(items)`, and a catalog option.
+  - `@gifting/domain`: `categoryFromTags` and `occasionsFromTags`.
+  - API: `connectorCatalog` (cache, cards, per-variant re-check) replaces
+    `ctCatalog`; `CATALOG_SOURCE` is gone. The demo catalog serves when the
+    connector has none.
+- **Why:** develop's connector rule, and ADR 0013 puts the catalog in the
+  contract with M2.
+- **Verified:** the conformance catalog checks pass on the memory
+  connector. On the real project the commercetools connector's search is
+  exact per variant, and `catalog:check` through `COMMERCE_CONNECTOR`
+  matches all five collections. Lint, typecheck, unit tests, build and
+  integration tests: see the plan's As built.
+- **Learned:** a connector can keep its platform's quirks (stock per
+  channel, ids in search results) entirely inside it; the contract only
+  needed keys, SKUs and a budget.
+
+---
 
 ## 29 Oct 2026
 
@@ -75,6 +121,33 @@ how it was verified, and any lesson worth keeping.
 - **Verified:** integration tests for one email per recipient, no raw link
   stored, a failed email left retryable, resend and cancel, and scoping to the
   caller's team; unit tests for the email adapter and the strings.
+
+### Marketplace catalog from commercetools (spike 2)
+- **What:** the API can read the catalog from commercetools, as agreed in
+  the [marketplace catalog plan](../plans/marketplace-catalog.md).
+  - `@gifting/domain`: `ProductView` gains `key`, `imageUrl` and
+    `variants`. New pure rules: `defaultVariant`, `withVariants`,
+    `findVariant`, `variantName`. `collectionItems` now works per variant.
+  - `@gifting/ct`: `catalog.ts` maps projections to product cards (price,
+    stock at the vendor's channel, photos, variant labels, category and
+    occasions from tags) and builds the collection search query.
+    `catalog-reader.ts` makes the read-only calls. `loadCtApiConfig` reads
+    the API's own client from `CTP_API_*`.
+  - API: `ctCatalog` lists with a 60 s cache, resolves collections by
+    search and reads a single SKU live. `CATALOG_SOURCE` chooses `seed` (the
+    default) or `commercetools`. A single gift is priced from its variant.
+    `pnpm --filter @gifting/api catalog:check` runs the real queries.
+  - Sender app: product photos, "From $X" prices, an option picker in the
+    product sheet and the send flow, and variant names on campaigns.
+- **Why:** spike 2, and the project now holds the real catalog.
+- **Verified:** unit tests (domain 42, ct 19, API 27); 33 integration
+  tests. Break and restore on both stock checks. `catalog:check` shows that
+  one search per collection finds exactly the reference set. The API was
+  also checked live on commercetools on a second port.
+- **Learned:** `isOnStock` without a channel finds nothing when every
+  inventory entry is at a supply channel; use `isOnStockForChannel`. A
+  comparison that re-filters its input proves nothing about the input.
+  Details: [spike 2 results](../plans/spikes.md#spike-2-marketplace-catalog).
 
 ### Light for everyone
 - **What:** the shared theme provider forces the light theme in every app.
@@ -200,6 +273,20 @@ how it was verified, and any lesson worth keeping.
   `@royalcyber.com` (DMARC `p=quarantine`, no Brevo DKIM) was accepted by
   Brevo and then silently quarantined by the receiver.
 
+### Sender dashboard merged with the commercetools catalog import
+- **What:** `develop` (commercetools setup, Christie Cookie catalog, five
+  demo companies) merged into the sender dashboard branch. In
+  `infra/seed/src/index.ts` the products keep develop's descriptions and
+  `perishable`, plus the dashboard's `category` and `occasions`.
+  `demoCompanies` is develop's list of five; `demoCompany` is its first
+  entry (Lumen Labs) with the dashboard's team thresholds, approvers and
+  members added.
+- **Why:** both branches changed the seed products and the demo company.
+- **Verified:** lint, typecheck and unit tests after the merge; a new seed
+  test checks that `demoCompany` keeps the same teams as `demoCompanies[0]`.
+
+---
+
 ## 28 Oct 2026
 
 ### M1 sign-in, phase A: Auth0 sign-in and member access
@@ -243,22 +330,6 @@ how it was verified, and any lesson worth keeping.
   ADR 0009 is accepted as Auth0, and open question 7 is answered.
 - **Why:** sign-in is the base of every M1 to M7 flow. The prototype has no
   auth screens, so the plan sets them out in its look.
-
-### Sender dashboard merged with the commercetools catalog import
-- **What:** `develop` (commercetools setup, Christie Cookie catalog, five
-  demo companies) merged into the sender dashboard branch. In
-  `infra/seed/src/index.ts` the products keep develop's descriptions and
-  `perishable`, plus the dashboard's `category` and `occasions`.
-  `demoCompanies` is develop's list of five; `demoCompany` is its first
-  entry (Lumen Labs) with the dashboard's team thresholds, approvers and
-  members added.
-- **Why:** both branches changed the seed products and the demo company.
-- **Verified:** lint, typecheck and unit tests after the merge; a new seed
-  test checks that `demoCompany` keeps the same teams as `demoCompanies[0]`.
-
----
-
-## 28 Oct 2026
 
 ### Prototype palette and single-gift sends
 - **What:** the theme tokens in `packages/ui/src/styles/globals.css` now use

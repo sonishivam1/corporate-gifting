@@ -42,6 +42,21 @@ The product does the rest the same on every platform: sessions, links,
 rate limits, emails and the rules (for example, no sign-in before the email
 is verified).
 
+## Catalog: what to implement (optional)
+
+`catalog` is optional. Without it the API serves its demo catalog.
+
+| Method | Returns |
+| --- | --- |
+| `listItems()` | Every item on sale in the market, as `CatalogItem`s: a stable `key`, name, brand, description, `tags`, the vendor (`vendorKey`, `vendorName`, `slaDays`), `currency`, and `variants` with `sku`, a `label` that tells them apart, `priceCents`, `available` (in stock at that vendor) and `imageUrl` |
+| `searchItems({ tags, brands, skus, budgetCents })` | `{ key, skus }` for the items that match any tag, brand or SKU (everything when all are empty), cost no more than the budget and are in stock; `skus: null` when every variant matched |
+| `getItem(sku)` | The item with that SKU, read live (null when unknown) |
+
+The product turns items into cards (category and occasions from tags),
+caches lists and searches, and checks every variant again, so a search may
+return too much but must not miss anything. The conformance suite checks
+that a search returns exactly the variants that fit.
+
 ## Steps
 
 1. **Spike.** Check the platform can do what the contract needs. For

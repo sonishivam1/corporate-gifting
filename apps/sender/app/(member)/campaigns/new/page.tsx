@@ -1,4 +1,6 @@
-import { getBalance, getCollections, getWorkspace, getProducts, getRecipients } from "@/lib/api";
+import { findVariant } from "@gifting/domain";
+
+import { getBalance, getCollections, getProducts, getRecipients, getWorkspace } from "@/lib/api";
 
 import { SendFlow } from "./send-flow";
 
@@ -26,7 +28,7 @@ export default async function NewCampaignPage({ searchParams }: PageProps<"/camp
       products={products}
       recipients={recipients}
       start={{
-        sku: products.some((p) => p.sku === sku) ? sku : undefined,
+        sku: sku && findVariant(products, sku) ? sku : undefined,
         collectionId: collections.some((c) => c.id === collection) ? collection : undefined,
       }}
     />

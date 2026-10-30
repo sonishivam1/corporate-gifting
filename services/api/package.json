@@ -11,7 +11,8 @@
     "lint": "eslint .",
     "typecheck": "node scripts/connectors.mjs && tsc --noEmit",
     "test": "node scripts/connectors.mjs && vitest run",
-    "test:integration": "node scripts/connectors.mjs && vitest run --config vitest.integration.config.ts"
+    "test:integration": "node scripts/connectors.mjs && vitest run --config vitest.integration.config.ts",
+    "catalog:check": "tsx --env-file-if-exists=../../.env scripts/catalog-check.ts"
   },
   "dependencies": {
     "@commercetools/platform-sdk": "9.7.0",

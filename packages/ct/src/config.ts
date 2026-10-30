@@ -50,6 +50,23 @@ export function loadCtConfig(source: Record<string, string | undefined> = proces
   };
 }
 
+const API_CLIENT_VARS = ["CTP_API_CLIENT_ID", "CTP_API_CLIENT_SECRET", "CTP_API_SCOPES"] as const;
+
+/**
+ * The Gifting API's own client (`CTP_API_*`): read-only scopes, apart from
+ * the setup client in `CTP_CLIENT_*`. Project, URLs and store are shared.
+ */
+export function loadCtApiConfig(source: Record<string, string | undefined> = process.env): CtConfig {
+  const missing = API_CLIENT_VARS.filter((name) => !source[name]?.trim());
+  if (missing.length) throw new AppError("config_invalid", missing.map((name) => `${name} is not set.`).join(" "));
+  return loadCtConfig({
+    ...source,
+    CTP_CLIENT_ID: source.CTP_API_CLIENT_ID,
+    CTP_CLIENT_SECRET: source.CTP_API_CLIENT_SECRET,
+    CTP_SCOPES: source.CTP_API_SCOPES,
+  });
+}
+
 /** Setup scripts may only touch sandbox or dev projects. */
 export function isSandboxProject(projectKey: string): boolean {
   return /(^|-)(sandbox|dev)(-|$)/.test(projectKey);

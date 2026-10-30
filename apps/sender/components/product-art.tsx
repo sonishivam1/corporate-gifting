@@ -1,10 +1,32 @@
 import type { ProductCategory } from "@gifting/domain";
 import { cn } from "@gifting/ui/lib/utils";
+import Image from "next/image";
 
 import { CATEGORY } from "@/lib/catalog";
+import { isOptimizable } from "@/lib/images";
 
-// The seed products have no photos yet; a category icon stands in.
-export function ProductArt({ category, className }: { category: ProductCategory; className?: string }) {
+/**
+ * The product's photo, or a category icon when it has none (the fictional
+ * seed products have no photos). Decorative: the name sits next to it.
+ */
+export function ProductArt({
+  category,
+  imageUrl,
+  sizes = "(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw",
+  className,
+}: {
+  category: ProductCategory;
+  imageUrl?: string | null;
+  sizes?: string;
+  className?: string;
+}) {
+  if (imageUrl) {
+    return (
+      <div className={cn("relative overflow-hidden rounded-lg bg-muted", className)} aria-hidden>
+        <Image src={imageUrl} alt="" fill sizes={sizes} unoptimized={!isOptimizable(imageUrl)} className="object-cover" />
+      </div>
+    );
+  }
   const { icon: Icon, tile } = CATEGORY[category];
   return (
     <div className={cn("flex items-center justify-center rounded-lg", tile, className)} aria-hidden>

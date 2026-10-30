@@ -7,14 +7,47 @@
  * back with a code for the email in `loginHint`. That lets the whole hosted
  * flow run locally without a platform. Never for production.
  */
-import { type CommerceConnector, CONTRACT_VERSION, type Customer, type SignInMode } from "@gifting/commerce";
+import {
+  type CatalogConnector,
+  type CatalogItem,
+  type CommerceConnector,
+  CONTRACT_VERSION,
+  type Customer,
+  type SignInMode,
+} from "@gifting/commerce";
 
 export type MemoryOptions = {
   /** Default "password". */
   signIn?: SignInMode;
   /** Whether it keeps its own session for a signed-in customer, like commercetools' tokens. Default true. */
   platformSessions?: boolean;
+  /** Items to sell. Without them the connector has no catalog, and the product serves its demo one. */
+  catalog?: CatalogItem[];
 };
+
+/** A catalog searched in memory, by the same rules a platform's search applies. */
+export function memoryCatalog(items: readonly CatalogItem[]): CatalogConnector {
+  const copy = (item: CatalogItem): CatalogItem => ({ ...item, tags: [...item.tags], variants: item.variants.map((v) => ({ ...v })) });
+  return {
+    listItems: async () => items.map(copy),
+    async searchItems({ tags, brands, skus, budgetCents }) {
+      const anyRule = tags.length + brands.length + skus.length > 0;
+      return items.flatMap((item) => {
+        const fits = item.variants.filter(
+          (v) =>
+            v.available &&
+            v.priceCents <= budgetCents &&
+            (!anyRule || skus.includes(v.sku) || brands.includes(item.brand) || item.tags.some((t) => tags.includes(t))),
+        );
+        return fits.length ? [{ key: item.key, skus: fits.map((v) => v.sku) }] : [];
+      });
+    },
+    getItem: async (sku) => {
+      const item = items.find((i) => i.variants.some((v) => v.sku === sku));
+      return item ? copy(item) : null;
+    },
+  };
+}
 
 type Stored = Customer & { password: string | null };
 
@@ -40,6 +73,7 @@ export function createMemoryConnector(options: MemoryOptions = {}) {
     id: "memory",
     contractVersion: CONTRACT_VERSION,
     capabilities: { signIn },
+    ...(options.catalog ? { catalog: memoryCatalog(options.catalog) } : {}),
     accounts: {
       ...(signIn === "password"
         ? {

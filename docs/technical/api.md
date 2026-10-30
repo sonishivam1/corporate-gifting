@@ -45,9 +45,9 @@ Every route declares who may call it, in `defineRoute({ auth })`
 | GET | `/v1/workspace` | workspace | User, company, current team (threshold, approvers), the user's teams; `devUsers` with development sign-in |
 | GET | `/v1/teams/:teamKey/overview?range=7d\|30d\|90d` | workspace (member of that team) | The Home overview: `balance`, `sent` and `chose` (with the previous period), `expiringSoon` (next 7 days), `pendingApprovals`, `daily` (sent, opened, chose per day) and `statuses`. Counted by `overviewFrom()` in `@gifting/domain` |
 | GET | `/v1/teams/:teamKey/balance` | workspace (member of that team) | `{ teamKey, currency, availableCents, heldCents, spentCents }`, computed from the ledger |
-| GET | `/v1/catalog/products?budget&occasion&category&q` | workspace | `{ products[] }`: available items only |
+| GET | `/v1/catalog/products?budget&occasion&category&q` | workspace | `{ products[] }`: one per product, narrowed to the variants in stock (and within the budget). `sku`, `priceCents` and `imageUrl` are the default variant's (the cheapest); `variants[]` has `sku`, `label`, `priceCents`, `available`, `imageUrl`. A single-gift send takes a variant SKU |
 | GET | `/v1/collections?budget=` | workspace | `{ collections[] }` with `itemCount` at the budget (the band when none) |
-| GET | `/v1/collections/:id/items?budget=` | workspace | `{ items[] }` |
+| GET | `/v1/collections/:id/items?budget=` | workspace | `{ items[] }`, narrowed to the variants that fit. Catalog routes answer `503 catalog_unavailable` when commercetools can't be reached |
 | GET | `/v1/recipients?q=` | workspace | `{ recipients[] }`: the company directory |
 | POST | `/v1/campaigns/estimate` | workspace | Estimate for an unsaved send: gifts, hold, total, available, after, `needsApproval`, `short` |
 | GET | `/v1/campaigns?status=all\|active\|scheduled\|pending_approval` | workspace | `{ campaigns[], funnel, counts }` (drafts are not listed) |

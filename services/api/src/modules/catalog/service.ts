@@ -1,12 +1,13 @@
 import { getCollections } from "@gifting/db";
 import {
   type Cents,
-  collectionItems,
   type CollectionView,
   type GiftCollection,
   type ProductQuery,
   type ProductView,
   type SendInput,
+  variantName,
+  withVariants,
 } from "@gifting/domain";
 
 import type { AppDeps } from "../../deps";
@@ -26,10 +27,8 @@ export type CatalogService = ReturnType<typeof createCatalogService>;
 
 export function createCatalogService(deps: AppDeps) {
   const c = () => getCollections(deps.db);
-  const available = async () => (await deps.catalog.products()).filter((p) => p.available);
 
-  function toView(col: GiftCollection, items: readonly ProductView[], budgetCents: Cents): CollectionView {
-    const fits = collectionItems(col.rules, items, budgetCents);
+  function toView(col: GiftCollection, fits: readonly ProductView[]): CollectionView {
     return {
       id: col._id,
       name: col.name,
@@ -49,31 +48,32 @@ export function createCatalogService(deps: AppDeps) {
   }
 
   return {
+    /** Products with an available variant (within the budget, if given), narrowed to those variants. */
     async products(query: ProductQuery): Promise<ProductView[]> {
       const q = query.q?.toLowerCase();
-      return (await available()).filter(
-        (p) =>
-          (!query.budget || p.priceCents <= query.budget) &&
+      const { budget } = query;
+      return (await deps.catalog.products()).flatMap((product) => {
+        const p = withVariants(product, (v) => v.available && (!budget || v.priceCents <= budget));
+        return p &&
           (!query.occasion || p.occasions.includes(query.occasion)) &&
           (!query.category || p.category === query.category) &&
-          (!q || `${p.name} ${p.brand}`.toLowerCase().includes(q)),
-      );
+          (!q || `${p.name} ${p.brand}`.toLowerCase().includes(q))
+          ? [p]
+          : [];
+      });
     },
 
     async collections(companyKey: string, budgetCents?: Cents): Promise<CollectionView[]> {
-      const [cols, items] = await Promise.all([
-        c().collections.find({ owner: { $in: ["platform", companyKey] } }).sort({ budgetBandCents: 1, name: 1 }).toArray(),
-        available(),
-      ]);
-      return cols.map((col) => toView(col, items, budgetCents ?? col.budgetBandCents));
+      const cols = await c().collections.find({ owner: { $in: ["platform", companyKey] } }).sort({ budgetBandCents: 1, name: 1 }).toArray();
+      return Promise.all(cols.map(async (col) => toView(col, await deps.catalog.collectionItems(col.rules, budgetCents ?? col.budgetBandCents))));
     },
 
     async collectionItems(companyKey: string, id: string, budgetCents?: Cents): Promise<ProductView[]> {
       const col = await findCollection(companyKey, id);
-      return collectionItems(col.rules, await available(), budgetCents ?? col.budgetBandCents);
+      return deps.catalog.collectionItems(col.rules, budgetCents ?? col.budgetBandCents);
     },
 
-    /** Names for campaign rows: collection ids and SKUs to labels. */
+    /** Names for campaign rows: collection ids and variant SKUs to labels. */
     async labels(companyKey: string): Promise<{ collections: Map<string, string>; products: Map<string, string> }> {
       const [cols, items] = await Promise.all([
         c().collections.find({ owner: { $in: ["platform", companyKey] } }, { projection: { name: 1 } }).toArray(),
@@ -81,21 +81,22 @@ export function createCatalogService(deps: AppDeps) {
       ]);
       return {
         collections: new Map(cols.map((col) => [col._id, col.name])),
-        products: new Map(items.map((p) => [p.sku, p.name])),
+        products: new Map(items.flatMap((p) => p.variants.map((v) => [v.sku, variantName(p, v)] as const))),
       };
     },
 
     /** Re-reads the gift from the catalog: nothing about price comes from the browser. */
     async resolveGift(companyKey: string, gift: SendInput["gift"]): Promise<ResolvedGift> {
       if (gift.kind === "single") {
-        const product = await deps.catalog.product(gift.sku);
-        if (!product || !product.available) {
+        const found = await deps.catalog.variant(gift.sku);
+        if (!found || !found.variant.available) {
           throw new ApiError(422, "item_not_eligible", "That gift isn't available. Pick another.");
         }
-        return { kind: "single", collectionId: null, sku: product.sku, label: product.name, budgetCents: product.priceCents };
+        const { product, variant } = found;
+        return { kind: "single", collectionId: null, sku: variant.sku, label: variantName(product, variant), budgetCents: variant.priceCents };
       }
       const col = await findCollection(companyKey, gift.collectionId);
-      if (collectionItems(col.rules, await available(), gift.budgetCents).length === 0) {
+      if ((await deps.catalog.collectionItems(col.rules, gift.budgetCents)).length === 0) {
         throw new ApiError(422, "collection_empty", "Nothing in this collection fits that budget.");
       }
       return { kind: "collection", collectionId: col._id, sku: null, label: col.name, budgetCents: gift.budgetCents };

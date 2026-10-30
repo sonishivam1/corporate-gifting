@@ -1,11 +1,13 @@
 import { type ChannelRegistry, createChannelRegistry, emailChannel } from "@gifting/channels";
+import type { CatalogConnector } from "@gifting/commerce";
 import { getClient, getDb } from "@gifting/db";
 import type { Logger } from "@gifting/logger";
 import type { Db, MongoClient } from "mongodb";
 
 import type { Mailer } from "./mail/mailer";
 import { seedOrg, type OrgDirectory } from "./modules/accounts/org";
-import { seedCatalog, type CatalogSource } from "./modules/catalog/source";
+import { connectorCatalog } from "./modules/catalog/connector-source";
+import { type CatalogSource, seedCatalog, seedOccasions } from "./modules/catalog/source";
 
 /**
  * What the API runs against. Production wiring reads the environment;
@@ -14,8 +16,9 @@ import { seedCatalog, type CatalogSource } from "./modules/catalog/source";
 export type AppDeps = {
   client: MongoClient;
   db: Db;
-  // Stand-ins for commercetools until M1 (Business Units) and M2 (product search).
+  // The commerce connector's catalog, or the demo catalog (see catalogFor).
   catalog: CatalogSource;
+  // A stand-in for commercetools Business Units until M1.
   org: OrgDirectory;
   // Development sign-in (see http/session.ts). Never on in production.
   devAuth: boolean;
@@ -27,6 +30,20 @@ export type AppDeps = {
   log?: Logger;
 };
 
+/**
+ * The commerce connector's catalog when it has one (ADR 0013), else the demo
+ * catalog from `infra/seed`. Tests, CI and the build use the demo catalog and
+ * need no platform.
+ */
+export function catalogFor(connector: CatalogConnector | null | undefined, log?: Logger): CatalogSource {
+  if (!connector) return seedCatalog;
+  return connectorCatalog({
+    catalog: connector,
+    fallbackOccasions: (sku) => seedOccasions.get(sku),
+    onError: (err) => log?.error({ err }, "catalog read failed"),
+  });
+}
+
 /** Gift emails go through the same mailer as account emails, so one setting decides where all email goes. */
 function defaultChannels(mailer: Mailer): ChannelRegistry {
   return createChannelRegistry([emailChannel({ transport: { sendMail: (mail) => mailer.send(mail) } })]);
@@ -37,7 +54,11 @@ function defaultChannels(mailer: Mailer): ChannelRegistry {
  * never connects. With no mailer (tests that send nothing), no channel is
  * registered and gifts stay queued.
  */
-export function defaultDeps(env: Record<string, string | undefined> = process.env, wiring: { mailer?: Mailer; log?: Logger } = {}): AppDeps {
+export function defaultDeps(
+  env: Record<string, string | undefined> = process.env,
+  options: { log?: Logger; catalog?: CatalogConnector | null; mailer?: Mailer | null } = {},
+): AppDeps {
+  const catalog = catalogFor(options.catalog, options.log);
   return {
     get client() {
       return getClient();
@@ -45,12 +66,12 @@ export function defaultDeps(env: Record<string, string | undefined> = process.en
     get db() {
       return getDb();
     },
-    catalog: seedCatalog,
+    catalog,
     org: seedOrg,
     devAuth: env.DEV_AUTH === "1" && env.NODE_ENV !== "production",
     recipientBaseUrl: env.RECIPIENT_PUBLIC_URL ?? "http://localhost:3001",
     now: () => new Date(),
-    ...(wiring.mailer ? { channels: defaultChannels(wiring.mailer) } : {}),
-    ...(wiring.log ? { log: wiring.log } : {}),
+    ...(options.mailer ? { channels: defaultChannels(options.mailer) } : {}),
+    ...(options.log ? { log: options.log } : {}),
   };
 }
