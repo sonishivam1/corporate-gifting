@@ -8,7 +8,7 @@ commitments. Owners are suggestions to confirm.
 **This file is updated with every milestone step**, together with
 [features.md](features.md) and the README progress table.
 
-_Last updated: 30 Oct 2026 (register and sign-in built on commercetools customer accounts; commerce made a plug-in, ADR 0013 accepted; spike 2 done, the sender dashboard reads the commercetools catalog; sender dashboard built ahead of M1 to M3 and merged behind sign-in, see [change 1](../plans/poc-plan.md#changes-after-agreement))._
+_Last updated: 2 Nov 2026 (build-your-own collection built: M2 complete; earlier: register and sign-in on commercetools customer accounts, commerce as a plug-in, spike 2, the sender dashboard ahead of M1 to M3)._
 
 ## Where we are
 
@@ -30,9 +30,9 @@ app). Then M1 starts.
 | Planned | Spikes 1 and 3 to 6 written up ([spikes](../plans/spikes.md)) | M0 |
 | Planned | A2P 10DLC registration, Slack app and Teams bot submitted | M0 |
 | Planned | Companies and teams as Business Units, identity, budget accounts, ledger, Stripe test top-ups | M1 |
-| Planned | Collection rules, product search resolution, build-your-own collection UI | M2 |
 | Planned | One-time and scheduled campaigns, estimates, approvals, holds, email, links and QR | M3 |
 | Planned | Recipient experience, company-balance order, vendor routing, vendor portal-lite, tracking | M4 |
+| ✅ Done | Build-your-own collection: company collections from picked products, brands and tags ([plan](../plans/build-your-own-collection.md)) | M2 |
 | ✅ Done | Recipient list upload (CSV of email and names) in the send flow ([plan](../plans/recipient-upload.md)) | M5 (ahead) |
 | Planned | Recipient directory, CSV dates, one HR system, milestone worker, SMS, Slack, Teams | M5 |
 | Planned | Expiry releases, refunds, statements, reconciliation, dashboard and exports | M6 |

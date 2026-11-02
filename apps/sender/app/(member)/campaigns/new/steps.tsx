@@ -28,7 +28,8 @@ import { Switch } from "@gifting/ui/components/switch";
 import { Textarea } from "@gifting/ui/components/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@gifting/ui/components/toggle-group";
 import { cn } from "@gifting/ui/lib/utils";
-import { CalendarIcon, CircleAlertIcon, GiftIcon, InfoIcon, LayersIcon, SearchIcon, XIcon } from "lucide-react";
+import { CalendarIcon, CircleAlertIcon, GiftIcon, InfoIcon, LayersIcon, PlusIcon, SearchIcon, XIcon } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 
@@ -113,7 +114,16 @@ export function GiftStep({
               ))}
             </ToggleGroup>
           </Section>
-          <Section title="Collection">
+          <Section
+            title="Collection"
+            aside={
+              <Button asChild variant="link" size="sm" className="px-0">
+                <Link href="/collections/new?from=send">
+                  <PlusIcon /> Build one
+                </Link>
+              </Button>
+            }
+          >
             <div className="grid gap-2 sm:grid-cols-2">
               {collections.map((c) => {
                 const items = itemsFor({ ...draft, collectionId: c.id }, collections, products);

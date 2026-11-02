@@ -6,7 +6,9 @@ import {
   balanceView,
   campaignDetailView,
   campaignListView,
+  type CollectionInput,
   collectionView,
+  type CollectionView,
   decisionResultView,
   estimateView,
   giftRowView,
@@ -109,7 +111,7 @@ const errorShape = z.object({ error: z.object({ code: z.string(), message: z.str
 async function call<S extends z.ZodType>(
   path: string,
   schema: S,
-  init: { method?: "GET" | "POST"; body?: unknown; headers?: Record<string, string> } = {},
+  init: { method?: "GET" | "POST" | "PUT"; body?: unknown; headers?: Record<string, string> } = {},
 ): Promise<z.infer<S>> {
   // Outside the try: reading cookies is how Next marks the page dynamic, and that signal must not be swallowed.
   const workspace = await devSessionHeaders();
@@ -161,6 +163,19 @@ export const getCollections = (budget?: number) =>
   call(`/v1/collections${budget ? `?budget=${budget}` : ""}`, z.object({ collections: z.array(collectionView) })).then(
     (r) => r.collections,
   );
+
+/** A collection with its own items; the company's are listed first. Archived ones are "not found". */
+export async function getCollection(id: string): Promise<CollectionView | null> {
+  return (await getCollections()).find((c) => c.id === id) ?? null;
+}
+
+export const createCollection = (input: CollectionInput) => call("/v1/collections", collectionView, { method: "POST", body: input });
+
+export const updateCollection = (id: string, input: CollectionInput) =>
+  call(`/v1/collections/${encodeURIComponent(id)}`, collectionView, { method: "PUT", body: input });
+
+export const archiveCollection = (id: string) =>
+  call(`/v1/collections/${encodeURIComponent(id)}/archive`, z.object({ archived: z.literal(true) }), { method: "POST" });
 
 /** The company directory: the first page by name, or the people matching `q`. */
 export const getRecipients = (q?: string) => call(`/v1/recipients${q ? `?q=${encodeURIComponent(q)}` : ""}`, recipientListView);

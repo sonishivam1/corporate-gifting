@@ -11,6 +11,35 @@ how it was verified, and any lesson worth keeping.
 
 ---
 
+## 2 Nov 2026
+
+### Build-your-own collection (M2.3)
+- **What:** company collections, as agreed in the
+  [plan](../plans/build-your-own-collection.md).
+  - `@gifting/domain`: `collectionInput` (name, band $5 to $500, tags,
+    brands and SKUs, at least one), `rulesFromInput`, and `createdBy`,
+    `updatedBy`, `archivedAt` on `giftCollection` (optional).
+  - API: `POST /v1/collections`, `PUT /v1/collections/:id`,
+    `POST /v1/collections/:id/archive`; the list puts the company's first
+    and leaves out archived ones; a new campaign refuses an archived
+    collection (`422 collection_archived`), while gifts already sent still
+    read it.
+  - Sender app: a Collections page (company and ready-made), a builder
+    (pick products, brands and tags; live preview with the API's own rule),
+    edit and archive; Home's "Build a collection" and the nav link work; the
+    send flow's collection step has "Build one".
+  - `LET_THEM_CHOOSE` is on again (agreed 2 Nov): the send flow offers "Let
+    them choose", and Home shows the collections strip. It was hidden after
+    the 28 Oct review, when there were no company collections.
+- **Why:** the last package of M2, and the answer to "several gifts, the
+  recipient picks one" without new money rules.
+- **Verified:** 4 domain tests, 9 integration tests (create, list order,
+  items within budget, edit, archive, send and redeem from a company
+  collection, redeem after archiving, another company's collection, a
+  platform collection, refused input). Break and restore: dropping the
+  company filter from edit fails two tests; skipping the archived check
+  fails one.
+
 ## 30 Oct 2026
 
 ### Recipient upload: review fixes

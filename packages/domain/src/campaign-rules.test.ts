@@ -10,7 +10,7 @@ import {
   hasShareableLinks,
 } from "./campaign-rules";
 import { categoryFromTags, defaultVariant, findVariant, occasionsFromTags, variantName, withVariants } from "./catalog";
-import { collectionItems, matchesRules } from "./collections";
+import { COLLECTION_LIMITS, collectionInput, collectionItems, matchesRules, rulesFromInput } from "./collections";
 import type { ProductView } from "./views";
 
 describe("estimateSend", () => {
@@ -114,6 +114,36 @@ describe("collections", () => {
     expect(fit).toMatchObject({ sku: "T-12", priceCents: 2800 });
     // A SKU rule picks out one variant, not the whole product.
     expect(collectionItems({ ...none, skus: ["T-24"] }, [tin], 5000)[0]?.variants.map((v) => v.sku)).toEqual(["T-24"]);
+  });
+
+  it("offers picked products, tags and brands together", () => {
+    const rules = rulesFromInput(collectionInput.parse({ name: "Mixed", budgetBandCents: 8000, rules: { tags: ["outdoors"], brands: [], skus: ["A"] } }));
+    expect(collectionItems(rules, items, 8000).map((i) => i.sku)).toEqual(["A", "D"]);
+  });
+});
+
+describe("collectionInput", () => {
+  const valid = { name: "  Team treats ", budgetBandCents: 5000, rules: { tags: ["food", "food"], brands: [], skus: ["A"] } };
+
+  it("trims the name and drops repeated rules", () => {
+    expect(collectionInput.parse(valid)).toEqual({ name: "Team treats", budgetBandCents: 5000, rules: { tags: ["food"], brands: [], skus: ["A"] } });
+  });
+
+  it("refuses empty rules, since they would offer the whole catalog", () => {
+    const res = collectionInput.safeParse({ ...valid, rules: { tags: [], brands: [], skus: [] } });
+    expect(res.success).toBe(false);
+    expect(res.error?.issues[0]?.message).toBe("Add at least one tag, brand or product.");
+  });
+
+  it("refuses a missing or long name, a band outside $5 to $500, and too many products", () => {
+    const bad = [
+      { ...valid, name: " " },
+      { ...valid, name: "x".repeat(COLLECTION_LIMITS.name + 1) },
+      { ...valid, budgetBandCents: 499 },
+      { ...valid, budgetBandCents: 50_001 },
+      { ...valid, rules: { ...valid.rules, skus: Array.from({ length: COLLECTION_LIMITS.skus + 1 }, (_, i) => `S-${i}`) } },
+    ];
+    for (const input of bad) expect(collectionInput.safeParse(input).success).toBe(false);
   });
 });
 

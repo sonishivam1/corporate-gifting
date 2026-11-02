@@ -46,8 +46,11 @@ Every route declares who may call it, in `defineRoute({ auth })`
 | GET | `/v1/teams/:teamKey/overview?range=7d\|30d\|90d` | workspace (member of that team) | The Home overview: `balance`, `sent` and `chose` (with the previous period), `expiringSoon` (next 7 days), `pendingApprovals`, `daily` (sent, opened, chose per day) and `statuses`. Counted by `overviewFrom()` in `@gifting/domain` |
 | GET | `/v1/teams/:teamKey/balance` | workspace (member of that team) | `{ teamKey, currency, availableCents, heldCents, spentCents }`, computed from the ledger |
 | GET | `/v1/catalog/products?budget&occasion&category&q` | workspace | `{ products[] }`: one per product, narrowed to the variants in stock (and within the budget). `sku`, `priceCents` and `imageUrl` are the default variant's (the cheapest); `variants[]` has `sku`, `label`, `priceCents`, `available`, `imageUrl`. A single-gift send takes a variant SKU |
-| GET | `/v1/collections?budget=` | workspace | `{ collections[] }` with `itemCount` at the budget (the band when none) |
+| GET | `/v1/collections?budget=` | workspace | `{ collections[] }` with `itemCount` at the budget (the band when none). The company's own first, then the platform's; archived ones are left out |
 | GET | `/v1/collections/:id/items?budget=` | workspace | `{ items[] }`, narrowed to the variants that fit. Catalog routes answer `503 catalog_unavailable` when commercetools can't be reached |
+| POST | `/v1/collections` | workspace | A company collection, shared with every member: body `{ name, budgetBandCents (500 to 50,000), rules: { tags[], brands[], skus[] } }` with at least one rule. Returns the collection. A name the company already uses (any case): `409 collection_name_taken` |
+| PUT | `/v1/collections/:id` | workspace | Replaces a company collection's name, band and rules (same body). Gifts not yet redeemed see the change. Platform, archived and other companies' collections: `404` |
+| POST | `/v1/collections/:id/archive` | workspace | `{ archived: true }`. Hidden from lists and new campaigns (`422 collection_archived`); gifts already sent still resolve it. Again: no change. Platform and other companies' collections: `404` |
 | GET | `/v1/recipients?q=` | workspace | `{ recipients[], more }`: the company directory by name, up to 500 (`DIRECTORY_PAGE`). `q` matches names and emails in the database, so it finds anyone; `more` says there are people past this page |
 | POST | `/v1/recipients/import` | workspace | A list from a file: body `{ rows[] }` of `email`, `firstName?`, `lastName?` (1 to 500). Everyone joins the company directory, matched by email (an existing person keeps their record). Returns `{ recipients[] (file order), added, existing }`. Any invalid row (including a name with an unreadable character, U+FFFD): `400 invalid_request`, nothing written. One bulk write: a retry finishes a half-saved list and adds nobody twice |
 | POST | `/v1/campaigns/estimate` | workspace | Estimate for an unsaved send: gifts, hold, total, available, after, `needsApproval`, `short` |
@@ -121,7 +124,7 @@ The request log records the route pattern, never the URL.
 | GET, POST | `/v1/teams/:teamKey/members` | owner, admin | accounts | M1 |
 | POST | `/v1/teams/:teamKey/top-ups` | owner, admin | ledger | M1 |
 | POST | `/v1/webhooks/stripe` | Stripe (signed) | integrations | M1 |
-| POST | `/v1/collections` (company collections), `?country=` on items | sender+, ops | catalog | M2 |
+| — | `?country=` on collection items | sender+, ops | catalog | M2 |
 | GET | `/v1/campaigns/:id/links.csv` (would need links re-issued: only hashes are stored) | sender+ | channels | M3 |
 | POST | `/v1/gifts/:id/extend` | sender+ | gifts | M3 |
 | GET | `/v1/vendor/orders` | vendor | fulfillment | M4 |

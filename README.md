@@ -93,7 +93,7 @@ true values while the recipient pays nothing.
 | Accounts: register with email verification and sign in, on commercetools customer accounts (B2C) | ✅ Built (M1): real email over SMTP (SendGrid); commerce connectors (commercetools, memory) |
 | Sender dashboard: Home, Browse gifts, Campaigns, send flow, approvals (ahead of M1 to M3, on seed data) | ✅ Built, see the [plan](docs/plans/sender-dashboard.md) |
 | Accounts, teams and the ledger | Planned (M1) |
-| Catalog and budget collections | Planned (M2) |
+| Catalog and budget collections | Built (M2): live commercetools catalog, platform and company collections |
 | Campaigns, approvals, holds, email, links, QR | Planned (M3) |
 | Gift email, recipient page, redemption into a commercetools order, resend, cancel | ✅ Built (M4) |
 | Vendor routing and tracking | Planned (M4) |

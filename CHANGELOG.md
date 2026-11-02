@@ -5,6 +5,14 @@ change was built, see the [build log](docs/engineering/build-log.md).
 
 ## Unreleased
 
+### Build your own collection
+- A new Collections page lists your company's collections and the
+  ready-made ones. Build a collection by picking products, whole brands or
+  tags, with a preview of what fits the budget; everyone in your company can
+  send it. Edit or archive it later; gifts already sent still work.
+- "Let them choose" is back in the send flow: recipients pick one gift from
+  a collection, up to your budget. Home shows your collections again.
+
 ### Upload a recipient list
 - In a new campaign, senders can upload a CSV of email, first name and
   last name. The preview shows who is ready and which lines are skipped
