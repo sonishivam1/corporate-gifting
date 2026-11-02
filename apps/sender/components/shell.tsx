@@ -9,7 +9,7 @@ import { NativeSelect, NativeSelectOption } from "@gifting/ui/components/native-
 import { SidebarShell, type SidebarNavItem } from "@gifting/ui/components/sidebar-shell";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@gifting/ui/components/tooltip";
 import { UserMenu } from "@gifting/ui/components/user-menu";
-import { BellIcon, Building2Icon, ChartColumnIcon, GridIcon, HouseIcon, LayersIcon, PlusIcon, RepeatIcon, SearchIcon, SendIcon, WalletIcon } from "lucide-react";
+import { BellIcon, Building2Icon, ChartColumnIcon, GridIcon, HouseIcon, LayersIcon, PlusIcon, RepeatIcon, SearchIcon, WalletIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type ReactNode, useTransition } from "react";
@@ -20,10 +20,9 @@ import { money } from "@/lib/format";
 /** The prototype's menu, in its order. Pages not built yet show "Soon". */
 const NAV: SidebarNavItem[] = [
   { href: "/", label: "Home", icon: HouseIcon, exact: true },
-  { href: "/campaigns/new", label: "Send gifts", icon: SendIcon },
   { href: "/browse", label: "Browse gifts", icon: GridIcon },
-  { href: "/collections", label: "Collections", icon: LayersIcon, soon: true },
-  { href: "/campaigns", label: "Campaigns", icon: ChartColumnIcon, excludes: ["/campaigns/new"] },
+  { href: "/collections", label: "Collections", icon: LayersIcon },
+  { href: "/campaigns", label: "Campaigns", icon: ChartColumnIcon },
   { href: "/automations", label: "Automations", icon: RepeatIcon, soon: true },
   { href: "/budgets", label: "Budgets", icon: WalletIcon, soon: true },
 ];

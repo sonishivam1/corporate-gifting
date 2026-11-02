@@ -78,6 +78,12 @@ export const giftCollection = z.object({
   }),
   countries: z.array(z.string().length(2)).min(1),
   budgetBandCents: centsField,
+  // Company collections (build-your-own-collection.md): who built and last
+  // changed it, and when it was archived. Archived collections are hidden
+  // from lists and new campaigns, but gifts already sent still read them.
+  createdBy: z.string().nullable().optional(),
+  updatedBy: z.string().nullable().optional(),
+  archivedAt: z.date().nullable().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });

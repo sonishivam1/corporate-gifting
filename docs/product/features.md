@@ -20,7 +20,7 @@ Twenty capabilities across ten modules. Sixteen are in the POC.
 | 6 | Monthly statement | Billing | sender | Yes | M6 | Planned |
 | 7 | Multi-brand catalog with vendors | Catalog (commercetools) | ops | Yes, 3 to 5 seeded vendors | M0, M2 | Partly built: the API reads the commercetools catalog (5 vendors, variants, photos) |
 | 8 | Budget collections (pick anything up to $X) | Collections | sender, recipient | Yes | M2 | Partly built: platform collections resolved by commercetools product search |
-| 9 | Build-your-own collection (tags, brands, pinned items) | Collections | sender | Yes | M2 | Planned |
+| 9 | Build-your-own collection (tags, brands, picked items) | Collections | sender | Yes | M2 | Built: shared with the whole company, saved for reuse, archived not deleted ([plan](../plans/build-your-own-collection.md)) |
 | 10 | One-time, scheduled and automated campaigns | Campaigns + Automation | sender | Yes | M3, M5 | Partly built: one-time and scheduled (no send worker yet) |
 | 11 | HR-system sync for birthdays and anniversaries | Integrations | sender | Yes: CSV plus one HR system | M5 | Planned |
 | 12 | Email, SMS, Slack, Teams, links, QR codes | Channels | sender | Yes | M3, M5 | Partly built: channels chosen and recorded; links and QR codes work; nothing is delivered yet |
@@ -68,6 +68,13 @@ commercetools product search to items within budget, in stock at the vendor
 channel, from active vendors. Results are cached per collection, country and
 budget for about an hour, and re-checked live at claim. Platform collections
 are curated by ops; companies build their own.
+
+Built ([plan](../plans/build-your-own-collection.md)): any member of a
+company builds a collection on the sender app's Collections page from picked
+products, whole brands and tags, with a live preview of what fits its
+budget. It is shared with the whole company and reused in any campaign. It
+can be edited (gifts not yet chosen see the change) and archived, never
+deleted, so gifts already sent can still be redeemed.
 
 ### Campaigns, approvals and automation — Planned (M3, M5)
 One-time, scheduled and automated campaigns. The sender sets the collection

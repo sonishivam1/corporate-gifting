@@ -1,4 +1,4 @@
-import { collectionView, productQuery, productView } from "@gifting/domain";
+import { collectionInput, collectionView, productQuery, productView } from "@gifting/domain";
 import { z } from "zod";
 
 import { defineRoute } from "../../http/route";
@@ -6,6 +6,7 @@ import { requireSession } from "../../http/session";
 import type { CatalogService } from "./service";
 
 const budget = z.object({ budget: z.coerce.number().int().positive().optional() });
+const byId = z.object({ id: z.string().min(1) });
 
 export function catalogRoutes(catalog: CatalogService) {
   return [
@@ -37,6 +38,32 @@ export function catalogRoutes(catalog: CatalogService) {
       handler: async ({ params, query, request }) => {
         const session = requireSession(request);
         return { items: await catalog.collectionItems(session.companyKey, params.id, query.budget) };
+      },
+    }),
+    // Company collections (plan: build-your-own-collection.md). Any member may
+    // build, edit or archive one; platform collections can't be changed.
+    defineRoute({
+      method: "POST",
+      url: "/v1/collections",
+      auth: "workspace",
+      schema: { body: collectionInput, response: collectionView },
+      handler: async ({ body, request }) => catalog.createCollection(requireSession(request), body),
+    }),
+    defineRoute({
+      method: "PUT",
+      url: "/v1/collections/:id",
+      auth: "workspace",
+      schema: { params: byId, body: collectionInput, response: collectionView },
+      handler: async ({ params, body, request }) => catalog.updateCollection(requireSession(request), params.id, body),
+    }),
+    defineRoute({
+      method: "POST",
+      url: "/v1/collections/:id/archive",
+      auth: "workspace",
+      schema: { params: byId, response: z.object({ archived: z.literal(true) }) },
+      handler: async ({ params, request }) => {
+        await catalog.archiveCollection(requireSession(request), params.id);
+        return { archived: true as const };
       },
     }),
   ];

@@ -153,12 +153,12 @@ export default async function Home({ searchParams }: PageProps<"/">) {
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5" aria-label="Quick actions">
         <Action href="/campaigns/new" icon={SendIcon} title="Send a gift" text="Pick a gift, write a note, choose how it arrives." lead />
         <Action href="/browse" icon={GridIcon} title="Browse gifts" text={`${plural(products.length, "gift")} from ${plural(brands, "brand")}.`} />
-        <Action icon={LayersIcon} title="Build a collection" text="Let people pick anything up to a budget." />
+        <Action href="/collections/new" icon={LayersIcon} title="Build a collection" text="Let people pick anything up to a budget." />
         <Action icon={RepeatIcon} title="Automate moments" text="Birthdays, anniversaries and first days." />
         <Action icon={WalletIcon} title="Top up budget" text="By card or invoice, straight into this team." />
       </section>
 
-      {/* Collections lead into "Let them choose", hidden for now. */}
+      {/* Collections lead into "Let them choose" (LET_THEM_CHOOSE). */}
       {LET_THEM_CHOOSE ? (
         <section className="grid gap-3">
           <h2 className="text-lg font-semibold">Your collections</h2>
