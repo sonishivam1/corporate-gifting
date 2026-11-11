@@ -2,7 +2,7 @@ import { type Action, can, companiesOf, type MemberRole, type Membership, reacha
 import type { FastifyInstance, FastifyRequest } from "fastify";
 
 import type { AppDeps } from "../deps";
-import type { OrgDirectory } from "../modules/accounts/org";
+import { DEV_COMPANY_KEY, type OrgDirectory } from "../modules/accounts/org";
 import { ApiError } from "./errors";
 import { bearerToken } from "./route";
 
@@ -50,12 +50,18 @@ async function devPerson(org: OrgDirectory, id: string): Promise<Person | null> 
   return { id, name: member?.name ?? id, memberships };
 }
 
+async function firstMember(org: OrgDirectory, companyKey: string): Promise<Person | null> {
+  const [member] = await org.members(companyKey);
+  return member ? devPerson(org, member.id) : null;
+}
+
 /**
  * The person behind a member route:
  * - the signed-in account (the API's access token), with their memberships;
  * - in development (DEV_AUTH=1), the "Viewing as" person in `x-dev-user`
  *   first, then the signed-in account if they belong somewhere, then the
- *   demo company's default member.
+ *   demo sender (built-in demo data) or the demo company's first member (a
+ *   platform's directory, where the demo ids don't exist).
  */
 async function person(request: FastifyRequest, deps: AppDeps): Promise<Person> {
   const accounts = request.server.accounts;
@@ -77,7 +83,8 @@ async function person(request: FastifyRequest, deps: AppDeps): Promise<Person> {
         if (memberships.length > 0) return { id: account.id, name: accountName(account), memberships };
       }
     }
-    const fallback = await devPerson(org, DEV_DEFAULT_USER);
+    // The demo sender in the built-in demo data; on a platform's directory, the demo company's first member.
+    const fallback = (await devPerson(org, DEV_DEFAULT_USER)) ?? (await firstMember(org, DEV_COMPANY_KEY));
     if (fallback) return fallback;
     throw new ApiError(403, "no_membership", "No member to view the dashboard as.");
   }

@@ -17,6 +17,9 @@ import { isCompanyRole, MEMBER_ROLES, type MemberRole, type Membership } from "@
 
 const PAGE = 500;
 
+/** commercetools customer ids are UUIDs; anything else can't be one (for example a development id). */
+export const isCustomerId = (id: string): boolean => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
 const isRole = (key: string): key is MemberRole => (MEMBER_ROLES as readonly string[]).includes(key);
 
 /** The memberships one associate's role assignments give on one unit. */
@@ -92,6 +95,8 @@ export function createCtOrganizations(api: CtApi): OrganizationsConnector {
 
   return {
     async membershipsOf(customerId) {
+      // commercetools refuses a predicate on a customer id that isn't a UUID (400), and no customer has one.
+      if (!isCustomerId(customerId)) return [];
       const { body } = await api
         .businessUnits()
         .get({ queryArgs: { where: "associates(customer(id = :id))", "var.id": customerId, limit: PAGE } })

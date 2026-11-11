@@ -1,7 +1,9 @@
 import type { BusinessUnit } from "@commercetools/platform-sdk";
 import { describe, expect, it } from "vitest";
 
-import { teamName, toOrgMembers, toOrgTeam, unitMemberships } from "./organizations";
+import type { CtApi } from "@gifting/ct";
+
+import { createCtOrganizations, isCustomerId, teamName, toOrgMembers, toOrgTeam, unitMemberships } from "./organizations";
 
 // Fictional units: just the fields the mapping reads.
 const associate = (id: string, roles: string[], customer?: { firstName?: string; lastName?: string; email: string }) => ({
@@ -57,5 +59,15 @@ describe("commercetools organizations mapping", () => {
       { id: "c-2", name: "ben@a.example", memberships: [{ companyKey: "company-a", role: "admin" }, { companyKey: "company-a", teamKey: "team-a1", role: "sender" }] },
       { id: "c-3", name: "Cy", memberships: [{ companyKey: "company-a", teamKey: "team-a1", role: "approver" }] },
     ]);
+  });
+});
+
+describe("commercetools organizations reads", () => {
+  it("answers an id that can't be a customer's with no memberships, without asking commercetools", async () => {
+    // commercetools answers 400 for a predicate on a customer id that isn't a UUID.
+    const api = { businessUnits: () => { throw new Error("should not be called"); } } as unknown as CtApi;
+    expect(await createCtOrganizations(api).membershipsOf("user-maya")).toEqual([]);
+    expect(isCustomerId("user-maya")).toBe(false);
+    expect(isCustomerId("2b6c1d6e-6a7b-4c39-9f0e-3d1c2b4a5e6f")).toBe(true);
   });
 });

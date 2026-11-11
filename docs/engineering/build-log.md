@@ -53,6 +53,19 @@ how it was verified, and any lesson worth keeping.
   team role (and "not found" from another team), self-approval, an approver
   refused sending, a sender and an admin refused approving, and an approver
   refused editing a collection.
+- **Fix (same day):** on `pnpm dev:all` with commercetools, the dashboard
+  said "The request could not be read". The development fallback asked
+  commercetools for `user-maya`'s memberships, and commercetools refuses a
+  predicate on a non-UUID customer id (`400 InvalidInput`). The connector
+  now answers such ids with no memberships, and development falls back to
+  the demo company's first member in the directory in use.
+- **Fix (same day):** switching to a second company (Harbor & Finch) showed
+  "This page couldn't load". Its teams exist in commercetools but have no
+  budget account in MongoDB (`seed:demo` funds only the demo company), and
+  reading the balance answered `404 account_not_found`. A team with no
+  account now reads as an empty ledger; holds and captures still need one,
+  so a send there is refused with `409 insufficient_funds`. New integration
+  test: `unfunded-team.test.ts`.
 - **Lesson:** keep the platform's job to "who belongs where". commercetools'
   associate role permissions are about carts and quotes, and Shopify's B2B
   has two fixed roles, so what a role may do has to be ours.

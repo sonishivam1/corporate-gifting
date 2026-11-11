@@ -120,8 +120,20 @@ All ten pieces, as planned. Differences and details:
   `401`), then organizations (`503 organizations_not_configured`), then
   membership (`403 no_membership`), then the action (`403 forbidden`).
 - **Development:** `x-dev-user` first, then the signed-in person if they
-  belong somewhere, then the demo company's default member (`user-maya`).
+  belong somewhere, then the demo sender (`user-maya`) in the built-in demo
+  data, or, on commercetools, the first member of the demo company
+  (`company-lumen-labs`, its owner), since the demo ids don't exist there.
   An unknown `x-dev-user` falls back the same way instead of `401`.
+- **Unfunded teams:** with real organizations, a person can reach a team
+  that has no budget account (another company, or one made with
+  `member:add --company-name`). Its balance reads as zero instead of
+  `404 account_not_found`, so the dashboard loads; sends are refused for
+  lack of funds until M1 creates and funds accounts.
+- **commercetools ids:** commercetools answers `400 InvalidInput` for a
+  predicate on a customer id that isn't a UUID, so `membershipsOf` answers
+  an id like `user-maya` with no memberships without asking. Found on the
+  first `pnpm dev:all` run after the change: the dashboard showed "The
+  request could not be read".
 - **Directory:** `orgDirectory()` wraps the connector with a minute's cache
   per call (failures aren't cached) and adds `team`, `member` and
   `approvers`. The demo company (`seedOrg`) is a small in-memory

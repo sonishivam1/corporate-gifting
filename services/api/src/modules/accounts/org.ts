@@ -82,6 +82,9 @@ export function orgDirectory(orgs: OrganizationsConnector, options: Partial<Cach
   };
 }
 
+/** The company the dashboard falls back to in development: the demo company, in whichever directory is in use. */
+export const DEV_COMPANY_KEY = demoCompany.key;
+
 const demoMembers = demoCompany.members.map((m) => ({
   id: m.id,
   name: m.name,

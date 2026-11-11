@@ -9,7 +9,8 @@ import type { AppDeps } from "../../deps";
 import { ApiError } from "../../http/errors";
 
 export type TeamBalance = {
-  accountId: string;
+  /** Null when the team has no budget account yet. */
+  accountId: string | null;
   currency: Currency;
   availableCents: number;
   heldCents: Cents;
@@ -55,7 +56,17 @@ export function createLedgerService(deps: AppDeps) {
   }
 
   return {
-    balance: async (teamKey: string, session?: ClientSession) => balanceOf(await account(teamKey, session), session),
+    /**
+     * A team with no budget account yet (a team that exists in the commerce
+     * platform but was never funded) reads as an empty ledger: nothing
+     * available, so a send is refused for lack of funds. Holds and captures
+     * still need the account.
+     */
+    async balance(teamKey: string, session?: ClientSession): Promise<TeamBalance> {
+      const acct = await c().accounts.findOne({ teamKey }, { session });
+      if (!acct) return { accountId: null, currency: "USD", availableCents: 0, heldCents: 0, spentCents: 0 };
+      return balanceOf(acct, session);
+    },
 
     /**
      * Places one hold per gift, inside the caller's transaction. Touching the

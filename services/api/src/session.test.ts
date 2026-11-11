@@ -81,6 +81,21 @@ describe("development sign-in", () => {
     }
   });
 
+  it("falls back to the demo company's first member in a platform's directory, where the demo ids don't exist", async () => {
+    const deps = defaultDeps({ DEV_AUTH: "1" });
+    deps.org = orgDirectory(
+      memoryOrganizations({
+        companies: [{ key: "company-lumen-labs", name: "Lumen Labs", teams: [{ key: "team-lumen-people", name: "People", approvalThresholdCents: 0 }] }],
+        members: [{ id: "c-owner", name: "Lena Ortiz", memberships: [{ companyKey: "company-lumen-labs", role: "owner" }] }],
+      }),
+      { ttlMs: 0 },
+    );
+    const platform = await buildApp({ deps });
+    const res = await platform.inject({ method: "GET", url: "/v1/workspace", headers: asUser("user-maya") });
+    await platform.close();
+    expect(res.json()).toMatchObject({ user: { id: "c-owner", role: "owner" }, team: { key: "team-lumen-people" } });
+  });
+
   it("ignores a company the person doesn't belong to", async () => {
     const res = await app.inject({ method: "GET", url: "/v1/workspace", headers: { ...asUser("user-maya"), "x-gifting-company": "company-orbit-studio" } });
     expect(res.json().company.key).toBe("company-lumen-labs");
