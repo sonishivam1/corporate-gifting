@@ -9,9 +9,9 @@ import {
   estimateSend,
   hasShareableLinks,
 } from "./campaign-rules";
-import { categoryFromTags, defaultVariant, findVariant, occasionsFromTags, variantName, withVariants } from "./catalog";
+import { categoryFromTags, checkBundle, defaultVariant, findVariant, occasionsFromTags, variantName, withVariants } from "./catalog";
 import { COLLECTION_LIMITS, collectionInput, collectionItems, matchesRules, rulesFromInput } from "./collections";
-import type { ProductView } from "./views";
+import { BUNDLE_LIMITS, type ProductView, sendInput } from "./views";
 
 describe("estimateSend", () => {
   const base = { gifts: 10, holdCents: 5000, availableCents: 100_000, approvalThresholdCents: 100_000 };
@@ -183,6 +183,33 @@ describe("variants", () => {
     expect(variantName(found!.product, found!.variant)).toBe("Tin T-12 (36 pieces)");
     expect(variantName({ name: "Mug" }, { label: "" })).toBe("Mug");
     expect(findVariant([tin], "nope")).toBeNull();
+  });
+});
+
+describe("bundles", () => {
+  const tin = product({ sku: "T-12", brand: "North", tags: ["food"], priceCents: 2800 }, [{ sku: "T-24", label: "24 pieces", priceCents: 4500, available: true, imageUrl: null }]);
+  const mug = product({ sku: "M-1", brand: "Clay", tags: ["home"], priceCents: 1800 });
+  const tea = product({ sku: "TEA-1", brand: "Leaf", tags: ["drink"], priceCents: 1200, available: false });
+  const item = (products: ProductView[], sku: string) => findVariant(products, sku)!;
+  const all = [tin, mug, tea];
+  const gift = (skus: string[]) => sendInput.shape.gift.safeParse({ kind: "bundle", skus });
+
+  it("costs the sum of its items", () => {
+    expect(checkBundle([item(all, "T-24"), item(all, "M-1")])).toEqual({ ok: true, totalCents: 6300 });
+  });
+
+  it("refuses two options of one product, and an item out of stock", () => {
+    expect(checkBundle([item(all, "T-12"), item(all, "T-24")])).toEqual({ ok: false, problem: "same_product" });
+    expect(checkBundle([item(all, "M-1"), item(all, "TEA-1")])).toEqual({ ok: false, problem: "unavailable" });
+  });
+
+  it("takes 2 to 5 different SKUs", () => {
+    expect(gift(["A", "B"]).success).toBe(true);
+    expect(gift(["A", "B", "C", "D", "E"]).success).toBe(true);
+    expect(gift(["A"]).success).toBe(false);
+    expect(gift(["A", "B", "C", "D", "E", "F"]).success).toBe(false);
+    expect(gift(["A", "A"]).success).toBe(false);
+    expect(BUNDLE_LIMITS).toEqual({ min: 2, max: 5 });
   });
 });
 

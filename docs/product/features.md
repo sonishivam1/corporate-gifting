@@ -78,7 +78,8 @@ deleted, so gifts already sent can still be redeemed.
 
 ### Campaigns, approvals and automation — Planned (M3, M5)
 One-time, scheduled and automated campaigns. The sender sets the collection
-(or a single SKU), budget per gift, recipients (directory, CSV or a rule),
+(or a single SKU, or a bundle of 2 to 5 SKUs that every recipient gets, priced
+at their sum: [plan](../plans/gift-bundles.md)), budget per gift, recipients (directory, CSV or a rule),
 channels, message, branding and expiry. The API estimates the cost; above the
 team threshold an approver must approve. On approval one hold per gift is
 placed, and the campaign fails fast if funds are short. Automated campaigns
@@ -108,7 +109,10 @@ The unwrap page shows the greeting in the company's colours and logo. The
 recipient browses the collection with no prices, chooses a variant and enters
 an address. The API locks the gift, builds a commercetools cart, checks the
 total fits the hold, adds a company-balance payment and creates order
-`GFT-<giftId>`. Out of stock returns the recipient to choose again. The flow
+`GFT-<giftId>`. Out of stock returns the recipient to choose again. A bundle
+shows every item with nothing to choose; one address orders them all in that
+one order, a line per item on its vendor's channel. If any item is out of
+stock nothing is ordered and the recipient is asked to come back later. The flow
 is in [key flows](../architecture/flows.md#redemption).
 
 ### Vendor fulfilment — Planned (M4)

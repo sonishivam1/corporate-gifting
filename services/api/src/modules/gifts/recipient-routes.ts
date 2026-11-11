@@ -18,7 +18,11 @@ const linkView = z.discriminatedUnion("state", [
   z.object({ state: z.literal("open"), from: z.string(), headline: z.string(), message: z.string(), expiresOn: z.string(), cover: z.string(), occasion: z.string(), brandColor: z.string().nullable() }),
 ]);
 
-const itemsView = z.discriminatedUnion("state", [z.object({ state: problem }), z.object({ state: z.literal("open"), items: z.array(item) })]);
+const itemsView = z.discriminatedUnion("state", [
+  z.object({ state: problem }),
+  // bundle: every item ships, there is nothing to choose. allInStock: whether the bundle can be claimed now.
+  z.object({ state: z.literal("open"), items: z.array(item), bundle: z.boolean(), allInStock: z.boolean() }),
+]);
 const itemView = z.discriminatedUnion("state", [z.object({ state: z.enum(["invalid", "used", "expired", "unavailable"]) }), z.object({ state: z.literal("open"), item })]);
 const orderView = z.discriminatedUnion("state", [
   z.object({ state: z.enum(["invalid", "pending"]) }),
@@ -30,6 +34,7 @@ const FAILURES = {
   used: [409, "gift_used", "This gift has already been chosen."],
   expired: [410, "gift_expired", "This gift has expired."],
   "item-unavailable": [409, "item_unavailable", "That gift can't be sent right now. Please choose another."],
+  "bundle-unavailable": [409, "bundle_unavailable", "One of your gifts is out of stock right now. Please try again later."],
   "try-again": [503, "try_again", "We couldn't finish that. Please try again in a moment."],
 } as const;
 
@@ -54,10 +59,11 @@ export function recipientRoutes(redeem: RedeemService) {
       method: "POST", auth: "public",
       url: "/v1/r/:token/redeem",
       rateLimit: REDEEM_LIMIT,
-      schema: { params: z.object({ token }), body: z.object({ sku, address }), response: z.object({ orderNumber: z.string(), sku: z.string() }) },
+      // A bundle needs no sku: every item is ordered. Choosing from several needs one.
+      schema: { params: z.object({ token }), body: z.object({ sku: sku.optional(), address }), response: z.object({ orderNumber: z.string(), sku: z.string(), skus: z.array(z.string()) }) },
       handler: async ({ params, body, reply }) => {
         const result = await redeem.redeem({ token: params.token, sku: body.sku, address: body.address });
-        if (result.ok) return { orderNumber: result.orderNumber, sku: result.sku };
+        if (result.ok) return { orderNumber: result.orderNumber, sku: result.sku, skus: result.skus };
         const [status, code, message] = FAILURES[result.reason];
         if (result.reason === "try-again") void reply.header("Retry-After", "5");
         throw new ApiError(status, code, message);

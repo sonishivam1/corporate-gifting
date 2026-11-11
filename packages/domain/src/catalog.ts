@@ -68,6 +68,19 @@ export function findVariant(products: readonly ProductView[], sku: string): { pr
   return null;
 }
 
+export type BundleCheck = { ok: true; totalCents: number } | { ok: false; problem: "same_product" | "unavailable" };
+
+/**
+ * A bundle's items, as found in the catalog (plan: gift-bundles.md). Each must
+ * be in stock and from a different product: two options of one tin would read
+ * as a mistake on the recipient's page. A bundle costs the sum of its items.
+ */
+export function checkBundle(items: readonly { product: Pick<ProductView, "key">; variant: Pick<VariantView, "priceCents" | "available"> }[]): BundleCheck {
+  if (new Set(items.map((i) => i.product.key)).size !== items.length) return { ok: false, problem: "same_product" };
+  if (items.some((i) => !i.variant.available)) return { ok: false, problem: "unavailable" };
+  return { ok: true, totalCents: items.reduce((sum, i) => sum + i.variant.priceCents, 0) };
+}
+
 /** "Classic Cookie Tin (24 pieces · Red tin)", or just the name for a single-variant product. */
 export function variantName(product: Pick<ProductView, "name">, variant: Pick<VariantView, "label">): string {
   return variant.label ? `${product.name} (${variant.label})` : product.name;

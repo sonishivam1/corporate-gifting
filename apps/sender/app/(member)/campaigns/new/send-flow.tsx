@@ -84,11 +84,14 @@ export function SendFlow({ me, balance, collections, products, recipients, start
     };
   }, [step, inputKey, input]);
 
-  const picked = draft.sku ? findVariant(products, draft.sku) : null;
+  const picked = draft.skus.flatMap((sku) => {
+    const found = findVariant(products, sku);
+    return found ? [variantName(found.product, found.variant)] : [];
+  });
   const giftLabel =
     draft.mode === "single"
-      ? picked
-        ? variantName(picked.product, picked.variant)
+      ? picked.length
+        ? picked.join(" + ")
         : "No gift picked"
       : `${collections.find((c) => c.id === draft.collectionId)?.name ?? "Collection"}, up to ${money(draft.budgetCents)}`;
 

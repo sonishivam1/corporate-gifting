@@ -55,7 +55,7 @@ Every route declares who may call it, in `defineRoute({ auth })`
 | POST | `/v1/recipients/import` | workspace | A list from a file: body `{ rows[] }` of `email`, `firstName?`, `lastName?` (1 to 500). Everyone joins the company directory, matched by email (an existing person keeps their record). Returns `{ recipients[] (file order), added, existing }`. Any invalid row (including a name with an unreadable character, U+FFFD): `400 invalid_request`, nothing written. One bulk write: a retry finishes a half-saved list and adds nobody twice |
 | POST | `/v1/campaigns/estimate` | workspace | Estimate for an unsaved send: gifts, hold, total, available, after, `needsApproval`, `short` |
 | GET | `/v1/campaigns?status=all\|active\|scheduled\|pending_approval` | workspace | `{ campaigns[], funnel, counts }` (drafts are not listed) |
-| POST | `/v1/campaigns` | workspace | `201 { id }`: a draft. Optional `Idempotency-Key` (UUID) becomes the id |
+| POST | `/v1/campaigns` | workspace | `201 { id }`: a draft. Optional `Idempotency-Key` (UUID) becomes the id. `gift` is `{ kind: "single", sku }`, `{ kind: "collection", collectionId, budgetCents }` or `{ kind: "bundle", skus }` (2 to 5 different products; every recipient gets every item; the budget is the sum of their live prices). A bundle with two options of one product: `422 bundle_same_product`; an unknown or sold-out item: `422 item_not_eligible`. Campaign rows carry `gift.kind` `bundle` and `gift.skus` |
 | GET | `/v1/campaigns/:id` | workspace | Detail, with `canDecide` for the viewer |
 | POST | `/v1/campaigns/:id/estimate` | workspace | Estimate for a saved campaign |
 | POST | `/v1/campaigns/:id/submit` | workspace | `{ campaignId, outcome, gifts, totalCents, links[] }` (see below) |
@@ -110,8 +110,8 @@ The request log records the route pattern, never the URL.
 | Method | Path | Who | Notes |
 | --- | --- | --- | --- |
 | GET | `/v1/r/:token` | link | Greeting; always 200 with `state` open, used, expired or invalid; first open marks the gift opened |
-| GET | `/v1/r/:token/items`, `/items/:sku` | link | What this gift may choose from; no prices |
-| POST | `/v1/r/:token/redeem` | link | `{ sku, address }` makes one order; `409 gift_used`, `409 item_unavailable`, `410 gift_expired`, `503 try_again` |
+| GET | `/v1/r/:token/items`, `/items/:sku` | link | What this gift may choose from, or a bundle's items; no prices. `{ items[], bundle, allInStock }`: a bundle can be claimed only when `allInStock` |
+| POST | `/v1/r/:token/redeem` | link | `{ sku, address }` makes one order; a bundle takes `{ address }` (any `sku` is ignored) and orders every item in that one order. Returns `{ orderNumber, sku, skus }`. `409 gift_used`, `409 item_unavailable`, `409 bundle_unavailable` (an item sold out: nothing ordered, try again later), `410 gift_expired`, `503 try_again` |
 | GET | `/v1/r/:token/order` | link | Order number and status |
 | POST | `/v1/gifts/:id/resend` | sender+ | New link by email; the old link stops working |
 | POST | `/v1/gifts/:id/cancel` | sender+ | Gift cancelled and its hold released |

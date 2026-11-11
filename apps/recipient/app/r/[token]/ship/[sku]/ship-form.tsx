@@ -13,6 +13,8 @@ const STATES = "AL AK AZ AR CA CO CT DE FL GA HI ID IL IN IA KS KY LA ME MD MA M
 
 type Copy = {
   yourGift: string;
+  // A bundle's notice when an item sold out between opening and confirming.
+  soldOut?: string;
   title: string;
   name: string;
   line1: string;
@@ -34,8 +36,8 @@ type Copy = {
 
 const EMPTY: ShipInput = { name: "", line1: "", line2: "", city: "", region: "", postalCode: "" };
 
-/** The shipping address, and the one button that claims the gift. The server checks everything again. */
-export function ShipForm({ token, sku, itemName, copy }: { token: string; sku: string; itemName: string; copy: Copy }) {
+/** The shipping address, and the one button that claims the gift, or a bundle (`sku` null). The server checks everything again. */
+export function ShipForm({ token, sku, itemName, copy }: { token: string; sku: string | null; itemName: string; copy: Copy }) {
   const router = useRouter();
   const [form, setForm] = useState<ShipInput>(EMPTY);
   const [errors, setErrors] = useState<Partial<Record<keyof ShipInput, string>>>({});
@@ -60,7 +62,8 @@ export function ShipForm({ token, sku, itemName, copy }: { token: string; sku: s
         return;
       }
       setErrors({});
-      if (result.code === "item_unavailable") router.replace(`/r/${token}/gifts/${encodeURIComponent(sku)}`);
+      if (result.code === "item_unavailable" && sku) router.replace(`/r/${token}/gifts/${encodeURIComponent(sku)}`);
+      else if (result.code === "bundle_unavailable") setProblem(copy.soldOut ?? copy.tryAgain);
       else setProblem(result.code === "gift_used" ? copy.used : result.code === "unreachable" ? copy.unavailable : copy.tryAgain);
     });
   }

@@ -81,6 +81,8 @@ export const typeDrafts: TypeDraft[] = [
       stringField("companyKey", "Company key", true),
       stringField("teamKey", "Team key", true),
       stringField("vendorKey", "Vendor key", true),
+      // A bundle's vendors, one per line item's supply channel (plan: gift-bundles.md).
+      stringSetField("vendorKeys", "Vendor keys"),
     ],
   },
   {

@@ -41,7 +41,7 @@ describe("commercetools drafts", () => {
   it("give gift orders the fields the platform routes by", () => {
     const giftOrder = typeDrafts.find((t) => t.key === "gift-order");
     expect(giftOrder?.resourceTypeIds).toEqual(["order"]);
-    expect(giftOrder?.fieldDefinitions?.map((f) => f.name)).toEqual(["giftId", "campaignId", "companyKey", "teamKey", "vendorKey"]);
+    expect(giftOrder?.fieldDefinitions?.map((f) => f.name)).toEqual(["giftId", "campaignId", "companyKey", "teamKey", "vendorKey", "vendorKeys"]);
   });
 
   it("only set vendor fields that the vendor type defines", () => {

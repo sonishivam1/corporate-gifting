@@ -41,10 +41,22 @@ function placed(order: Order): PlacedOrder {
 }
 
 /**
+ * The gift-order fields. `vendorKey` is the first item's vendor (the field is
+ * required). `vendorKeys` lists every vendor and is written only for bundles, so
+ * single-gift orders work on a project whose type predates the field.
+ */
+function orderFields(input: PlaceOrderInput, vendorKey: string, vendorKeys: readonly string[]) {
+  const base = { giftId: input.giftId, campaignId: input.campaignId, companyKey: input.companyKey, teamKey: input.teamKey, vendorKey };
+  return input.items.length > 1 ? { ...base, vendorKeys } : base;
+}
+
+/**
  * Creates the redemption order in commercetools (ADR 0005):
- *   1. stock is checked at the vendor's supply channel;
- *   2. a cart in the gifting store with one line item, shipped to the recipient,
- *      reserving stock on order (commercetools works out shipping and tax);
+ *   1. stock is checked for every item at its vendor's supply channel; one sold-out
+ *      item stops the whole order, so a bundle never ships short;
+ *   2. a cart in the gifting store with one line per item, each on its vendor's
+ *      channel, shipped to the recipient, reserving stock on order (commercetools
+ *      works out shipping and tax);
  *   3. the total must fit the gift's hold, or the item is refused;
  *   4. a `company-balance` Payment with a successful Charge, so the order is paid and
  *      the recipient sees no payment step. Its interaction id is the ledger capture key;
@@ -73,18 +85,23 @@ export function createCtOrderPlacer(api: CtApi, options: CtOrderOptions): OrderP
 
     async place(input: PlaceOrderInput): Promise<PlacedOrder> {
       if (!allowWrites) throw new OrderError("not_supported", "Order creation is off for this commercetools project (name it in CTP_SETUP_PROJECT_KEY if it is a POC project).");
-      if (!SAFE_KEY.test(input.sku) || !SAFE_KEY.test(input.vendorKey)) throw new OrderError("not_supported", "The item or vendor key is not valid.");
+      const first = input.items[0];
+      if (!first) throw new OrderError("not_supported", "The order has no items.");
+      if (input.items.some((i) => !SAFE_KEY.test(i.sku) || !SAFE_KEY.test(i.vendorKey))) throw new OrderError("not_supported", "An item or vendor key is not valid.");
 
       const existing = await findOrder(input.orderNumber);
       if (existing) return placed(existing);
 
       try {
-        // 1. Stock, at this vendor's supply channel.
-        const channel = (await api.channels().withKey({ key: input.vendorKey }).get().execute()).body;
-        const stock = await api.inventory().get({ queryArgs: { where: `sku="${input.sku}" and supplyChannel(id="${channel.id}")`, limit: 1 } }).execute();
-        if ((stock.body.results[0]?.availableQuantity ?? 0) <= 0) throw new OrderError("out_of_stock", `${input.sku} is out of stock.`);
+        // 1. Stock, for every item at its vendor's supply channel, before anything is written.
+        const vendorKeys = [...new Set(input.items.map((i) => i.vendorKey))];
+        const channels = new Map(await Promise.all(vendorKeys.map(async (key) => [key, (await api.channels().withKey({ key }).get().execute()).body.id] as const)));
+        for (const item of input.items) {
+          const stock = await api.inventory().get({ queryArgs: { where: `sku="${item.sku}" and supplyChannel(id="${channels.get(item.vendorKey)}")`, limit: 1 } }).execute();
+          if ((stock.body.results[0]?.availableQuantity ?? 0) <= 0) throw new OrderError("out_of_stock", `${item.sku} is out of stock.`);
+        }
 
-        // 2. The cart: one item, shipped to the recipient, stock reserved on order.
+        // 2. The cart: one line per item, shipped to the recipient, stock reserved on order.
         const a = input.shipTo;
         const draft: CartDraft = {
           currency: "USD",
@@ -94,7 +111,7 @@ export function createCtOrderPlacer(api: CtApi, options: CtOrderOptions): OrderP
           inventoryMode: "ReserveOnOrder",
           shippingAddress: { ...splitName(a.name), streetName: a.line1, ...(a.line2 ? { additionalStreetInfo: a.line2 } : {}), city: a.city, state: a.region, postalCode: a.postalCode, country: a.country, email: input.recipient.email },
           shippingMethod: { typeId: "shipping-method", key: shippingMethodKey },
-          lineItems: [{ sku: input.sku, quantity: 1, supplyChannel: { typeId: "channel", id: channel.id } }],
+          lineItems: input.items.map((i) => ({ sku: i.sku, quantity: 1, supplyChannel: { typeId: "channel", id: channels.get(i.vendorKey)! } })),
         };
         const cart = (await store().carts().post({ body: draft }).execute()).body;
 
@@ -130,7 +147,7 @@ export function createCtOrderPlacer(api: CtApi, options: CtOrderOptions): OrderP
                 version: withPayment.version,
                 orderNumber: input.orderNumber,
                 paymentState: "Paid",
-                custom: { type: { typeId: "type", key: GIFT_ORDER_TYPE_KEY }, fields: { giftId: input.giftId, campaignId: input.campaignId, companyKey: input.companyKey, teamKey: input.teamKey, vendorKey: input.vendorKey } },
+                custom: { type: { typeId: "type", key: GIFT_ORDER_TYPE_KEY }, fields: orderFields(input, first.vendorKey, vendorKeys) },
               },
             })
             .execute()
@@ -143,7 +160,7 @@ export function createCtOrderPlacer(api: CtApi, options: CtOrderOptions): OrderP
           const raced = await findOrder(input.orderNumber);
           if (raced) return placed(raced);
         }
-        if (codes(err).includes("OutOfStock")) throw new OrderError("out_of_stock", `${input.sku} is out of stock.`);
+        if (codes(err).includes("OutOfStock")) throw new OrderError("out_of_stock", `${input.items.map((i) => i.sku).join(", ")}: an item is out of stock.`);
         if (isNotFound(err)) throw new OrderError("not_supported", "The vendor channel was not found in commercetools.", { cause: err });
         // A bad request will not be fixed by retrying; anything else (network, 5xx) may be.
         if (httpStatus(err) === 400) throw new OrderError("not_supported", `commercetools refused the order: ${codes(err).join(", ") || (err as Error).message}`, { cause: err });

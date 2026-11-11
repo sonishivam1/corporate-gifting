@@ -53,7 +53,7 @@ end.
 | Cart | Created only by the API in the gifting store: one line item, quantity 1, with the vendor's supply channel, the recipient's address, the marketplace shipping method, `inventoryMode: ReserveOnOrder` |
 | Tax | On the recipient's address. POC: platform tax with rates for the seeded states. Production: External tax mode with a tax provider (spike 3) |
 | Payment | Method `company-balance`, amount = cart total, one successful `Charge` transaction whose interaction id is the ledger capture key |
-| Order | `orderNumber` `GFT-<giftId>` (unique: no second order per gift); custom type `gift-order`: `giftId`, `campaignId`, `companyKey`, `teamKey`, `vendorKey` |
+| Order | `orderNumber` `GFT-<giftId>` (unique: no second order per gift); one line item per gift item, each on its vendor's supply channel (a bundle has several); custom type `gift-order`: `giftId`, `campaignId`, `companyKey`, `teamKey`, `vendorKey` (the first item's vendor), `vendorKeys` (a bundle's vendors; set only on bundle orders) |
 | Shipments | Deliveries and Parcels with tracking added by Fulfillment; shipment state set on the order |
 | Subscriptions | `OrderCreated`, `OrderStateChanged`, `OrderShipmentStateChanged`, delivery and parcel messages to a Google Cloud Pub/Sub topic; deduplicated by message id |
 
@@ -87,7 +87,7 @@ transaction that marks the gift redeemed.
 | Key | Resource | Fields |
 | --- | --- | --- |
 | `vendor` | Channel | `contactEmail`, `fulfilmentMethod` (portal, email, api), `slaDays` |
-| `gift-order` | Order | `giftId`, `campaignId`, `companyKey`, `teamKey`, `vendorKey` |
+| `gift-order` | Order | `giftId`, `campaignId`, `companyKey`, `teamKey`, `vendorKey`, `vendorKeys` (set of strings; bundles) |
 | `company-settings` | Business Unit | `brandColor`, `logoUrl`, `retentionDays`, `allowOverage` |
 | `team-settings` | Business Unit | `approvalThresholdCents`, `approverIds` |
 | `company-balance-payment` | Payment | `captureKey` (the ledger capture key), `giftId`, `companyKey`, `teamKey` |

@@ -107,7 +107,11 @@ export default async function CampaignPage({ params }: PageProps<"/campaigns/[id
                     </span>
                   </TableCell>
                   <TableCell>
-                    {g.chosenSku ? productName.get(g.chosenSku) ?? g.chosenSku : <span className="text-muted-foreground">–</span>}
+                    {g.orderedSkus.length ? (
+                      g.orderedSkus.map((sku) => productName.get(sku) ?? sku).join(" + ")
+                    ) : (
+                      <span className="text-muted-foreground">–</span>
+                    )}
                   </TableCell>
                 </TableRow>
               );

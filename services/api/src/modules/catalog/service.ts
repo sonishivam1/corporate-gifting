@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { getCollections } from "@gifting/db";
 import {
   type Cents,
+  checkBundle,
   type CollectionInput,
   type CollectionView,
   type GiftCollection,
@@ -23,11 +24,13 @@ const NAME_COLLATION = { locale: "en", strength: 2 } as const;
 
 /** What a campaign sends, checked against the live catalog. */
 export type ResolvedGift = {
-  kind: "collection" | "single";
+  kind: "collection" | "single" | "bundle";
   collectionId: string | null;
   sku: string | null;
+  // A bundle's items; empty for the other kinds.
+  skus: string[];
   label: string;
-  // Per-gift budget: the collection budget, or the product's price.
+  // Per-gift budget: the collection budget, the product's price, or the sum of a bundle's prices.
   budgetCents: Cents;
 };
 
@@ -183,14 +186,28 @@ export function createCatalogService(deps: AppDeps) {
           throw new ApiError(422, "item_not_eligible", "That gift isn't available. Pick another.");
         }
         const { product, variant } = found;
-        return { kind: "single", collectionId: null, sku: variant.sku, label: variantName(product, variant), budgetCents: variant.priceCents };
+        return { kind: "single", collectionId: null, sku: variant.sku, skus: [], label: variantName(product, variant), budgetCents: variant.priceCents };
+      }
+      if (gift.kind === "bundle") {
+        // Every price is read live here; nothing about price comes from the browser.
+        const found = await Promise.all(gift.skus.map((sku) => deps.catalog.variant(sku)));
+        const items = found.filter((f) => f !== null);
+        if (items.length !== found.length) throw new ApiError(422, "item_not_eligible", "A gift in the bundle isn't available. Pick another.");
+        const checked = checkBundle(items);
+        if (!checked.ok) {
+          throw checked.problem === "same_product"
+            ? new ApiError(422, "bundle_same_product", "Two options of the same gift are in the bundle. Keep one.")
+            : new ApiError(422, "item_not_eligible", "A gift in the bundle isn't available. Pick another.");
+        }
+        const label = items.map((i) => variantName(i.product, i.variant)).join(" + ");
+        return { kind: "bundle", collectionId: null, sku: null, skus: [...gift.skus], label, budgetCents: checked.totalCents };
       }
       const col = await findCollection(companyKey, gift.collectionId);
       if (col.archivedAt) throw new ApiError(422, "collection_archived", "That collection has been archived. Pick another.");
       if ((await deps.catalog.collectionItems(col.rules, gift.budgetCents)).length === 0) {
         throw new ApiError(422, "collection_empty", "Nothing in this collection fits that budget.");
       }
-      return { kind: "collection", collectionId: col._id, sku: null, label: col.name, budgetCents: gift.budgetCents };
+      return { kind: "collection", collectionId: col._id, sku: null, skus: [], label: col.name, budgetCents: gift.budgetCents };
     },
   };
 }

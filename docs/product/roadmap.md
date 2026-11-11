@@ -8,7 +8,7 @@ commitments. Owners are suggestions to confirm.
 **This file is updated with every milestone step**, together with
 [features.md](features.md) and the README progress table.
 
-_Last updated: 2 Nov 2026 (build-your-own collection built: M2 complete; earlier: register and sign-in on commercetools customer accounts, commerce as a plug-in, spike 2, the sender dashboard ahead of M1 to M3)._
+_Last updated: 10 Nov 2026 (gift bundles built: every recipient gets 2 to 5 gifts in one order; earlier: build-your-own collection built, M2 complete; register and sign-in on commercetools customer accounts, commerce as a plug-in, spike 2, the sender dashboard ahead of M1 to M3)._
 
 ## Where we are
 
@@ -34,6 +34,7 @@ app). Then M1 starts.
 | Planned | Recipient experience, company-balance order, vendor routing, vendor portal-lite, tracking | M4 |
 | ✅ Done | Build-your-own collection: company collections from picked products, brands and tags ([plan](../plans/build-your-own-collection.md)) | M2 |
 | ✅ Done | Recipient list upload (CSV of email and names) in the send flow ([plan](../plans/recipient-upload.md)) | M5 (ahead) |
+| ✅ Done | Gift bundles: every recipient gets 2 to 5 gifts in one order ([plan](../plans/gift-bundles.md)) | M3, M4 (added) |
 | Planned | Recipient directory, CSV dates, one HR system, milestone worker, SMS, Slack, Teams | M5 |
 | Planned | Expiry releases, refunds, statements, reconciliation, dashboard and exports | M6 |
 | Planned | Concurrency and ledger tests, security pass, demo script and data, cloud environment | M7 |
