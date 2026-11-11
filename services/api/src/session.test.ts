@@ -1,8 +1,15 @@
 import type { FastifyInstance } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { memoryOrganizations } from "@gifting/commerce-memory";
+import type { AccountView } from "@gifting/domain";
+
 import { buildApp } from "./app";
 import { defaultDeps } from "./deps";
+import { ApiError } from "./http/errors";
+import { defineRoute } from "./http/route";
+import { orgDirectory } from "./modules/accounts/org";
+import type { AccountsService } from "./modules/accounts/service";
 
 // None of these reach the database: the requests are refused or answered first.
 let app: FastifyInstance;
@@ -18,13 +25,12 @@ afterAll(async () => {
   await signedOut.close();
 });
 
-const asUser = (user: string, team?: string) => ({ "x-dev-user": user, ...(team ? { "x-dev-team": team } : {}) });
+const asUser = (user: string, team?: string) => ({ "x-dev-user": user, ...(team ? { "x-gifting-team": team } : {}) });
 
 describe("development sign-in", () => {
   it("is never on in production", async () => {
-    const res = await signedOut.inject({ method: "GET", url: "/v1/workspace" });
-    expect(res.statusCode).toBe(401);
-    expect(res.json().error.code).toBe("unauthenticated");
+    const res = await signedOut.inject({ method: "GET", url: "/v1/workspace", headers: asUser("user-maya") });
+    expect([res.statusCode, res.json().error.code]).toEqual([503, "auth_not_configured"]);
   });
 
   it("never stands in for real sign-in: account routes ignore the development headers", async () => {
@@ -44,11 +50,15 @@ describe("development sign-in", () => {
     const res = await app.inject({ method: "GET", url: "/v1/workspace" });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({
-      user: { id: "user-maya", role: "sender" },
+      user: { id: "user-maya", role: "sender", roles: ["sender"] },
       company: { key: "company-lumen-labs" },
-      team: { key: "team-lumen-people", approverNames: ["Rowan Ellis"] },
+      companies: [{ key: "company-lumen-labs", name: "Lumen Labs" }],
+      // The team's approver and the company's owner may approve.
+      team: { key: "team-lumen-people", approverNames: ["Rowan Ellis", "Dana Okafor"] },
     });
     expect(res.json().teams).toHaveLength(2);
+    expect(res.json().actions).toContain("campaign:create");
+    expect(res.json().actions).not.toContain("campaign:approve");
   });
 
   it("switches team only to one the user belongs to", async () => {
@@ -58,9 +68,126 @@ describe("development sign-in", () => {
     expect(notMine.json().team.key).toBe("team-lumen-people");
   });
 
-  it("refuses an unknown user", async () => {
+  it("falls back to the demo sender for an unknown user", async () => {
     const res = await app.inject({ method: "GET", url: "/v1/workspace", headers: asUser("user-nobody") });
-    expect(res.statusCode).toBe(401);
+    expect(res.json().user.id).toBe("user-maya");
+  });
+
+  it("gives an owner and an admin every team, with their company role", async () => {
+    for (const [user, role] of [["user-dana", "owner"], ["user-theo", "admin"]] as const) {
+      const res = await app.inject({ method: "GET", url: "/v1/workspace", headers: asUser(user, "team-lumen-sales") });
+      expect(res.json(), user).toMatchObject({ user: { role, roles: [role] }, team: { key: "team-lumen-sales" } });
+      expect(res.json().teams.map((t: { key: string }) => t.key), user).toEqual(["team-lumen-people", "team-lumen-sales"]);
+    }
+  });
+
+  it("ignores a company the person doesn't belong to", async () => {
+    const res = await app.inject({ method: "GET", url: "/v1/workspace", headers: { ...asUser("user-maya"), "x-gifting-company": "company-orbit-studio" } });
+    expect(res.json().company.key).toBe("company-lumen-labs");
+  });
+});
+
+describe("permissions", () => {
+  // Refused before the handler runs, so none of these reach the database.
+  const refused = async (user: string, method: "GET" | "POST", url: string, team?: string) => {
+    const res = await app.inject({ method, url, headers: asUser(user, team), ...(method === "POST" ? { payload: {} } : {}) });
+    return [res.statusCode, res.json().error?.code];
+  };
+
+  it("keeps approvers from sending, editing collections, managing gifts or reading the directory", async () => {
+    expect(await refused("user-rowan", "POST", "/v1/campaigns/estimate")).toEqual([403, "forbidden"]);
+    expect(await refused("user-rowan", "POST", "/v1/campaigns")).toEqual([403, "forbidden"]);
+    expect(await refused("user-rowan", "POST", "/v1/collections")).toEqual([403, "forbidden"]);
+    expect(await refused("user-rowan", "POST", "/v1/gifts/gft-1/cancel")).toEqual([403, "forbidden"]);
+    expect(await refused("user-rowan", "GET", "/v1/recipients")).toEqual([403, "forbidden"]);
+    expect(await refused("user-rowan", "POST", "/v1/recipients/import")).toEqual([403, "forbidden"]);
+  });
+
+  it("lets only owners and approvers approve or decline", async () => {
+    for (const user of ["user-maya", "user-theo"]) {
+      expect(await refused(user, "POST", "/v1/campaigns/cmp-1/approve"), user).toEqual([403, "forbidden"]);
+      expect(await refused(user, "POST", "/v1/campaigns/cmp-1/decline"), user).toEqual([403, "forbidden"]);
+    }
+  });
+
+  it("uses the roles on the chosen team: a team the person has no role on is ignored", async () => {
+    const res = await app.inject({ method: "GET", url: "/v1/workspace", headers: asUser("user-rowan", "team-lumen-sales") });
+    expect(res.json().team.key).toBe("team-lumen-people");
+    expect(res.json().actions).toContain("campaign:approve");
+  });
+
+  it("requires every member route to declare a permission, and no other route to", () => {
+    const handler = async () => undefined;
+    expect(() => defineRoute({ method: "GET", url: "/v1/x", auth: "member", schema: {}, handler })).toThrow(/permission/);
+    expect(() => defineRoute({ method: "GET", url: "/v1/x", auth: "account", permission: "reports:view" as never, schema: {}, handler })).toThrow(/permission/);
+  });
+});
+
+describe("signed-in members (no development session)", () => {
+  // Fictional people: one in two companies; anyone else is in none.
+  const orgs = memoryOrganizations({
+    companies: [
+      { key: "company-a", name: "Company A", teams: [{ key: "team-a1", name: "One", approvalThresholdCents: null }] },
+      { key: "company-b", name: "Company B", teams: [{ key: "team-b1", name: "One", approvalThresholdCents: 0 }, { key: "team-b2", name: "Two", approvalThresholdCents: 0 }] },
+    ],
+    members: [{ id: "cust-1", name: "Ada Park", memberships: [{ companyKey: "company-a", teamKey: "team-a1", role: "approver" }, { companyKey: "company-b", teamKey: "team-b2", role: "sender" }] }],
+  });
+  const account = (id: string): AccountView => ({ id, email: `${id}@people.example`, firstName: "Ada", lastName: "Park", companyName: null });
+  const accounts = {
+    async authenticate(token: string) {
+      if (!token.startsWith("token-")) throw new ApiError(401, "unauthenticated", "Sign in to continue.");
+      return account(token.slice("token-".length));
+    },
+    isOps: () => false,
+  } as unknown as AccountsService;
+  let member: FastifyInstance;
+  let noOrgs: FastifyInstance;
+
+  beforeAll(async () => {
+    // Assigned, not spread: the default deps open the database lazily, and these requests never reach it.
+    const deps = defaultDeps({ NODE_ENV: "production" });
+    deps.org = orgDirectory(orgs, { ttlMs: 0 });
+    member = await buildApp({ accounts, deps });
+    noOrgs = await buildApp({ accounts, deps: defaultDeps({ NODE_ENV: "production" }) });
+  });
+
+  afterAll(async () => {
+    await member.close();
+    await noOrgs.close();
+  });
+
+  const workspace = (target: FastifyInstance, token: string | null, headers: Record<string, string> = {}) =>
+    target.inject({ method: "GET", url: "/v1/workspace", headers: { ...(token ? { authorization: `Bearer ${token}` } : {}), ...headers } });
+
+  it("needs a signed-in person, and ignores the development headers", async () => {
+    expect((await workspace(member, null, asUser("user-maya"))).statusCode).toBe(401);
+  });
+
+  it("opens the person's first company, and switches only to their own", async () => {
+    const first = await workspace(member, "token-cust-1");
+    expect(first.json()).toMatchObject({ user: { id: "cust-1", name: "Ada Park", roles: ["approver"] }, company: { key: "company-a" }, devUsers: null });
+    expect(first.json().companies.map((c: { key: string }) => c.key)).toEqual(["company-a", "company-b"]);
+    const b = await workspace(member, "token-cust-1", { "x-gifting-company": "company-b" });
+    expect(b.json()).toMatchObject({ company: { key: "company-b" }, team: { key: "team-b2" }, user: { roles: ["sender"] } });
+    expect(b.json().teams).toEqual([{ key: "team-b2", name: "Two" }]);
+    // Only a team they hold a role on, whatever the team header says.
+    const wrongTeam = await workspace(member, "token-cust-1", { "x-gifting-company": "company-b", "x-gifting-team": "team-b1" });
+    expect(wrongTeam.json().team.key).toBe("team-b2");
+  });
+
+  it("counts a team with no threshold as 0: everything needs approval", async () => {
+    expect((await workspace(member, "token-cust-1")).json().team.approvalThresholdCents).toBe(0);
+  });
+
+  it("refuses someone in no company with no_membership", async () => {
+    const res = await workspace(member, "token-cust-2");
+    expect([res.statusCode, res.json().error.code]).toEqual([403, "no_membership"]);
+  });
+
+  it("answers 503 when the platform has no organizations, after checking who is calling", async () => {
+    expect((await workspace(noOrgs, null)).statusCode).toBe(401);
+    const res = await workspace(noOrgs, "token-cust-1");
+    expect([res.statusCode, res.json().error.code]).toEqual([503, "organizations_not_configured"]);
   });
 });
 
@@ -71,7 +198,7 @@ describe("scope", () => {
     const range = await app.inject({ method: "GET", url: "/v1/teams/team-lumen-people/overview?range=1y" });
     expect(range.statusCode).toBe(400);
     const signedOutRes = await signedOut.inject({ method: "GET", url: "/v1/teams/team-lumen-people/overview" });
-    expect(signedOutRes.statusCode).toBe(401);
+    expect(signedOutRes.statusCode).toBe(503);
   });
 
   it("treats another team's balance as not found", async () => {

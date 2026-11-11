@@ -18,14 +18,16 @@ async function loadWorkspace() {
     if (err instanceof ApiCallError) return err;
     throw err;
   });
-  if (workspace instanceof ApiCallError) return { workspace: null, balance: null, pendingApprovals: 0, problem: workspace.message };
+  if (workspace instanceof ApiCallError) {
+    return { workspace: null, balance: null, pendingApprovals: 0, problem: workspace.message, noMembership: workspace.code === "no_membership" };
+  }
   // The balance is the first read from the database: if that is down, say so here rather than fail every page.
   const balance = await getBalance(workspace.team.key).catch((err: unknown) => {
     if (err instanceof ApiCallError) return err;
     throw err;
   });
   if (balance instanceof ApiCallError) {
-    return { workspace, balance: null, pendingApprovals: 0, problem: balance.code === "database_unavailable" ? balance.message : null };
+    return { workspace, balance: null, pendingApprovals: 0, problem: balance.code === "database_unavailable" ? balance.message : null, noMembership: false };
   }
   // For the bell: a failure here only hides the count.
   const pendingApprovals = await getCampaigns("pending_approval", 1)
@@ -34,14 +36,15 @@ async function loadWorkspace() {
       if (err instanceof ApiCallError) return 0;
       throw err;
     });
-  return { workspace, balance, pendingApprovals, problem: null };
+  return { workspace, balance, pendingApprovals, problem: null, noMembership: false };
 }
 
 /**
  * Every page in this group needs a signed-in person. `proxy.ts` has already
  * checked the session cookie; this asks the Gifting API who it belongs to,
- * then loads the dashboard's workspace (the demo company through the
- * development session, until the B2C workspace model is decided).
+ * then loads the dashboard's workspace: the company and team they work in,
+ * from their memberships (ADR 0016). Someone in no company yet gets a page
+ * that says how to join.
  */
 export default async function SignedInLayout({ children }: { children: ReactNode }) {
   await connection();
@@ -66,8 +69,29 @@ export default async function SignedInLayout({ children }: { children: ReactNode
   }
 
   const { me } = result;
-  const { workspace, balance, pendingApprovals, problem } = await loadWorkspace();
+  const { workspace, balance, pendingApprovals, problem, noMembership } = await loadWorkspace();
   const name = [me.firstName, me.lastName].filter(Boolean).join(" ") || me.email;
+  if (noMembership) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-muted p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>You&rsquo;re not in a company yet</CardTitle>
+            <CardDescription>
+              You&rsquo;re signed in as {me.email}, but no company has added you. Ask your company&rsquo;s owner or admin to add you, then sign in again.
+            </CardDescription>
+          </CardHeader>
+          <CardFooter>
+            <form action={signOutAction}>
+              <Button type="submit" variant="outline">
+                Sign out
+              </Button>
+            </form>
+          </CardFooter>
+        </Card>
+      </main>
+    );
+  }
   return (
     <Shell me={workspace} balance={balance} pendingApprovals={pendingApprovals} account={{ name, email: me.email, detail: me.companyName ?? undefined }} signOut={signOutAction}>
       {problem ? (
@@ -75,7 +99,7 @@ export default async function SignedInLayout({ children }: { children: ReactNode
           <CircleAlertIcon />
           <AlertTitle>Can&apos;t load the dashboard</AlertTitle>
           <AlertDescription>
-            {problem} If the API is running, check that MongoDB is up (pnpm db:up), seeded (pnpm seed:demo) and that DEV_AUTH=1 is set for the development workspace.
+            {problem} If the API is running, check that MongoDB is up (pnpm db:up) and seeded (pnpm seed:demo). In development, DEV_AUTH=1 runs the dashboard as the demo company.
           </AlertDescription>
         </Alert>
       ) : (

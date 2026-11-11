@@ -4,6 +4,7 @@ import { getCollections } from "@gifting/db";
 import {
   addFunnels,
   type Campaign,
+  can,
   campaignDisplayStatus,
   type CampaignDetailView,
   campaignFunnel,
@@ -61,15 +62,20 @@ export function createCampaignsService(
 
   const kindOf = (cmp: Campaign): ResolvedGift["kind"] => (cmp.collectionId ? "collection" : cmp.skus?.length ? "bundle" : "single");
 
+  const org = () => {
+    if (!deps.org) throw new ApiError(503, "organizations_not_configured", "Companies and roles are not configured on this server.");
+    return deps.org;
+  };
+
   async function team(session: Session): Promise<OrgTeam> {
-    const found = await deps.org.team(session.companyKey, session.teamKey);
+    const found = await org().team(session.companyKey, session.teamKey);
     if (!found) throw new ApiError(404, "team_not_found", "Team not found.");
     return found;
   }
 
+  /** The people who may approve on the team (ADR 0016): its approvers and the company's owners. */
   async function approverNames(t: OrgTeam): Promise<string[]> {
-    const members = await Promise.all(t.approverIds.map((id) => deps.org.member(id)));
-    return members.flatMap((m) => (m ? [m.name] : []));
+    return (await org().approvers(t.companyKey, t.key)).map((m) => m.name);
   }
 
   /** Scoped to the caller's company and team: anything else is "not found". */
@@ -295,15 +301,13 @@ export function createCampaignsService(
     },
 
     /**
-     * An approver (never the campaign's sender) approves: holds are placed and
-     * the gifts go out, or wait for their send date. Short of funds, nothing
-     * changes.
+     * Someone with `campaign:approve` on the team (checked on the route),
+     * never the campaign's sender, approves: holds are placed and the gifts
+     * go out, or wait for their send date. Short of funds, nothing changes.
      */
     async decide(session: Session, id: string, decision: "approved" | "rejected"): Promise<DecisionResultView> {
-      const t = await team(session);
       return withTransaction(async (tx) => {
         const campaign = await find(session, id, tx);
-        if (!t.approverIds.includes(session.userId)) throw new ApiError(404, "campaign_not_found", "Campaign not found.");
         if (campaign.createdBy === session.userId) {
           throw new ApiError(403, "self_approval", "Someone other than the sender must approve this campaign.");
         }
@@ -371,7 +375,7 @@ export function createCampaignsService(
       const campaign = await find(session, id);
       const [summary] = await summaries(session, [campaign]);
       const t = await team(session);
-      const creator = await deps.org.member(campaign.createdBy);
+      const creator = await org().member(session.companyKey, campaign.createdBy);
       return {
         ...summary!,
         greeting: campaign.greeting,
@@ -389,7 +393,7 @@ export function createCampaignsService(
           : null,
         canDecide:
           campaign.status === "pending_approval" &&
-          t.approverIds.includes(session.userId) &&
+          can(session.roles, "campaign:approve") &&
           campaign.createdBy !== session.userId,
         totalHoldCents: campaign.recipientIds.length * holdFor(campaign.budgetCents),
       };

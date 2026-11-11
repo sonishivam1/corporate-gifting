@@ -32,10 +32,12 @@ must respect.
 - **Built (29 Oct):** real register and sign-in (B2C, commercetools customer
   accounts, [ADR 0015](docs/architecture/decisions/0015-commerce-customer-accounts.md))
   behind plug-in commerce connectors
-  ([ADR 0013](docs/architecture/decisions/0013-commerce-adapters.md)). The
-  dashboard sits behind that sign-in; its company and team still come from
-  the development session (`DEV_AUTH=1`, "workspace" routes) until the B2C
-  workspace model is decided.
+  ([ADR 0013](docs/architecture/decisions/0013-commerce-adapters.md)).
+- **Building (11 Nov):** [organizations and roles](docs/plans/organizations-and-roles.md)
+  ([ADR 0016](docs/architecture/decisions/0016-organizations-and-roles.md)).
+  A person's companies, teams and roles come from commercetools Business
+  Units through the connector's `organizations`; every dashboard route
+  declares the action it needs.
 - **Next:** the week-1 [spikes](docs/plans/spikes.md). Spike 1, the
   company-balance order, gates everything in M4. After the spikes comes M1:
   accounts and money.
@@ -61,7 +63,7 @@ Node 24 and pnpm 10. On Windows with fnm, prefix commands with
 | `pnpm ct:plan` | Print the commercetools setup drafts (store, channels, types); no calls |
 | `pnpm ct:apply` | Set up the project from `.env`: types, product types, tax, zone and shipping, channels, store, associate roles, gift categories. Creates what's missing and adds missing fields and attributes; safe to re-run |
 | `pnpm seed` | Import the fictional products and stock, 250 demo customers, and 5 demo companies with 10 teams (Business Units) through the Import API (run `ct:apply` first) |
-| `pnpm member:add -- --email … --company … [--team …] --role … [--company-name …]` | Add a real person (work email) to a company so they can sign in (M1 phase A; invitations come in phase B). `--company-name` creates the company, with a General team, if its key is new |
+| `pnpm member:add -- --email … --company … [--team …] --role … [--company-name …]` | Add a registered person (work email, verified) to a company with a role, until invitations exist (ADR 0016). Refuses an email with no account. `--company-name` creates the company, with a General team, if its key is new |
 | `pnpm catalog:extract` | Read the Christie Cookie storefront into `.data/catalogs/christie-cookie.json` (gitignored; with the client's permission) |
 | `pnpm catalog:import` / `pnpm catalog:remove` | Import that snapshot into the project (vendor channel, categories, products with images, stock), or delete it all again |
 | `pnpm worker` | Start the worker (today: lists the registered jobs) |
@@ -168,10 +170,19 @@ that module's exported service, never its collections.
   price comes from the browser.
 - Gift status changes go through `canTransition()` in `@gifting/domain`.
 
-**Scope and access**
+**Scope and access** ([ADR 0016](docs/architecture/decisions/0016-organizations-and-roles.md))
 - Every API call works inside the caller's company and team, taken from the
-  session, never from the request body. Something outside that scope is
-  "not found", never "forbidden".
+  session, never from the request body. The session's company, team and
+  roles come from the person's memberships (the connector's
+  `organizations`); the `x-gifting-company` and `x-gifting-team` headers
+  only choose among them. Something outside that scope is "not found",
+  never "forbidden".
+- Roles grant actions; the map is `packages/domain/src/permissions.ts`, the
+  same on every platform. Owners and admins hold their role on the company
+  (every team), approvers and senders on one team. Never check a role's
+  name in a handler; declare the action on the route.
+- An action the person's roles don't grant, inside their own team, is
+  `403 forbidden`. No company at all is `403 no_membership`.
 - Vendors see only orders routed to their channel, and only shipping fields.
 - Recipient links are 32 random bytes, stored only as a SHA-256 hash.
   Short codes are rate-limited.
@@ -196,8 +207,11 @@ that module's exported service, never its collections.
   for input and output. Only `/health` is unversioned. Within v1, changes
   are additive.
 - Every route says who may call it: `auth: "account"` (the default),
-  `"ops"` or `"public"` ([register and sign-in plan](docs/plans/m1-register-sign-in.md)).
-  Handlers take the person from `ctx.account`, never from the request.
+  `"member"` (the dashboard: a company and team, plus a `permission`, the
+  action it needs), `"ops"` or `"public"`
+  ([register and sign-in plan](docs/plans/m1-register-sign-in.md)).
+  Handlers take the person from `ctx.account` or `ctx.session`, never from
+  the request.
   Apps call the API from the server with the customer's commercetools
   access token, kept in an encrypted http-only cookie; no token reaches a
   browser ([ADR 0015](docs/architecture/decisions/0015-commerce-customer-accounts.md)).

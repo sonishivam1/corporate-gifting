@@ -44,7 +44,7 @@ end.
 | Concern | Design |
 | --- | --- |
 | Project and store | One project for the marketplace with a `gifting` Store; later, one store per country |
-| Companies and teams | Business Units: one Company per customer, one Division per team. Associates and Associate Roles for owner, admin, sender and approver |
+| Companies and teams | Business Units: one Company per customer, one Division per team. Associates and Associate Roles for owner, admin, sender and approver: owners and admins on the Company, approvers and senders on a Division. The API reads them through the connector's `organizations` for every dashboard session ([ADR 0016](decisions/0016-organizations-and-roles.md)). Our permission map, not the associate role permissions, decides what each role may do, and the product applies company roles to every team itself rather than wait for commercetools' eventually consistent inheritance |
 | Vendors | One supply Channel per vendor (role `InventorySupply`), custom type `vendor`: contacts, fulfilment method, SLA |
 | Products | Every variant has `brand`, `vendorKey` and `tags` attributes; stock per vendor channel; one price per country in USD for the POC |
 | Catalog import | Vendor feeds, CSV or a storefront snapshot into the Import API (`infra/catalog`, `infra/seed`); product types `gift-item` and `cookie-tin` share the `brand`, `vendorKey` and `tags` attributes |
@@ -89,7 +89,7 @@ transaction that marks the gift redeemed.
 | `vendor` | Channel | `contactEmail`, `fulfilmentMethod` (portal, email, api), `slaDays` |
 | `gift-order` | Order | `giftId`, `campaignId`, `companyKey`, `teamKey`, `vendorKey`, `vendorKeys` (set of strings; bundles) |
 | `company-settings` | Business Unit | `brandColor`, `logoUrl`, `retentionDays`, `allowOverage` |
-| `team-settings` | Business Unit | `approvalThresholdCents`, `approverIds` |
+| `team-settings` | Business Unit | `approvalThresholdCents` (none counts as 0: every send needs approval), `approverIds` (no longer read: approvers are the associates whose role grants `campaign:approve`) |
 | `company-balance-payment` | Payment | `captureKey` (the ledger capture key), `giftId`, `companyKey`, `teamKey` |
 
 The drafts are in [`infra/ct-setup/src/drafts.ts`](../../infra/ct-setup/src/drafts.ts).
@@ -100,7 +100,7 @@ No client in a browser. Each runs with only the scopes it needs.
 
 | Client | Used by | Scopes |
 | --- | --- | --- |
-| `gifting-api` | `services/api` (`CTP_API_*`; read-only `view_published_products`, `view_products` until M4) | `manage_orders`, `manage_payments`, `view_products`, `view_published_products`, `manage_business_units`, `manage_associate_roles` (channels are readable with `view_products`) |
+| `gifting-api` | `services/api` (`CTP_API_*`; read-only `view_published_products`, `view_products` until M4) | `manage_orders`, `manage_payments`, `view_products`, `view_published_products`, `view_business_units`, `view_customers` (organizations, read for every dashboard session), `manage_business_units`, `manage_associate_roles` (invitations, later) (channels are readable with `view_products`) |
 | `gifting-events` | `services/worker` | `view_orders`, `manage_orders` (shipment state, deliveries) |
 | `gifting-import` | `infra/seed` | `manage_import_containers`, `manage_products`, `manage_channels` |
 | `gifting-setup` | `infra/ct-setup` | `manage_project` (sandbox only; never in a deployed environment) |

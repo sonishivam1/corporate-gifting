@@ -12,3 +12,4 @@ export * from "./orders";
 export * from "./recipient-upload";
 export * from "./views";
 export * from "./overview";
+export * from "./permissions";

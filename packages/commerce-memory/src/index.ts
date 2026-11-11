@@ -2,7 +2,7 @@ import { defineConnector } from "@gifting/commerce";
 
 import { createMemoryConnector } from "./memory";
 
-export { createMemoryConnector, memoryCatalog, type MemoryOptions } from "./memory";
+export { createMemoryConnector, memoryCatalog, memoryOrganizations, type MemoryOptions, type MemoryOrganizations } from "./memory";
 
 /**
  * COMMERCE_CONNECTOR=memory: a platform in memory, for local development

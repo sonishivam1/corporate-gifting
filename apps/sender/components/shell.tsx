@@ -14,7 +14,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type ReactNode, useTransition } from "react";
 
-import { switchTeam, switchUser } from "@/app/session-actions";
+import { switchCompany, switchTeam, switchUser } from "@/app/session-actions";
 import { money } from "@/lib/format";
 
 /** The prototype's menu, in its order. Pages not built yet show "Soon". */
@@ -41,8 +41,26 @@ function Search() {
   );
 }
 
-/** The signed-in person's company, at the left of the top bar (as in the overview mockup). */
-function CompanyContext({ name }: { name: string }) {
+/** The company the dashboard works in, at the left of the top bar; a switcher when the person belongs to several. */
+function CompanyContext({ name, me }: { name: string; me: MeView | null }) {
+  const [pending, startTransition] = useTransition();
+  if (me && me.companies.length > 1) {
+    return (
+      <NativeSelect
+        aria-label="Company"
+        size="sm"
+        value={me.company.key}
+        disabled={pending}
+        onChange={(e) => startTransition(() => switchCompany(e.target.value))}
+      >
+        {me.companies.map((c) => (
+          <NativeSelectOption key={c.key} value={c.key}>
+            {c.name}
+          </NativeSelectOption>
+        ))}
+      </NativeSelect>
+    );
+  }
   return (
     <span className="flex min-w-0 items-center gap-2 rounded-lg border bg-background px-3 py-1.5 text-sm font-medium">
       <Building2Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
@@ -98,8 +116,8 @@ export function Shell({
       currentPath={pathname}
       linkAs={Link}
       footer={me ? <Footer me={me} balance={balance} /> : null}
-      // The signed-in person's own company, from their account (read live from the commerce platform on every page).
-      context={account.detail ? <CompanyContext name={account.detail} /> : undefined}
+      // The company the dashboard works in (the person's membership), else the company name on their account.
+      context={me || account.detail ? <CompanyContext name={me?.company.name ?? account.detail ?? ""} me={me} /> : undefined}
       topBar={<Search />}
       actions={
         <>
@@ -147,16 +165,18 @@ function Footer({ me, balance }: { me: MeView; balance: BalanceView | null }) {
             <span className="text-xs text-muted-foreground">Available to send</span>
             <span className="font-heading text-xl font-semibold tabular-nums">{balance ? money(balance.availableCents) : "–"}</span>
           </div>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span tabIndex={0}>
-                <Button variant="outline" size="sm" disabled>
-                  <PlusIcon /> Top up
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>Card and invoice top-ups arrive in M1.</TooltipContent>
-          </Tooltip>
+          {me.actions.includes("budget:topup") ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span tabIndex={0}>
+                  <Button variant="outline" size="sm" disabled>
+                    <PlusIcon /> Top up
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>Card and invoice top-ups arrive in M1.</TooltipContent>
+            </Tooltip>
+          ) : null}
         </div>
       </div>
       {me.devUsers ? (

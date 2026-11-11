@@ -2,7 +2,7 @@ import { createChannelRegistry } from "@gifting/channels";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { address, fakeOrders, recordingChannel, tokenOf } from "./fakes";
-import { createAndSubmit, type Harness, IMANI, MAYA, people, send, startHarness } from "./harness";
+import { createAndSubmit, type Harness, IMANI, MAYA, people, send, startHarness, THEO } from "./harness";
 
 // Company collections (plan: build-your-own-collection.md). Fictional data only.
 let h: Harness;
@@ -55,10 +55,13 @@ describe("building a collection", () => {
 
   it("edits a collection, and the change reaches its items", async () => {
     const col = (await create({ name: "To edit", rules: { tags: ["outdoors"] } })).json();
-    const res = await update(col.id, { name: "Edited", budgetBandCents: 6000, rules: { skus: ["BL-MUG-PAIR"] } }, IMANI);
+    // An approver's role can't edit collections; an admin's can.
+    const refused = await update(col.id, { name: "Edited", budgetBandCents: 6000, rules: { skus: ["BL-MUG-PAIR"] } }, IMANI);
+    expect([refused.statusCode, refused.json().error.code]).toEqual([403, "forbidden"]);
+    const res = await update(col.id, { name: "Edited", budgetBandCents: 6000, rules: { skus: ["BL-MUG-PAIR"] } }, THEO);
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ id: col.id, name: "Edited", budgetBandCents: 6000, itemCount: 1 });
-    expect(await h.c.collections.findOne({ _id: col.id })).toMatchObject({ createdBy: "user-maya", updatedBy: "user-imani" });
+    expect(await h.c.collections.findOne({ _id: col.id })).toMatchObject({ createdBy: "user-maya", updatedBy: "user-theo" });
   });
 
   it("archives a collection: hidden from the list and new campaigns; archiving again changes nothing", async () => {

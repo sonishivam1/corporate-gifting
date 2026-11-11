@@ -42,25 +42,25 @@ Every route declares who may call it, in `defineRoute({ auth })`
 | POST | `/v1/auth/refresh` | public | `{ accessToken, refreshToken, expiresAt }`, or `401` |
 | POST | `/v1/auth/sign-out` | public | `{ status: "signed_out" }`; ends the session at once, and the platform's own session |
 | GET | `/v1/me` | account | `AccountView`: `id, email, firstName, lastName, companyName` (`@gifting/domain`) |
-| GET | `/v1/workspace` | workspace | User, company, current team (threshold, approvers), the user's teams; `devUsers` with development sign-in |
-| GET | `/v1/teams/:teamKey/overview?range=7d\|30d\|90d` | workspace (member of that team) | The Home overview: `balance`, `sent` and `chose` (with the previous period), `expiringSoon` (next 7 days), `pendingApprovals`, `daily` (sent, opened, chose per day) and `statuses`. Counted by `overviewFrom()` in `@gifting/domain` |
-| GET | `/v1/teams/:teamKey/balance` | workspace (member of that team) | `{ teamKey, currency, availableCents, heldCents, spentCents }`, computed from the ledger |
-| GET | `/v1/catalog/products?budget&occasion&category&q` | workspace | `{ products[] }`: one per product, narrowed to the variants in stock (and within the budget). `sku`, `priceCents` and `imageUrl` are the default variant's (the cheapest); `variants[]` has `sku`, `label`, `priceCents`, `available`, `imageUrl`. A single-gift send takes a variant SKU |
-| GET | `/v1/collections?budget=` | workspace | `{ collections[] }` with `itemCount` at the budget (the band when none). The company's own first, then the platform's; archived ones are left out |
-| GET | `/v1/collections/:id/items?budget=` | workspace | `{ items[] }`, narrowed to the variants that fit. Catalog routes answer `503 catalog_unavailable` when commercetools can't be reached |
-| POST | `/v1/collections` | workspace | A company collection, shared with every member: body `{ name, budgetBandCents (500 to 50,000), rules: { tags[], brands[], skus[] } }` with at least one rule. Returns the collection. A name the company already uses (any case): `409 collection_name_taken` |
-| PUT | `/v1/collections/:id` | workspace | Replaces a company collection's name, band and rules (same body). Gifts not yet redeemed see the change. Platform, archived and other companies' collections: `404` |
-| POST | `/v1/collections/:id/archive` | workspace | `{ archived: true }`. Hidden from lists and new campaigns (`422 collection_archived`); gifts already sent still resolve it. Again: no change. Platform and other companies' collections: `404` |
-| GET | `/v1/recipients?q=` | workspace | `{ recipients[], more }`: the company directory by name, up to 500 (`DIRECTORY_PAGE`). `q` matches names and emails in the database, so it finds anyone; `more` says there are people past this page |
-| POST | `/v1/recipients/import` | workspace | A list from a file: body `{ rows[] }` of `email`, `firstName?`, `lastName?` (1 to 500). Everyone joins the company directory, matched by email (an existing person keeps their record). Returns `{ recipients[] (file order), added, existing }`. Any invalid row (including a name with an unreadable character, U+FFFD): `400 invalid_request`, nothing written. One bulk write: a retry finishes a half-saved list and adds nobody twice |
-| POST | `/v1/campaigns/estimate` | workspace | Estimate for an unsaved send: gifts, hold, total, available, after, `needsApproval`, `short` |
-| GET | `/v1/campaigns?status=all\|active\|scheduled\|pending_approval` | workspace | `{ campaigns[], funnel, counts }` (drafts are not listed) |
-| POST | `/v1/campaigns` | workspace | `201 { id }`: a draft. Optional `Idempotency-Key` (UUID) becomes the id. `gift` is `{ kind: "single", sku }`, `{ kind: "collection", collectionId, budgetCents }` or `{ kind: "bundle", skus }` (2 to 5 different products; every recipient gets every item; the budget is the sum of their live prices). A bundle with two options of one product: `422 bundle_same_product`; an unknown or sold-out item: `422 item_not_eligible`. Campaign rows carry `gift.kind` `bundle` and `gift.skus` |
-| GET | `/v1/campaigns/:id` | workspace | Detail, with `canDecide` for the viewer |
-| POST | `/v1/campaigns/:id/estimate` | workspace | Estimate for a saved campaign |
-| POST | `/v1/campaigns/:id/submit` | workspace | `{ campaignId, outcome, gifts, totalCents, links[] }` (see below) |
-| POST | `/v1/campaigns/:id/approve`, `/decline` | workspace (the team's approver, not the sender) | `{ campaignId, status }` |
-| GET | `/v1/campaigns/:id/gifts` | workspace | `{ gifts[] }`: recipient, status, channel, chosen SKU |
+| GET | `/v1/workspace` | member | User (with `roles` on the current team), company, current team (threshold, approvers), the user's teams, `companies` (every company they belong to), `actions` (what they may do on the current team); `devUsers` with development sign-in |
+| GET | `/v1/teams/:teamKey/overview?range=7d\|30d\|90d` | member · `reports:view` (that team) | The Home overview: `balance`, `sent` and `chose` (with the previous period), `expiringSoon` (next 7 days), `pendingApprovals`, `daily` (sent, opened, chose per day) and `statuses`. Counted by `overviewFrom()` in `@gifting/domain` |
+| GET | `/v1/teams/:teamKey/balance` | member · `budget:view` (that team) | `{ teamKey, currency, availableCents, heldCents, spentCents }`, computed from the ledger |
+| GET | `/v1/catalog/products?budget&occasion&category&q` | member · `catalog:view` | `{ products[] }`: one per product, narrowed to the variants in stock (and within the budget). `sku`, `priceCents` and `imageUrl` are the default variant's (the cheapest); `variants[]` has `sku`, `label`, `priceCents`, `available`, `imageUrl`. A single-gift send takes a variant SKU |
+| GET | `/v1/collections?budget=` | member · `catalog:view` | `{ collections[] }` with `itemCount` at the budget (the band when none). The company's own first, then the platform's; archived ones are left out |
+| GET | `/v1/collections/:id/items?budget=` | member · `catalog:view` | `{ items[] }`, narrowed to the variants that fit. Catalog routes answer `503 catalog_unavailable` when commercetools can't be reached |
+| POST | `/v1/collections` | member · `collection:manage` | A company collection, shared with every member: body `{ name, budgetBandCents (500 to 50,000), rules: { tags[], brands[], skus[] } }` with at least one rule. Returns the collection. A name the company already uses (any case): `409 collection_name_taken` |
+| PUT | `/v1/collections/:id` | member · `collection:manage` | Replaces a company collection's name, band and rules (same body). Gifts not yet redeemed see the change. Platform, archived and other companies' collections: `404` |
+| POST | `/v1/collections/:id/archive` | member · `collection:manage` | `{ archived: true }`. Hidden from lists and new campaigns (`422 collection_archived`); gifts already sent still resolve it. Again: no change. Platform and other companies' collections: `404` |
+| GET | `/v1/recipients?q=` | member · `recipients:view` | `{ recipients[], more }`: the company directory by name, up to 500 (`DIRECTORY_PAGE`). `q` matches names and emails in the database, so it finds anyone; `more` says there are people past this page |
+| POST | `/v1/recipients/import` | member · `recipients:add` | A list from a file: body `{ rows[] }` of `email`, `firstName?`, `lastName?` (1 to 500). Everyone joins the company directory, matched by email (an existing person keeps their record). Returns `{ recipients[] (file order), added, existing }`. Any invalid row (including a name with an unreadable character, U+FFFD): `400 invalid_request`, nothing written. One bulk write: a retry finishes a half-saved list and adds nobody twice |
+| POST | `/v1/campaigns/estimate` | member · `campaign:create` | Estimate for an unsaved send: gifts, hold, total, available, after, `needsApproval`, `short` |
+| GET | `/v1/campaigns?status=all\|active\|scheduled\|pending_approval` | member · `campaign:view` | `{ campaigns[], funnel, counts }` (drafts are not listed) |
+| POST | `/v1/campaigns` | member · `campaign:create` | `201 { id }`: a draft. Optional `Idempotency-Key` (UUID) becomes the id. `gift` is `{ kind: "single", sku }`, `{ kind: "collection", collectionId, budgetCents }` or `{ kind: "bundle", skus }` (2 to 5 different products; every recipient gets every item; the budget is the sum of their live prices). A bundle with two options of one product: `422 bundle_same_product`; an unknown or sold-out item: `422 item_not_eligible`. Campaign rows carry `gift.kind` `bundle` and `gift.skus` |
+| GET | `/v1/campaigns/:id` | member · `campaign:view` | Detail, with `canDecide` for the viewer |
+| POST | `/v1/campaigns/:id/estimate` | member · `campaign:create` | Estimate for a saved campaign |
+| POST | `/v1/campaigns/:id/submit` | member · `campaign:create` | `{ campaignId, outcome, gifts, totalCents, links[] }` (see below) |
+| POST | `/v1/campaigns/:id/approve`, `/decline` | member · `campaign:approve` (never the campaign's sender) | `{ campaignId, status }` |
+| GET | `/v1/campaigns/:id/gifts` | member · `campaign:view` | `{ gifts[] }`: recipient, status, channel, chosen SKU |
 
 The password routes (register, verify, resend, sign-in) answer
 `400 not_supported` on a platform with its own sign-in page, and the hosted
@@ -71,14 +71,37 @@ Request and response shapes are the Zod schemas in
 [`packages/domain/src/views.ts`](../../packages/domain/src/views.ts),
 shared with the apps.
 
-**Workspace routes** (the dashboard's company and team scope) run on the
-development session until the B2C workspace model is decided. With
-`DEV_AUTH=1` outside production, the session comes from the `x-dev-user`
-and `x-dev-team` headers the sender app forwards, defaulting to the demo
-sender. Otherwise every workspace route answers `401 unauthenticated`.
-Company and team always come from the session, never from the body. The
-development headers never stand in for real sign-in: account routes
-(`/v1/me` and the rest) need the API's own access token.
+**Member routes** (`auth: "member"`, the dashboard) work inside one
+company and one team ([ADR 0016](../architecture/decisions/0016-organizations-and-roles.md)):
+
+- The person comes from the API's access token, as on account routes.
+- Their companies, teams and roles come from the commerce platform, through
+  the connector's `organizations` (cached for a minute). Owners and admins
+  hold their role on the company and reach every team; approvers and
+  senders hold theirs on one team.
+- The sender app picks the company and team with the `x-gifting-company`
+  and `x-gifting-team` headers. They are checked against the person's
+  memberships; one they don't hold is ignored, and the first membership is
+  used instead. Company and team never come from the body.
+- Each route names the action it needs (after the dot in the Auth column).
+  The roles that grant each action are in
+  [`packages/domain/src/permissions.ts`](../../packages/domain/src/permissions.ts)
+  and the [security doc](../architecture/security.md#organizations-roles-and-what-they-can-do).
+
+| Response | When |
+| --- | --- |
+| `401 unauthenticated` | No access token (and no development session) |
+| `403 no_membership` | Signed in, but in no company yet: an operator adds them with `pnpm member:add` |
+| `403 forbidden` | The person's roles on this team don't grant the route's action |
+| `404 not_found` | Another company's or team's data, whatever the headers say |
+| `503 organizations_not_configured` | The commerce connector has no `organizations` (production only) |
+
+Development: with `DEV_AUTH=1` outside production, the `x-dev-user` header
+the sender app forwards acts as any member of the directory (the demo
+company from `infra/seed` when the connector has no `organizations`).
+Without it, the signed-in person's own membership is used, else the demo
+company's first member. Account routes (`/v1/me` and the rest) always need
+the API's own access token.
 
 **Submit:** above the team's approval threshold the campaign becomes
 `pending_approval` and its gifts are created without holds. Otherwise one

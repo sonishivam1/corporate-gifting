@@ -52,6 +52,8 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const raw = (await searchParams).range;
   const range: OverviewRange = OVERVIEW_RANGES.includes(raw as OverviewRange) ? (raw as OverviewRange) : "30d";
   const [me, account] = await Promise.all([getWorkspace(), getMe()]);
+  const canSend = me.actions.includes("campaign:create");
+  const canBuild = me.actions.includes("collection:manage");
   // Greet the signed-in person; the workspace's development user only if their name is missing.
   const firstName = (account.kind === "account" ? account.me.firstName : null) ?? me.user.name.split(" ")[0];
   // The signed-in person's company, from their account; left out if they didn't give one.
@@ -100,11 +102,13 @@ export default async function Home({ searchParams }: PageProps<"/">) {
               <GridIcon /> Browse gifts
             </Link>
           </Button>
-          <Button asChild>
-            <Link href="/campaigns/new">
-              <SendIcon /> Send a gift
-            </Link>
-          </Button>
+          {canSend ? (
+            <Button asChild>
+              <Link href="/campaigns/new">
+                <SendIcon /> Send a gift
+              </Link>
+            </Button>
+          ) : null}
         </div>
       </section>
 
@@ -151,9 +155,9 @@ export default async function Home({ searchParams }: PageProps<"/">) {
       </section>
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5" aria-label="Quick actions">
-        <Action href="/campaigns/new" icon={SendIcon} title="Send a gift" text="Pick a gift, write a note, choose how it arrives." lead />
+        {canSend ? <Action href="/campaigns/new" icon={SendIcon} title="Send a gift" text="Pick a gift, write a note, choose how it arrives." lead /> : null}
         <Action href="/browse" icon={GridIcon} title="Browse gifts" text={`${plural(products.length, "gift")} from ${plural(brands, "brand")}.`} />
-        <Action href="/collections/new" icon={LayersIcon} title="Build a collection" text="Let people pick anything up to a budget." />
+        {canBuild ? <Action href="/collections/new" icon={LayersIcon} title="Build a collection" text="Let people pick anything up to a budget." /> : null}
         <Action icon={RepeatIcon} title="Automate moments" text="Birthdays, anniversaries and first days." />
         <Action icon={WalletIcon} title="Top up budget" text="By card or invoice, straight into this team." />
       </section>
@@ -166,7 +170,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
             {collections.map((c) => (
               <Link
                 key={c.id}
-                href={`/campaigns/new?collection=${encodeURIComponent(c.id)}`}
+                href={canSend ? `/campaigns/new?collection=${encodeURIComponent(c.id)}` : "/collections"}
                 className="w-52 shrink-0 snap-start rounded-xl focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
               >
                 <Card className="h-full gap-3 py-3 transition-colors hover:bg-muted/50">
@@ -200,11 +204,16 @@ export default async function Home({ searchParams }: PageProps<"/">) {
         <CardContent>
           {campaigns.campaigns.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No campaigns yet.{" "}
-              <Link className="text-primary underline-offset-4 hover:underline" href="/campaigns/new">
-                Send your first gift
-              </Link>
-              .
+              No campaigns yet.
+              {canSend ? (
+                <>
+                  {" "}
+                  <Link className="text-primary underline-offset-4 hover:underline" href="/campaigns/new">
+                    Send your first gift
+                  </Link>
+                  .
+                </>
+              ) : null}
             </p>
           ) : (
             <Table>

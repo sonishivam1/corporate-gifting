@@ -4,17 +4,21 @@ import { createCtApi, loadCtApiConfig, loadCtConfig } from "@gifting/ct";
 import { createCtAccounts, loadSignInClientConfig } from "./accounts";
 import { createCtCatalog } from "./catalog-connector";
 import { createCtOrderPlacer, orderWritesAllowed } from "./orders";
+import { createCtOrganizations } from "./organizations";
 
 export { createCtAccounts, loadSignInClientConfig, signInScopeProblem } from "./accounts";
 export { createCtCatalog } from "./catalog-connector";
 export { BALANCE_PAYMENT_TYPE_KEY, createCtOrderPlacer, GIFT_ORDER_TYPE_KEY, orderWritesAllowed } from "./orders";
+export { createCtOrganizations } from "./organizations";
 
 /**
  * COMMERCE_CONNECTOR=commercetools. Settings: the CTP_* variables (the
  * project, its API client and CTP_STORE_KEY) and the sign-in client,
  * CTP_SIGNIN_CLIENT_ID and CTP_SIGNIN_CLIENT_SECRET. The catalog reads with
  * its own read-only client, CTP_API_CLIENT_ID, CTP_API_CLIENT_SECRET and
- * CTP_API_SCOPES; without it the connector has no catalog.
+ * CTP_API_SCOPES; without it the connector has no catalog. Organizations
+ * (companies, teams, roles) are read from Business Units with the API client
+ * (`view_business_units`, `view_customers`).
  */
 export default defineConnector(({ env, log }) => {
   const ct = loadCtConfig(env);
@@ -26,6 +30,7 @@ export default defineConnector(({ env, log }) => {
     capabilities: { signIn: "password" },
     accounts,
     ...(catalogClient ? { catalog: createCtCatalog(createCtApi(catalogClient)) } : {}),
+    organizations: createCtOrganizations(createCtApi(ct)),
     orders: createCtOrderPlacer(createCtApi(ct), { allowWrites: orderWritesAllowed(ct), storeKey: ct.storeKey, ...(env.CTP_SHIPPING_METHOD_KEY ? { shippingMethodKey: env.CTP_SHIPPING_METHOD_KEY } : {}) }),
     async check() {
       // Refuse to start with an admin sign-in client: its customer tokens would carry full project access.

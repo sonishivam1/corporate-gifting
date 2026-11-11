@@ -11,7 +11,8 @@ export function reportingRoutes(reporting: ReportingService) {
     defineRoute({
       method: "GET",
       url: "/v1/teams/:teamKey/overview",
-      auth: "workspace",
+      auth: "member",
+      permission: "reports:view",
       schema: {
         params: z.object({ teamKey: z.string().min(1) }),
         query: z.object({ range: z.enum(OVERVIEW_RANGES).default("30d") }),

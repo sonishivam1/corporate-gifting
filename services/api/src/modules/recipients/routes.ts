@@ -10,7 +10,8 @@ export function recipientsRoutes(recipients: RecipientsService) {
     defineRoute({
       method: "GET",
       url: "/v1/recipients",
-      auth: "workspace",
+      auth: "member",
+      permission: "recipients:view",
       schema: {
         query: z.object({ q: z.string().trim().max(80).optional() }),
         response: recipientListView,
@@ -23,7 +24,8 @@ export function recipientsRoutes(recipients: RecipientsService) {
     defineRoute({
       method: "POST",
       url: "/v1/recipients/import",
-      auth: "workspace",
+      auth: "member",
+      permission: "recipients:add",
       schema: { body: recipientImportInput, response: recipientImportView },
       handler: async ({ body, request }) => {
         const session = requireSession(request);

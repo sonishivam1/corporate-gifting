@@ -1,11 +1,13 @@
 import { notFound } from "next/navigation";
 
 import { CollectionBuilder } from "@/components/collection-builder";
-import { getCollection, getProducts } from "@/lib/api";
+import { NotAllowed } from "@/components/not-allowed";
+import { allowed, getCollection, getProducts } from "@/lib/api";
 
 /** Edit one of the company's collections. Platform and archived collections are "not found". */
 export default async function EditCollectionPage({ params }: PageProps<"/collections/[id]">) {
   const { id } = await params;
+  if (!(await allowed("collection:manage"))) return <NotAllowed what="edit collections" />;
   const [collection, products] = await Promise.all([getCollection(id), getProducts()]);
   if (!collection || collection.owner === "platform") notFound();
   return (

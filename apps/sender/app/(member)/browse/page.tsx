@@ -7,7 +7,7 @@ import { SearchIcon } from "lucide-react";
 import Link from "next/link";
 
 import { ProductCard } from "@/components/product-card";
-import { getProducts } from "@/lib/api";
+import { allowed, getProducts } from "@/lib/api";
 import { CATEGORY } from "@/lib/catalog";
 import { plural } from "@/lib/format";
 
@@ -38,7 +38,7 @@ export default async function BrowsePage({ searchParams }: PageProps<"/browse">)
     q: one(raw.q) || undefined,
   });
   const filters: Filters = parsed.success ? parsed.data : {};
-  const products = await getProducts(filters);
+  const [products, canSend] = await Promise.all([getProducts(filters), allowed("campaign:create")]);
 
   return (
     <div className="grid gap-6 pt-4">
@@ -84,7 +84,7 @@ export default async function BrowsePage({ searchParams }: PageProps<"/browse">)
       {products.length ? (
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {products.map((p) => (
-            <ProductCard key={p.key} product={p} />
+            <ProductCard key={p.key} product={p} canSend={canSend} />
           ))}
         </section>
       ) : (

@@ -237,7 +237,7 @@ describe("the sender replaces or cancels a gift", () => {
     await redeem(tokens[0]!, await firstItem(tokens[0]!));
     expect((await h.app.inject({ method: "POST", url: `/v1/gifts/${gift._id}/resend`, headers: MAYA })).statusCode).toBe(409);
     expect((await h.app.inject({ method: "POST", url: `/v1/gifts/${gift._id}/cancel`, headers: MAYA })).statusCode).toBe(409);
-    expect((await h.app.inject({ method: "POST", url: `/v1/gifts/${gift._id}/cancel`, headers: { "x-dev-user": "user-maya", "x-dev-team": "team-lumen-sales" } })).statusCode).toBe(404);
+    expect((await h.app.inject({ method: "POST", url: `/v1/gifts/${gift._id}/cancel`, headers: { "x-dev-user": "user-maya", "x-gifting-team": "team-lumen-sales" } })).statusCode).toBe(404);
   });
 });
 

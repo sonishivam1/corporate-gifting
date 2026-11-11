@@ -1,18 +1,18 @@
 // pnpm member:add -- --email you@company.com --company company-lumen-labs \
 //   [--team team-lumen-people] --role owner|admin|approver|sender \
-//   [--first-name Ada --last-name Lovelace] [--company-name "Your Company"]
+//   [--company-name "Your Company"]
 //
-// Adds a real person as a member of a company in the commercetools project
-// from .env, so they can sign in before invitations exist (M1 sign-in plan,
-// phase A). Creates the customer if needed (status "invited"; their first
-// sign-in makes it "active") and adds them to the company or team with the
-// role. Work emails only. Owners and admins join the company and reach every
-// team; approvers and senders join one team.
+// Adds a registered person to a company in the commercetools project from
+// .env, until invitations exist (ADR 0016). The person registers and
+// verifies their email first (ADR 0015); a customer record made here could
+// never sign in, so an unknown email is refused. Adds them to the company or
+// team with the role; the dashboard picks it up within a minute. Work emails
+// only. Owners and admins join the company and reach every team; approvers
+// and senders join one team.
 //
 // --company-name creates the company when no unit has that key yet: a Company
 // unit in the gifting store, its email domain taken from --email, and one
 // team, "General" (key `<company>-general`). Ops do this from phase B.
-import { randomUUID } from "node:crypto";
 import { parseArgs } from "node:util";
 
 import { createCtApi, isNotFound, loadCtConfig, maySetUpProject, NOT_SETUP_PROJECT_MESSAGE } from "@gifting/ct";
@@ -28,8 +28,6 @@ const argsSchema = z
     company: z.string({ error: "--company is not set." }).min(1),
     team: z.string().optional(),
     role: z.enum(MEMBER_ROLES, { error: `--role must be one of ${MEMBER_ROLES.join(", ")}.` }),
-    "first-name": z.string().optional(),
-    "last-name": z.string().optional(),
     "company-name": z.string().min(1).optional(),
   })
   .refine((a) => !isPersonalEmail(a.email), { error: "Members join with a work email; personal domains are refused." })
@@ -46,8 +44,6 @@ try {
       company: { type: "string" },
       team: { type: "string" },
       role: { type: "string" },
-      "first-name": { type: "string" },
-      "last-name": { type: "string" },
       "company-name": { type: "string" },
     },
   });
@@ -58,6 +54,13 @@ try {
   const config = loadCtConfig();
   if (!maySetUpProject(config)) throw new AppError("not_sandbox", NOT_SETUP_PROJECT_MESSAGE);
   const api = createCtApi(config);
+
+  // Before anything is created: only a registered person can be added.
+  const customer = (await api.customers().get({ queryArgs: { where: "lowercaseEmail = :email", "var.email": args.email, limit: 1 } }).execute()).body.results[0];
+  if (!customer) {
+    throw new AppError("not_registered", "No account has that email. Ask them to register in the sender app and verify their email, then run this again.");
+  }
+  log.info({ customerKey: customer.key ?? customer.id }, "customer found");
 
   // The unit the member joins: the company for owners and admins, else the team.
   let company = await api
@@ -114,26 +117,6 @@ try {
     if (team.unitType !== "Division" || team.topLevelUnit.key !== company.key) throw new AppError("not_a_team", `${args.team} is not a team of ${company.key}.`);
     unitKey = team.key;
   }
-
-  const found = (await api.customers().get({ queryArgs: { where: `lowercaseEmail = "${args.email}"`, limit: 1 } }).execute()).body.results[0];
-  const customer =
-    found ??
-    (
-      await api
-        .customers()
-        .post({
-          body: {
-            key: `member-${randomUUID()}`,
-            email: args.email,
-            ...(args["first-name"] ? { firstName: args["first-name"] } : {}),
-            ...(args["last-name"] ? { lastName: args["last-name"] } : {}),
-            authenticationMode: "ExternalAuth",
-            custom: { type: { typeId: "type", key: "member-profile" }, fields: { status: "invited", invitedAt: new Date().toISOString(), invitedBy: "member:add" } },
-          },
-        })
-        .execute()
-    ).body.customer;
-  log.info({ customerKey: customer.key, created: !found }, found ? "customer exists" : "customer created");
 
   const unit = (await api.businessUnits().withKey({ key: unitKey }).get().execute()).body;
   if (unit.associates.some((a) => a.customer.id === customer.id)) {

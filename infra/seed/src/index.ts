@@ -68,32 +68,38 @@ export const demoCompanies: DemoCompany[] = [
   { key: "company-orbit-studio", name: "Orbit Studio", domain: "orbitstudio.example", brandColor: "#DB2777", teams: [{ key: "team-orbit-studio", name: "Studio" }, { key: "team-orbit-growth", name: "Growth" }] },
 ];
 
-export type SeedMember = { id: string; name: string; teams: { teamKey: string; role: "owner" | "admin" | "sender" | "approver" }[] };
+/**
+ * A demo person and their roles: owners and admins on the company (no
+ * `teamKey`), approvers and senders on one team (ADR 0016).
+ */
+export type SeedMember = { id: string; name: string; memberships: { teamKey?: string; role: "owner" | "admin" | "sender" | "approver" }[] };
 
 /**
- * The company the sender dashboard runs as: Lumen Labs, the first of
- * `demoCompanies`, with its team settings and members. In commercetools the
- * threshold and approvers are the `team-settings` custom type and the
- * members are Associates. Until M1 reads them from there, the API reads them
- * from here.
+ * The company the sender dashboard runs as in development: Lumen Labs, the
+ * first of `demoCompanies`, with its team settings and members. In
+ * commercetools the threshold is the `team-settings` custom type and the
+ * members are Associates; the API reads them there through the connector's
+ * organizations, and reads these only when the connector has none.
  */
 export const demoCompany = {
   ...demoCompanies[0]!,
   teams: [
-    { key: "team-lumen-people", name: "People", approvalThresholdCents: 100_000, approverIds: ["user-rowan"] },
-    { key: "team-lumen-sales", name: "Sales", approvalThresholdCents: 250_000, approverIds: ["user-imani"] },
+    { key: "team-lumen-people", name: "People", approvalThresholdCents: 100_000 },
+    { key: "team-lumen-sales", name: "Sales", approvalThresholdCents: 250_000 },
   ],
   members: [
     {
       id: "user-maya",
       name: "Maya Chen",
-      teams: [
+      memberships: [
         { teamKey: "team-lumen-people", role: "sender" },
         { teamKey: "team-lumen-sales", role: "sender" },
       ],
     },
-    { id: "user-rowan", name: "Rowan Ellis", teams: [{ teamKey: "team-lumen-people", role: "approver" }] },
-    { id: "user-imani", name: "Imani Brooks", teams: [{ teamKey: "team-lumen-sales", role: "approver" }] },
+    { id: "user-rowan", name: "Rowan Ellis", memberships: [{ teamKey: "team-lumen-people", role: "approver" }] },
+    { id: "user-imani", name: "Imani Brooks", memberships: [{ teamKey: "team-lumen-sales", role: "approver" }] },
+    { id: "user-dana", name: "Dana Okafor", memberships: [{ role: "owner" }] },
+    { id: "user-theo", name: "Theo Lindqvist", memberships: [{ role: "admin" }] },
   ] satisfies SeedMember[],
 } as const;
 

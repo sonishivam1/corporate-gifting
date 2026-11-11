@@ -11,6 +11,52 @@ how it was verified, and any lesson worth keeping.
 
 ---
 
+## 11 Nov 2026
+
+### Organizations and role-based access
+- **What:** a signed-in person sees their own company's content and can do
+  only what their role allows ([ADR 0016](../architecture/decisions/0016-organizations-and-roles.md),
+  [plan](../plans/organizations-and-roles.md)).
+  - `@gifting/domain`: `permissions.ts`, the action list and the roles that
+    grant each (`can`, `actionsFor`, `rolesOnTeam`, `reachableTeams`);
+    `meView` adds `user.roles`, `companies` and `actions`.
+  - `@gifting/commerce`: an optional `organizations` part
+    (`membershipsOf`, `company`, `teams`, `members`) and its conformance
+    checks. Memory connector: `memoryOrganizations`. commercetools:
+    `createCtOrganizations` reads Company and Division Business Units and
+    their explicit associates; unknown roles, and roles on the wrong kind of
+    unit, are dropped.
+  - API: `auth: "member"` replaces `"workspace"`. Every member route
+    declares a `permission` (`defineRoute` refuses one without), checked in
+    the session hook before the handler (`403 forbidden`). The session comes
+    from the access token and the person's memberships, cached for a minute;
+    `x-gifting-company` and `x-gifting-team` choose among them. No company is
+    `403 no_membership`; production without organizations is
+    `503 organizations_not_configured`. Approvers are whoever holds
+    `campaign:approve` on the team (its approvers and the company's owners);
+    `approverIds` is no longer read. A team with no threshold counts as 0.
+  - Sender app: company switcher (more than one company), team switcher on
+    the new cookies and headers, send, build and edit controls hidden when
+    the role lacks them, a "not allowed" notice on those pages, and a page
+    for someone in no company.
+  - Demo data: an owner (Dana Okafor) and an admin (Theo Lindqvist) in the
+    demo company. `pnpm member:add` adds only registered people.
+- **Why:** sign-in (ADR 0015) proved who someone is, but the dashboard still
+  ran on the development session over the demo company, and production
+  refused it.
+- **Verified:** `pnpm lint`, `typecheck`, `test` and `build`. New tests:
+  every role's actions, roles on a team, the commercetools mapping, the
+  organizations conformance checks against memory, refusals per role,
+  signed-in members in two companies, no membership, and no organizations.
+  Break and restore: without the permission check, the refusal tests fail.
+  `pnpm test:integration`: 93 passed, including the owner approving with no
+  team role (and "not found" from another team), self-approval, an approver
+  refused sending, a sender and an admin refused approving, and an approver
+  refused editing a collection.
+- **Lesson:** keep the platform's job to "who belongs where". commercetools'
+  associate role permissions are about carts and quotes, and Shopify's B2B
+  has two fixed roles, so what a role may do has to be ours.
+
 ## 10 Nov 2026
 
 ### Gift bundles: the recipient gets every gift

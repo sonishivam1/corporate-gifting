@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import type { CatalogConnector } from "@gifting/commerce";
+import type { CatalogConnector, OrganizationsConnector } from "@gifting/commerce";
 import { dbConfig, getDb } from "@gifting/db";
 import type { OrderPlacer } from "@gifting/domain";
 import { AppError, createLogger } from "@gifting/logger";
@@ -32,6 +32,7 @@ let accounts: AccountsService | null = null;
 let mailer: Mailer;
 let catalog: CatalogConnector | null = null;
 let orders: OrderPlacer | undefined;
+let organizations: OrganizationsConnector | null = null;
 try {
   const production = process.env.NODE_ENV === "production";
   const smtp = env.SMTP_HOST ? { host: env.SMTP_HOST, port: env.SMTP_PORT, user: env.SMTP_USER || undefined, pass: env.SMTP_PASS || undefined } : env.SMTP_URL || undefined;
@@ -39,6 +40,11 @@ try {
   // The commerce platform is a plug-in: COMMERCE_CONNECTOR names it, and it reads its own settings.
   const connector = await loadConnector({ env: process.env, log, production });
   catalog = connector?.catalog ?? null;
+  organizations = connector?.organizations ?? null;
+  if (!organizations) {
+    if (production) log.warn("The commerce connector has no organizations: the dashboard answers 503 organizations_not_configured.");
+    else log.warn("The commerce connector has no organizations: the dashboard runs as the demo company (with DEV_AUTH=1).");
+  }
   if (connector) {
     orders = connector.orders;
     if (!env.API_SESSION_SECRET) throw new AppError("config_invalid", "API_SESSION_SECRET is not set (openssl rand -hex 32).");
@@ -59,7 +65,7 @@ try {
   process.exit(1);
 }
 
-const app = await buildApp({ logger: log, accounts, catalog, mailer, ...(orders ? { orders } : {}) });
+const app = await buildApp({ logger: log, accounts, catalog, mailer, organizations, ...(orders ? { orders } : {}) });
 
 try {
   await app.listen({ port: env.API_PORT, host: "0.0.0.0" });

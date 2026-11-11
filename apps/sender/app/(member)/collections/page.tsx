@@ -8,12 +8,12 @@ import Link from "next/link";
 
 import { ArchiveCollection } from "@/components/archive-collection";
 import { CollectionMosaic } from "@/components/product-art";
-import { getCollections } from "@/lib/api";
+import { allowed, getCollections } from "@/lib/api";
 import { money, plural } from "@/lib/format";
 
-/** The company's own collections, which any member can change, and the platform's. */
+/** The company's own collections, which owners, admins and senders can change, and the platform's. */
 export default async function CollectionsPage() {
-  const collections = await getCollections();
+  const [collections, canManage] = await Promise.all([getCollections(), allowed("collection:manage")]);
   const own = collections.filter((c) => c.owner !== "platform");
   const platform = collections.filter((c) => c.owner === "platform");
 
@@ -24,11 +24,13 @@ export default async function CollectionsPage() {
           <h1 className="text-3xl font-semibold">Collections</h1>
           <p className="text-muted-foreground">Gifts people choose from, up to a budget. Your company&apos;s collections are shared with everyone in it.</p>
         </div>
-        <Button asChild>
-          <Link href="/collections/new">
-            <PlusIcon /> Build a collection
-          </Link>
-        </Button>
+        {canManage ? (
+          <Button asChild>
+            <Link href="/collections/new">
+              <PlusIcon /> Build a collection
+            </Link>
+          </Button>
+        ) : null}
       </section>
 
       <section className="grid gap-3" aria-labelledby="own-collections">
@@ -39,12 +41,16 @@ export default async function CollectionsPage() {
           <Grid>
             {own.map((c) => (
               <CollectionCard key={c.id} collection={c}>
-                <Button asChild variant="outline" size="sm">
-                  <Link href={`/collections/${encodeURIComponent(c.id)}`}>
-                    <PencilIcon /> Edit
-                  </Link>
-                </Button>
-                <ArchiveCollection id={c.id} name={c.name} />
+                {canManage ? (
+                  <>
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/collections/${encodeURIComponent(c.id)}`}>
+                        <PencilIcon /> Edit
+                      </Link>
+                    </Button>
+                    <ArchiveCollection id={c.id} name={c.name} />
+                  </>
+                ) : null}
               </CollectionCard>
             ))}
           </Grid>
@@ -57,13 +63,15 @@ export default async function CollectionsPage() {
               <EmptyTitle>No collections of your own yet</EmptyTitle>
               <EmptyDescription>Pick products, brands or tags, set a budget, and everyone in your company can send it.</EmptyDescription>
             </EmptyHeader>
-            <EmptyContent>
-              <Button asChild size="sm">
-                <Link href="/collections/new">
-                  <PlusIcon /> Build a collection
-                </Link>
-              </Button>
-            </EmptyContent>
+            {canManage ? (
+              <EmptyContent>
+                <Button asChild size="sm">
+                  <Link href="/collections/new">
+                    <PlusIcon /> Build a collection
+                  </Link>
+                </Button>
+              </EmptyContent>
+            ) : null}
           </Empty>
         )}
       </section>

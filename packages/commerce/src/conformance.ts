@@ -10,6 +10,8 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { isCompanyRole, MEMBER_ROLES } from "@gifting/domain";
+
 import { type CatalogItem, type CommerceConnector, connectorProblem } from "./contract";
 
 export type ConformanceOptions = {
@@ -25,6 +27,11 @@ export type ConformanceOptions = {
    * refusal checks run for hosted sign-in.
    */
   completeHostedSignIn?: (url: string, email: string) => Promise<string>;
+  /**
+   * Connectors with `organizations`: a customer who holds at least one role.
+   * Without it, only the checks for unknown customers and companies run.
+   */
+  organizations?: { customerId: () => string | Promise<string> };
   /** Per-test timeout; real platforms need a few seconds. */
   timeoutMs?: number;
 };
@@ -155,6 +162,42 @@ export function describeConnectorConformance(name: string, options: ConformanceO
         if (!pick) return ctx.skip();
         const matches = await connector.catalog.searchItems({ tags: [], brands: [], skus: [pick.variant.sku], budgetCents: pick.variant.priceCents });
         expect(matches.map((m) => m.key)).toEqual([pick.item.key]);
+      });
+    });
+
+    describe("organizations (connectors that have them)", () => {
+      it("answers an unknown customer and company with nothing", { timeout }, async (ctx) => {
+        const orgs = connector.organizations;
+        if (!orgs) return ctx.skip();
+        expect(await orgs.membershipsOf(UNKNOWN_ID)).toEqual([]);
+        expect(await orgs.company(`no-such-company-${UNKNOWN_ID}`)).toBeNull();
+        expect(await orgs.teams(`no-such-company-${UNKNOWN_ID}`)).toEqual([]);
+        expect(await orgs.members(`no-such-company-${UNKNOWN_ID}`)).toEqual([]);
+      });
+
+      it("returns a member's companies, teams and roles in the product's shape", { timeout: timeout * 3 }, async (ctx) => {
+        const orgs = connector.organizations;
+        if (!orgs || !options.organizations) return ctx.skip();
+        const customerId = await options.organizations.customerId();
+        const memberships = await orgs.membershipsOf(customerId);
+        expect(memberships.length).toBeGreaterThan(0);
+        for (const m of memberships) {
+          expect(MEMBER_ROLES).toContain(m.role);
+          // Company roles are held on the company, team roles on a team.
+          expect(Boolean(m.teamKey), `${m.companyKey} ${m.role}`).toBe(!isCompanyRole(m.role));
+        }
+        for (const companyKey of new Set(memberships.map((m) => m.companyKey))) {
+          expect((await orgs.company(companyKey))?.key).toBe(companyKey);
+          const teams = await orgs.teams(companyKey);
+          const teamKeys = teams.map((t) => t.key);
+          expect(new Set(teamKeys).size).toBe(teamKeys.length);
+          for (const t of teams) expect(t.approvalThresholdCents === null || Number.isInteger(t.approvalThresholdCents), t.key).toBe(true);
+          for (const m of memberships.filter((x) => x.companyKey === companyKey && x.teamKey)) expect(teamKeys).toContain(m.teamKey);
+          const members = await orgs.members(companyKey);
+          expect(members.map((m) => m.id)).toContain(customerId);
+          // Nobody's roles in another company leak into this one.
+          for (const member of members) for (const m of member.memberships) expect(m.companyKey, member.id).toBe(companyKey);
+        }
       });
     });
 

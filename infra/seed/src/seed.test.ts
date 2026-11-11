@@ -52,11 +52,24 @@ describe("demo company", () => {
     expect(demoCompany.teams.map((t) => [t.key, t.name])).toEqual(first!.teams.map((t) => [t.key, t.name]));
   });
 
-  it("has an approver on every team who isn't its only sender", () => {
+  it("has an approver and a sender on every team, and someone in every role", () => {
+    const holds = (teamKey: string, role: string) => demoCompany.members.filter((m) => m.memberships.some((x) => "teamKey" in x && x.teamKey === teamKey && x.role === role));
     for (const team of demoCompany.teams) {
-      expect(team.approverIds.length, team.key).toBeGreaterThan(0);
-      const senders = demoCompany.members.filter((m) => m.teams.some((t) => t.teamKey === team.key && t.role === "sender"));
-      expect(senders.some((s) => !team.approverIds.includes(s.id as never)), team.key).toBe(true);
+      expect(holds(team.key, "approver").length, team.key).toBeGreaterThan(0);
+      expect(holds(team.key, "sender").length, team.key).toBeGreaterThan(0);
+    }
+    const roles = new Set(demoCompany.members.flatMap((m) => m.memberships.map((x) => x.role)));
+    expect([...roles].sort()).toEqual(["admin", "approver", "owner", "sender"]);
+  });
+
+  it("holds company roles on the company and team roles on a team of its own", () => {
+    const teams = new Set<string>(demoCompany.teams.map((t) => t.key));
+    for (const member of demoCompany.members) {
+      for (const m of member.memberships) {
+        const teamKey = "teamKey" in m ? m.teamKey : undefined;
+        if (m.role === "owner" || m.role === "admin") expect(teamKey, member.id).toBeUndefined();
+        else expect(teams.has(teamKey ?? ""), member.id).toBe(true);
+      }
     }
   });
 

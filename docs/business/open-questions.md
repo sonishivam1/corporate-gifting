@@ -17,6 +17,7 @@ affected docs.
 | 9 | Which other commerce platforms must the product support, and in what order? ([ADR 0013](../architecture/decisions/0013-commerce-adapters.md)) | The commerce interface, connector priority | Before M1 | commercetools only in the POC. Shopify and BigCommerce are likely next, each built as a connector when a client needs it | 28 Oct 2026, Shivam |
 | 10 | One commerce platform per deployment, or vendors on different platforms in one marketplace? | Commerce connections, vendor onboarding | Before M1 | One per deployment: the client's own platform. The data model leaves room for more | 28 Oct 2026, Shivam |
 | 11 | Is a second commerce connector (for example a Shopify development store) in the POC scope? | POC plan, M7 demo | Before M1 | No | 28 Oct 2026, Shivam |
+| 12 | With open registration (B2C), how does a person get a company, a team and a role? ([ADR 0016](../architecture/decisions/0016-organizations-and-roles.md)) | Dashboard access, roles, invitations | M1 | From the commerce platform: commercetools Business Units, associates and roles, read through the connector. Our own map decides what each role may do. An operator adds people with `pnpm member:add` until invitations | 11 Nov 2026, Shivam |
 
 ## Working assumptions until answered
 
