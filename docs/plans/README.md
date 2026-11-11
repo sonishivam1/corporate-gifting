@@ -23,6 +23,7 @@ work packages. Each milestone step gets its own plan here when it starts.
 | [Marketplace catalog from commercetools (spike 2)](marketplace-catalog.md) | Catalog, sender app | ✅ Built (29 Oct 2026) |
 | [Recipient upload in the send flow](recipient-upload.md) | Recipients, sender app | ✅ Built (30 Oct 2026) |
 | [Build-your-own collection (M2.3)](build-your-own-collection.md) | Catalog, sender app | ✅ Built (2 Nov 2026) |
+| [Gift bundles: the recipient gets every gift](gift-bundles.md) | Campaigns, gifts, connectors, sender and recipient apps | ✅ Built (10 Nov 2026) |
 
 ## Template
 

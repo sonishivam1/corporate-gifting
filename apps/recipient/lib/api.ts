@@ -26,7 +26,8 @@ export async function getApiMeta(): Promise<ApiMeta | null> {
 export type Problem = "invalid" | "used" | "expired";
 export type LinkView = { state: Problem } | { state: "open"; from: string; headline: string; message: string; expiresOn: string; cover: string; occasion: string; brandColor: string | null };
 export type Item = { sku: string; name: string; brand: string; description: string; category: string; vendorName: string; slaDays: number };
-export type ItemsView = { state: Problem } | { state: "open"; items: Item[] };
+// bundle: every item ships, nothing to choose. allInStock: whether the bundle can be claimed now.
+export type ItemsView = { state: Problem } | { state: "open"; items: Item[]; bundle: boolean; allInStock: boolean };
 export type ItemView = { state: Problem | "unavailable" } | { state: "open"; item: Item };
 export type OrderView = { state: "invalid" | "pending" } | { state: "ordered"; orderNumber: string; status: "ordered" | "shipped" | "delivered" };
 export type RedeemOutcome = { ok: true; orderNumber: string } | { ok: false; code: string };
@@ -46,13 +47,13 @@ export const getItems = (token: string) => get<ItemsView>(`/v1/r/${enc(token)}/i
 export const getItem = (token: string, sku: string) => get<ItemView>(`/v1/r/${enc(token)}/items/${enc(sku)}`);
 export const getOrder = (token: string) => get<OrderView>(`/v1/r/${enc(token)}/order`);
 
-/** Chooses a gift. The token travels server to server only. */
-export async function redeemGift(token: string, sku: string, address: Address): Promise<RedeemOutcome> {
+/** Chooses a gift, or claims a bundle (no SKU: every item is ordered). The token travels server to server only. */
+export async function redeemGift(token: string, sku: string | null, address: Address): Promise<RedeemOutcome> {
   try {
     const res = await fetch(`${API_URL}/v1/r/${enc(token)}/redeem`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ sku, address }),
+      body: JSON.stringify(sku ? { sku, address } : { address }),
       cache: "no-store",
       signal: AbortSignal.timeout(30000),
     });

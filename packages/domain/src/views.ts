@@ -134,11 +134,22 @@ const greeting = z.object({
   fromName: z.string().trim().min(1).max(40),
 });
 
+/** A bundle sends every item to each recipient: 2 to 5 different products (plan: gift-bundles.md). */
+export const BUNDLE_LIMITS = { min: 2, max: 5 } as const;
+
 export const sendInput = z.object({
   name: z.string().trim().max(120).default(""),
   gift: z.discriminatedUnion("kind", [
     z.object({ kind: z.literal("collection"), collectionId: z.string().min(1), budgetCents: z.number().int().positive() }),
     z.object({ kind: z.literal("single"), sku: z.string().min(1) }),
+    z.object({
+      kind: z.literal("bundle"),
+      skus: z
+        .array(z.string().min(1))
+        .min(BUNDLE_LIMITS.min, `Pick at least ${BUNDLE_LIMITS.min} gifts for a bundle.`)
+        .max(BUNDLE_LIMITS.max, `A bundle has up to ${BUNDLE_LIMITS.max} gifts.`)
+        .refine((s) => new Set(s).size === s.length, "A gift is in the bundle twice."),
+    }),
   ]),
   greeting,
   message: z.string().trim().min(1).max(500),
@@ -200,10 +211,12 @@ export const campaignSummaryView = z.object({
   status: z.enum(CAMPAIGN_STATUSES),
   displayStatus: z.enum(CAMPAIGN_DISPLAY_STATUSES),
   gift: z.object({
-    kind: z.enum(["collection", "single"]),
+    kind: z.enum(["collection", "single", "bundle"]),
     label: z.string(),
     collectionId: z.string().nullable(),
     sku: z.string().nullable(),
+    // A bundle's items; empty for the other kinds.
+    skus: z.array(z.string()),
   }),
   budgetCents: cents,
   channels: z.array(z.enum(CHANNEL_KINDS)),
@@ -253,6 +266,8 @@ export const giftRowView = z.object({
   status: z.enum(GIFT_STATUSES),
   channel: z.enum(CHANNEL_KINDS),
   chosenSku: z.string().nullable(),
+  // Every item ordered: the chosen one, or a bundle's. Empty until the recipient claims.
+  orderedSkus: z.array(z.string()),
 });
 export type GiftRowView = z.infer<typeof giftRowView>;
 

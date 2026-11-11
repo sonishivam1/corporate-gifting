@@ -11,6 +11,35 @@ how it was verified, and any lesson worth keeping.
 
 ---
 
+## 10 Nov 2026
+
+### Gift bundles: the recipient gets every gift
+- **What:** a third kind of gift, as agreed in the
+  [plan](../plans/gift-bundles.md).
+  - `@gifting/domain`: `{ kind: "bundle", skus }` in `sendInput` (2 to 5
+    distinct SKUs, `BUNDLE_LIMITS`); `checkBundle` (different products, in
+    stock, priced at the sum); optional `campaign.skus` and `claim.skus`;
+    `PlaceOrderInput.items` replaces `sku` and `vendorKey`.
+  - commercetools connector: every item's stock is checked at its vendor's
+    channel before anything is written; one cart with a line per item; the
+    order's new `vendorKeys` field (bundles only; `ct:apply` adds it).
+  - API: bundles priced live at the sum of their items for the estimate,
+    approval and hold; `GET /v1/r/:token/items` adds `bundle` and
+    `allInStock`; redeem takes no SKU for a bundle and orders every item, or
+    nothing (`409 bundle_unavailable`); gift rows add `orderedSkus`.
+  - Sender app: "Specific gifts" picks one to five products, with a tray of
+    picks, options and the price per recipient. Recipient app: "Your gifts"
+    and one address for a bundle.
+- **Why:** "several products, and the recipient gets all of them", parked
+  on 30 Oct, without giving up any exactly-once guard: still one claim, one
+  order `GFT-<giftId>`, one payment and one capture.
+- **Verified:** 3 domain, 4 connector and 11 integration tests. Break and
+  restore for the bundle stock check, the connector's per-item stock check
+  and the claim lock.
+- **Lesson:** a race test only proves a lock if the racers really overlap.
+  With an instant in-memory catalog the claims ran one after another and
+  the test passed without the lock; a 5 ms catalog delay made it fail.
+
 ## 2 Nov 2026
 
 ### Build-your-own collection (M2.3)

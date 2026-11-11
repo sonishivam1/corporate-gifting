@@ -5,6 +5,14 @@ change was built, see the [build log](docs/engineering/build-log.md).
 
 ## Unreleased
 
+### Gift bundles
+- Send several gifts at once: in "Specific gifts", pick up to 5 products and
+  every recipient gets all of them. The review shows the price per
+  recipient, the sum of the gifts.
+- Recipients see "Your gifts", enter their address once, and everything is
+  ordered together. If one gift is out of stock, nothing is ordered yet and
+  they are asked to come back later.
+
 ### Build your own collection
 - A new Collections page lists your company's collections and the
   ready-made ones. Build a collection by picking products, whole brands or

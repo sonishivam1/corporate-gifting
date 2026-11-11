@@ -7,7 +7,7 @@ import { createCtOrderPlacer, orderWritesAllowed } from "./orders";
 type Sent = { cart?: unknown; payment?: unknown; addPayment?: unknown; order?: unknown };
 
 /** A stand-in for the commercetools API that records what we send, so the order payloads can be checked offline. */
-function fakeApi(options: { available?: number; existing?: boolean; total?: number } = {}) {
+function fakeApi(options: { available?: number; soldOut?: string[]; existing?: boolean; total?: number } = {}) {
   const sent: Sent = {};
   const notFound = Object.assign(new Error("not found"), { statusCode: 404 });
   const total = options.total ?? 5631;
@@ -21,8 +21,14 @@ function fakeApi(options: { available?: number; existing?: boolean; total?: numb
   };
   const api = {
     orders: () => ({ withOrderNumber: () => ({ get: () => ({ execute: async () => (options.existing ? { body: order } : Promise.reject(notFound)) }) }) }),
-    channels: () => ({ withKey: ({ key }: { key: string }) => ({ get: () => ({ execute: async () => (key === "vendor-missing" ? Promise.reject(notFound) : { body: { id: "ch-1" } }) }) }) }),
-    inventory: () => ({ get: () => ({ execute: async () => ({ body: { results: [{ availableQuantity: options.available ?? 10 }] } }) }) }),
+    channels: () => ({
+      withKey: ({ key }: { key: string }) => ({ get: () => ({ execute: async () => (key === "vendor-missing" ? Promise.reject(notFound) : { body: { id: key === "vendor-north-bakery" ? "ch-1" : `ch-${key}` } }) }) }),
+    }),
+    inventory: () => ({
+      get: ({ queryArgs }: { queryArgs: { where: string } }) => ({
+        execute: async () => ({ body: { results: [{ availableQuantity: options.soldOut?.some((sku) => queryArgs.where.includes(`"${sku}"`)) ? 0 : (options.available ?? 10) }] } }),
+      }),
+    }),
     payments: () => ({ post: ({ body }: { body: unknown }) => ({ execute: async () => ((sent.payment = body), { body: { id: "pay-1" } }) }) }),
     inStoreKeyWithStoreKeyValue: () => store,
   } as unknown as CtApi;
@@ -30,7 +36,7 @@ function fakeApi(options: { available?: number; existing?: boolean; total?: numb
 }
 
 const input = {
-  orderNumber: "GFT-g1", giftId: "g1", campaignId: "c1", companyKey: "company-lumen", teamKey: "team-people", vendorKey: "vendor-north-bakery", sku: "SKU-1",
+  orderNumber: "GFT-g1", giftId: "g1", campaignId: "c1", companyKey: "company-lumen", teamKey: "team-people", items: [{ sku: "SKU-1", vendorKey: "vendor-north-bakery" }],
   captureKey: "capture:g1:1", recipient: { name: "Priya Nair", email: "priya@example.com" },
   shipTo: { name: "Priya Nair", line1: "200 Sample Ave", line2: null, city: "Austin", region: "TX", postalCode: "78701", country: "US" as const },
 };
@@ -98,7 +104,50 @@ describe("creating a redemption order on commercetools", () => {
 
   it("refuses a vendor that is not in the project, and keys that could break a query", async () => {
     const placer = createCtOrderPlacer(fakeApi().api, { allowWrites: true });
-    await expect(placer.place({ ...input, vendorKey: "vendor-missing" })).rejects.toMatchObject({ code: "not_supported" });
-    await expect(placer.place({ ...input, sku: 'x" or sku="y' })).rejects.toMatchObject({ code: "not_supported" });
+    await expect(placer.place({ ...input, items: [{ sku: "SKU-1", vendorKey: "vendor-missing" }] })).rejects.toMatchObject({ code: "not_supported" });
+    await expect(placer.place({ ...input, items: [{ sku: 'x" or sku="y', vendorKey: "vendor-north-bakery" }] })).rejects.toMatchObject({ code: "not_supported" });
+    await expect(placer.place({ ...input, items: [] })).rejects.toMatchObject({ code: "not_supported" });
+  });
+
+  it("keeps single-gift orders on the fields every project has: no vendorKeys", async () => {
+    const { api, sent } = fakeApi();
+    await createCtOrderPlacer(api, { allowWrites: true }).place(input);
+    expect((sent.order as { custom: { fields: object } }).custom.fields).not.toHaveProperty("vendorKeys");
+  });
+});
+
+describe("a bundle order (plan: gift-bundles.md)", () => {
+  const bundle = {
+    ...input,
+    items: [
+      { sku: "SKU-1", vendorKey: "vendor-north-bakery" },
+      { sku: "MUG-1", vendorKey: "vendor-clay-co" },
+      { sku: "SKU-2", vendorKey: "vendor-north-bakery" },
+    ],
+  };
+
+  it("is one cart with a line per item, each on its own vendor's channel", async () => {
+    const { api, sent } = fakeApi();
+    await createCtOrderPlacer(api, { allowWrites: true }).place(bundle);
+    expect((sent.cart as { lineItems: unknown[] }).lineItems).toEqual([
+      { sku: "SKU-1", quantity: 1, supplyChannel: { typeId: "channel", id: "ch-1" } },
+      { sku: "MUG-1", quantity: 1, supplyChannel: { typeId: "channel", id: "ch-vendor-clay-co" } },
+      { sku: "SKU-2", quantity: 1, supplyChannel: { typeId: "channel", id: "ch-1" } },
+    ]);
+  });
+
+  it("is one order and one payment for the whole total, listing every vendor once", async () => {
+    const { api, sent } = fakeApi();
+    expect(await createCtOrderPlacer(api, { allowWrites: true }).place(bundle)).toEqual({ orderNumber: "GFT-g1", orderId: "ord-1", totalCents: 5631, status: "open" });
+    expect(sent.payment).toMatchObject({ amountPlanned: { centAmount: 5631 }, transactions: [{ interactionId: "capture:g1:1" }] });
+    expect(sent.order).toMatchObject({ orderNumber: "GFT-g1", custom: { fields: { vendorKey: "vendor-north-bakery", vendorKeys: ["vendor-north-bakery", "vendor-clay-co"] } } });
+  });
+
+  it("places nothing when any one item is sold out", async () => {
+    const { api, sent } = fakeApi({ soldOut: ["MUG-1"] });
+    await expect(createCtOrderPlacer(api, { allowWrites: true }).place(bundle)).rejects.toMatchObject({ code: "out_of_stock" });
+    expect(sent.cart).toBeUndefined();
+    expect(sent.payment).toBeUndefined();
+    expect(sent.order).toBeUndefined();
   });
 });

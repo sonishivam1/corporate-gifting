@@ -123,6 +123,8 @@ export const campaign = z.object({
   status: z.enum(CAMPAIGN_STATUSES),
   collectionId: id.nullable(),
   sku: z.string().nullable(),
+  // A bundle's items, each sent to every recipient. Absent for single gifts and collections.
+  skus: z.array(z.string()).optional(),
   budgetCents: centsField,
   channels: z.array(channelKind).min(1),
   branding: z.object({ brandColor: z.string().nullable(), logoUrl: z.string().url().nullable() }),
@@ -159,7 +161,10 @@ export const campaign = z.object({
 export type Campaign = z.infer<typeof campaign>;
 
 export const giftClaim = z.object({
+  // The chosen item; a bundle's first item.
   sku: z.string().min(1),
+  // A bundle's items, all ordered together. Absent for single gifts and collections.
+  skus: z.array(z.string()).optional(),
   idempotencyKey: z.string().min(1),
   status: z.enum(["pending", "ordered", "failed"]),
   startedAt: z.date(),

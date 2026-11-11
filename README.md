@@ -96,6 +96,7 @@ true values while the recipient pays nothing.
 | Catalog and budget collections | Built (M2): live commercetools catalog, platform and company collections |
 | Campaigns, approvals, holds, email, links, QR | Planned (M3) |
 | Gift email, recipient page, redemption into a commercetools order, resend, cancel | ✅ Built (M4) |
+| Gift bundles: every recipient gets 2 to 5 gifts, in one order | ✅ Built, see the [plan](docs/plans/gift-bundles.md) |
 | Vendor routing and tracking | Planned (M4) |
 | Automation and more channels | Planned (M5) |
 | Statements, reconciliation and reporting | Planned (M6) |

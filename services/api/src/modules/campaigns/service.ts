@@ -59,6 +59,8 @@ export function createCampaignsService(
   const extraFor = (budgetCents: number) => estimateExtraCents(budgetCents, deps.giftEstimatePercent ?? 0);
   const holdFor = (budgetCents: number) => holdAmount({ budgetCents, shippingAllowanceCents: 0, taxEstimateCents: extraFor(budgetCents), feeCents: 0 });
 
+  const kindOf = (cmp: Campaign): ResolvedGift["kind"] => (cmp.collectionId ? "collection" : cmp.skus?.length ? "bundle" : "single");
+
   async function team(session: Session): Promise<OrgTeam> {
     const found = await deps.org.team(session.companyKey, session.teamKey);
     if (!found) throw new ApiError(404, "team_not_found", "Team not found.");
@@ -102,9 +104,10 @@ export function createCampaignsService(
 
   function giftOf(campaign: Campaign): ResolvedGift {
     return {
-      kind: campaign.collectionId ? "collection" : "single",
+      kind: kindOf(campaign),
       collectionId: campaign.collectionId,
       sku: campaign.sku,
+      skus: campaign.skus ?? [],
       label: "",
       budgetCents: campaign.budgetCents,
     };
@@ -123,12 +126,15 @@ export function createCampaignsService(
       status: cmp.status,
       displayStatus: campaignDisplayStatus(cmp.status),
       gift: {
-        kind: cmp.collectionId ? "collection" : "single",
+        kind: kindOf(cmp),
         label: cmp.collectionId
           ? (labels.collections.get(cmp.collectionId) ?? "Collection")
-          : (labels.products.get(cmp.sku ?? "") ?? cmp.sku ?? "Gift"),
+          : cmp.skus?.length
+            ? cmp.skus.map((sku) => labels.products.get(sku) ?? sku).join(" + ")
+            : (labels.products.get(cmp.sku ?? "") ?? cmp.sku ?? "Gift"),
         collectionId: cmp.collectionId,
         sku: cmp.sku,
+        skus: cmp.skus ?? [],
       },
       budgetCents: cmp.budgetCents,
       channels: cmp.channels,
@@ -190,6 +196,7 @@ export function createCampaignsService(
         status: "draft",
         collectionId: gift.collectionId,
         sku: gift.sku,
+        ...(gift.kind === "bundle" ? { skus: gift.skus } : {}),
         budgetCents: gift.budgetCents,
         channels: input.channels,
         branding: { brandColor: null, logoUrl: null },

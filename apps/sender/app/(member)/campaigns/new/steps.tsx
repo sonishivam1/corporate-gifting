@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  BUNDLE_LIMITS,
   CARD_COVERS,
   CHANNEL_KINDS,
   type CollectionView,
@@ -89,8 +90,8 @@ export function GiftStep({
           <ChoiceCard selected={draft.mode === "single"} onClick={() => update({ mode: "single" })} indicator={false}>
             <GiftIcon className="size-5 shrink-0 text-primary" />
             <span className="grid gap-0.5">
-              <span className="font-medium">One specific gift</span>
-              <span className="text-muted-foreground">Everyone gets the same item. They still add their own address.</span>
+              <span className="font-medium">Specific gifts</span>
+              <span className="text-muted-foreground">Everyone gets the same: one gift, or a bundle of up to {BUNDLE_LIMITS.max}. They add their own address.</span>
             </span>
           </ChoiceCard>
         </div>
@@ -149,12 +150,12 @@ export function GiftStep({
         </>
       ) : (
         <>
-          <VariantPicker draft={draft} update={update} products={products} />
+          <PickedGifts draft={draft} update={update} products={products} />
           <Section
-            title={LET_THEM_CHOOSE ? "Pick the gift" : "Pick the gift everyone gets"}
+            title="Pick the gifts everyone gets"
             aside={
               <span className="text-xs text-muted-foreground" aria-live="polite">
-                {q ? `${shown.length} of ${plural(products.length, "gift")}` : plural(products.length, "gift")}
+                {draft.skus.length} of {BUNDLE_LIMITS.max} picked · {q ? `${shown.length} of ${plural(products.length, "gift")}` : plural(products.length, "gift")}
               </span>
             }
           >
@@ -172,9 +173,14 @@ export function GiftStep({
             {shown.length === 0 ? <p className="text-sm text-muted-foreground">No gift matches “{query.trim()}”. Try a brand or a shorter word.</p> : null}
             <div className="grid gap-2 sm:grid-cols-2">
               {shown.map((p) => {
-                const selected = p.variants.some((v) => v.sku === draft.sku);
+                const picked = draft.skus.find((sku) => p.variants.some((v) => v.sku === sku));
                 return (
-                  <ChoiceCard key={p.key} selected={selected} onClick={() => selected || update({ sku: p.sku })}>
+                  <ChoiceCard
+                    key={p.key}
+                    selected={Boolean(picked)}
+                    disabled={!picked && draft.skus.length >= BUNDLE_LIMITS.max}
+                    onClick={() => update({ skus: picked ? draft.skus.filter((s) => s !== picked) : [...draft.skus, p.sku] })}
+                  >
                     <ProductArt category={p.category} imageUrl={p.imageUrl} sizes="3rem" className="size-12 shrink-0" />
                     <span className="grid min-w-0">
                       <span className="text-xs text-muted-foreground uppercase">{p.brand}</span>
@@ -192,31 +198,45 @@ export function GiftStep({
   );
 }
 
-/** The chosen gift, and which of its options (size, flavour, tin) everyone gets. */
-function VariantPicker({ draft, update, products }: { draft: Draft; update: Update; products: readonly ProductView[] }) {
-  const found = draft.sku ? findVariant(products, draft.sku) : null;
-  if (!found) return null;
-  const { product, variant } = found;
+/** The picked gifts, which option (size, flavour, tin) of each everyone gets, and what one recipient's gifts cost. */
+function PickedGifts({ draft, update, products }: { draft: Draft; update: Update; products: readonly ProductView[] }) {
+  const picks = draft.skus.flatMap((sku) => {
+    const found = findVariant(products, sku);
+    return found ? [found] : [];
+  });
+  if (picks.length === 0) return null;
+  const total = picks.reduce((sum, p) => sum + p.variant.priceCents, 0);
+  const replace = (from: string, to: string) => update({ skus: draft.skus.map((s) => (s === from ? to : s)) });
   return (
-    <div className="flex flex-wrap items-end gap-4 rounded-lg border bg-muted/40 p-3">
-      <ProductArt category={product.category} imageUrl={variant.imageUrl ?? product.imageUrl} sizes="4rem" className="size-16 shrink-0" />
-      <div className="grid min-w-0 flex-1 gap-0.5">
-        <span className="text-xs text-muted-foreground">Everyone gets</span>
-        <span className="truncate font-medium">{product.name}</span>
-        <span className="text-sm tabular-nums">{money(variant.priceCents)} each</span>
+    <div className="grid gap-3 rounded-lg border bg-muted/40 p-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <span className="text-sm font-medium">{picks.length > 1 ? `Everyone gets all ${picks.length}` : "Everyone gets"}</span>
+        <span className="text-sm tabular-nums">{money(total)} per recipient</span>
       </div>
-      {product.variants.length > 1 ? (
-        <Field className="w-full sm:w-64">
-          <FieldLabel htmlFor="variant">Option</FieldLabel>
-          <NativeSelect id="variant" value={variant.sku} onChange={(e) => update({ sku: e.target.value })}>
-            {product.variants.map((v) => (
-              <NativeSelectOption key={v.sku} value={v.sku}>
-                {v.label} · {money(v.priceCents)}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
-        </Field>
-      ) : null}
+      <ul className="grid gap-2">
+        {picks.map(({ product, variant }) => (
+          <li key={product.key} className="flex flex-wrap items-center gap-3">
+            <ProductArt category={product.category} imageUrl={variant.imageUrl ?? product.imageUrl} sizes="3rem" className="size-12 shrink-0" />
+            <div className="grid min-w-0 flex-1">
+              <span className="truncate font-medium">{product.name}</span>
+              <span className="text-xs text-muted-foreground tabular-nums">{money(variant.priceCents)}</span>
+            </div>
+            {product.variants.length > 1 ? (
+              <NativeSelect aria-label={`Option for ${product.name}`} value={variant.sku} onChange={(e) => replace(variant.sku, e.target.value)}>
+                {product.variants.map((v) => (
+                  <NativeSelectOption key={v.sku} value={v.sku}>
+                    {v.label} · {money(v.priceCents)}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+            ) : null}
+            <Button variant="ghost" size="icon" aria-label={`Remove ${product.name}`} onClick={() => update({ skus: draft.skus.filter((s) => s !== variant.sku) })}>
+              <XIcon />
+            </Button>
+          </li>
+        ))}
+      </ul>
+      {picks.length === 1 ? <p className="text-xs text-muted-foreground">Pick more to send a bundle: everyone gets every gift, in one order.</p> : null}
     </div>
   );
 }

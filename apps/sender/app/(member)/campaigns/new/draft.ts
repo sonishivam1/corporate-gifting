@@ -1,5 +1,5 @@
 import type { CardCover, ChannelKind, CollectionView, Occasion, ProductView, SendInput } from "@gifting/domain";
-import { collectionItems, findVariant } from "@gifting/domain";
+import { BUNDLE_LIMITS, collectionItems, findVariant } from "@gifting/domain";
 
 import { CHANNEL_CHOICE, LET_THEM_CHOOSE } from "@/lib/features";
 import { shortDate } from "@/lib/format";
@@ -9,7 +9,8 @@ export type Draft = {
   mode: "collection" | "single";
   collectionId: string;
   budgetCents: number;
-  sku: string | null;
+  // The gifts everyone gets, as variant SKUs in the order picked: one is a single gift, two or more a bundle.
+  skus: string[];
   occasion: Occasion;
   cover: CardCover;
   headline: string;
@@ -50,7 +51,7 @@ export function initialDraft(input: {
     mode: input.start.sku || !LET_THEM_CHOOSE ? "single" : "collection",
     collectionId: collection?.id ?? "",
     budgetCents: startCollection?.budgetBandCents ?? 5000,
-    sku: input.start.sku ?? null,
+    skus: input.start.sku ? [input.start.sku] : [],
     occasion: "thanks",
     cover: "confetti",
     headline: HEADLINES.thanks,
@@ -79,14 +80,17 @@ export const recipientCount = (d: Draft) => d.recipientIds.length + d.newEmails.
 
 /** Per-gift budget for the preview; the API re-reads it from the catalog. */
 export function perGiftCents(d: Draft, products: readonly ProductView[]): number {
-  if (d.mode === "single") return (d.sku && findVariant(products, d.sku)?.variant.priceCents) || 0;
+  if (d.mode === "single") return d.skus.reduce((sum, sku) => sum + (findVariant(products, sku)?.variant.priceCents ?? 0), 0);
   return d.budgetCents;
 }
 
 /** Why a step can't continue yet, or null when it can. */
 export function stepProblem(step: number, d: Draft, collections: readonly CollectionView[], products: readonly ProductView[]): string | null {
   if (step === 0) {
-    if (d.mode === "single") return d.sku ? null : "Pick a gift to continue.";
+    if (d.mode === "single") {
+      if (d.skus.length === 0) return "Pick a gift to continue.";
+      return d.skus.length > BUNDLE_LIMITS.max ? `A bundle has up to ${BUNDLE_LIMITS.max} gifts.` : null;
+    }
     return itemsFor(d, collections, products).length ? null : "Pick a collection with gifts at this budget.";
   }
   if (step === 1) {
@@ -112,7 +116,9 @@ export function toSendInput(d: Draft): SendInput {
     name: d.name.trim() || defaultName(d),
     gift:
       d.mode === "single"
-        ? { kind: "single", sku: d.sku ?? "" }
+        ? d.skus.length > 1
+          ? { kind: "bundle", skus: d.skus }
+          : { kind: "single", sku: d.skus[0] ?? "" }
         : { kind: "collection", collectionId: d.collectionId, budgetCents: d.budgetCents },
     greeting: { occasion: d.occasion, cover: d.cover, headline: d.headline, fromName: d.fromName },
     message: d.message,

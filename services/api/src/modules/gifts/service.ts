@@ -167,6 +167,7 @@ export function createGiftsService(deps: AppDeps, services: { recipients: Recipi
           status: g.status,
           channel: g.notifications[0]?.channel ?? fallback,
           chosenSku: g.claim?.sku ?? null,
+          orderedSkus: g.claim ? (g.claim.skus ?? [g.claim.sku]) : [],
         }))
         .sort((a, b) => a.recipientName.localeCompare(b.recipientName));
     },

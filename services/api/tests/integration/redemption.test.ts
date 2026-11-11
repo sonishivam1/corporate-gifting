@@ -75,7 +75,7 @@ describe("choosing a gift", () => {
     const res = await redeem(tokens[0]!, sku);
     expect(res.statusCode).toBe(200);
     const gift = (await h.c.gifts.findOne({ campaignId: id }))!;
-    expect(res.json()).toEqual({ orderNumber: `GFT-${gift._id}`, sku });
+    expect(res.json()).toEqual({ orderNumber: `GFT-${gift._id}`, sku, skus: [sku] });
     expect(gift).toMatchObject({ status: "redeemed", ctOrderNumber: `GFT-${gift._id}`, claim: { sku, status: "ordered" } });
     // The Home overview reads when each status was reached.
     expect(gift).toMatchObject({ statusAt: { redeeming: expect.any(Date), redeemed: expect.any(Date) } });

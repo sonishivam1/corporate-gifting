@@ -4,6 +4,8 @@ import type { Address } from "./address";
 export const ORDER_STATUSES = ["open", "shipped", "delivered", "cancelled"] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
+export type OrderItem = { sku: string; vendorKey: string };
+
 export type PlaceOrderInput = {
   /** `GFT-<giftId>` from orderNumberForGift(). The idempotency key of the call. */
   orderNumber: string;
@@ -11,9 +13,12 @@ export type PlaceOrderInput = {
   campaignId: string;
   companyKey: string;
   teamKey: string;
-  /** The vendor that owns the item: its supply channel in the commerce platform. */
-  vendorKey: string;
-  sku: string;
+  /**
+   * What ships, one of each: one item, or a bundle's items. Each comes from the
+   * vendor that owns it (its supply channel in the commerce platform). The order
+   * is placed only if every item is in stock.
+   */
+  items: readonly OrderItem[];
   /** The ledger capture key. It becomes the payment transaction's interaction id. */
   captureKey: string;
   recipient: { name: string; email: string };
@@ -30,7 +35,7 @@ export type PlacedOrder = {
 };
 
 export type OrderErrorCode =
-  /** The item sold out. The recipient chooses again. */
+  /** An item sold out. Nothing is ordered; the recipient chooses again, or tries a bundle again later. */
   | "out_of_stock"
   /** The platform could not be reached or answered with an error. Look the order up before retrying. */
   | "unavailable"
