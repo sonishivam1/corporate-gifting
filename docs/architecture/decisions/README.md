@@ -22,6 +22,7 @@ costs. Status is **Proposed** (needs agreement), **Accepted**, or
 | [0014](0014-google-cloud.md) | The cloud environment runs on Google Cloud | Accepted |
 | [0015](0015-commerce-customer-accounts.md) | Register and sign in with the commerce platform's customer accounts (commercetools OAuth password flow) | Accepted (B2B parts kept by 0016) |
 | [0016](0016-organizations-and-roles.md) | Organizations from the commerce platform; roles grant actions, checked on every route | Accepted |
+| [0017](0017-invitations.md) | Invitations in MongoDB (a ninth collection); members and teams managed through the connector | Accepted |
 
 To add one, copy the shape of an existing record, take the next number, and
 link it here.

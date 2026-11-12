@@ -310,6 +310,9 @@ importers:
       '@gifting/commerce':
         specifier: workspace:*
         version: link:../commerce
+      '@gifting/domain':
+        specifier: workspace:*
+        version: link:../domain
 
   packages/content: {}
 

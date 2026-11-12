@@ -1,6 +1,6 @@
 /**
- * Zod schemas for the eight MongoDB collections: the single source of truth
- * for their shape (ADR 0002, ADR 0003). Anything commercetools models
+ * Zod schemas for the nine MongoDB collections: the single source of truth
+ * for their shape (ADR 0002, ADR 0003, ADR 0017). Anything commercetools models
  * (companies, teams, vendors, products, orders, addresses, shipments) is
  * referenced by key here, never copied.
  *
@@ -10,6 +10,7 @@
 import { z } from "zod";
 
 import { GIFT_STATUSES } from "./gift-status";
+import { MEMBER_ROLES } from "./members";
 import { CURRENCIES } from "./money";
 
 const id = z.string().min(1);
@@ -225,3 +226,32 @@ export const processedEvent = z.object({
   receivedAt: z.date(),
 });
 export type ProcessedEvent = z.infer<typeof processedEvent>;
+
+export const INVITATION_STATUSES = ["pending", "accepting", "accepted", "revoked"] as const;
+export type InvitationStatus = (typeof INVITATION_STATUSES)[number];
+
+/** How long an invitation link works, from sending or resending. */
+export const INVITATION_DAYS = 7;
+
+// invitations (ADR 0017): an offer of one role, waiting for the invited person. The role itself lives only in the platform.
+export const invitation = z.object({
+  _id: id,
+  companyKey: key,
+  // Null for owner and admin, which are held on the company.
+  teamKey: key.nullable(),
+  role: z.enum(MEMBER_ROLES),
+  // Personal data: never logged.
+  emailLower: z.string().min(3).max(254),
+  // SHA-256 of the link's token; the token itself is never stored.
+  tokenHash: z.string().length(64),
+  status: z.enum(INVITATION_STATUSES),
+  invitedBy: id,
+  acceptedBy: id.nullable(),
+  revokedBy: id.nullable(),
+  createdAt: z.date(),
+  expiresAt: z.date(),
+  acceptedAt: z.date().nullable(),
+  revokedAt: z.date().nullable(),
+  updatedAt: z.date(),
+});
+export type Invitation = z.infer<typeof invitation>;

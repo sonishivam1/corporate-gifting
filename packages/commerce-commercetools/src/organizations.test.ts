@@ -55,9 +55,9 @@ describe("commercetools organizations mapping", () => {
 
   it("collects each person's memberships across the company's units, named from the customer", () => {
     expect(toOrgMembers([company, team])).toEqual([
-      { id: "c-1", name: "Ada Park", memberships: [{ companyKey: "company-a", role: "owner" }] },
-      { id: "c-2", name: "ben@a.example", memberships: [{ companyKey: "company-a", role: "admin" }, { companyKey: "company-a", teamKey: "team-a1", role: "sender" }] },
-      { id: "c-3", name: "Cy", memberships: [{ companyKey: "company-a", teamKey: "team-a1", role: "approver" }] },
+      { id: "c-1", name: "Ada Park", email: "ada@a.example", memberships: [{ companyKey: "company-a", role: "owner" }] },
+      { id: "c-2", name: "ben@a.example", email: "ben@a.example", memberships: [{ companyKey: "company-a", role: "admin" }, { companyKey: "company-a", teamKey: "team-a1", role: "sender" }] },
+      { id: "c-3", name: "Cy", email: "cy@a.example", memberships: [{ companyKey: "company-a", teamKey: "team-a1", role: "approver" }] },
     ]);
   });
 });

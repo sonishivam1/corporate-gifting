@@ -40,4 +40,16 @@ export const INDEXES: Record<CollectionName, IndexDescription[]> = {
   ],
   integrations: [{ key: { companyKey: 1, type: 1 }, name: "companyKey_type_unique", unique: true }],
   processedEvents: [{ key: { receivedAt: 1 }, name: "receivedAt_ttl", expireAfterSeconds: 30 * 24 * 60 * 60 }],
+  invitations: [
+    // The link: one invitation per token.
+    { key: { tokenHash: 1 }, name: "tokenHash_unique", unique: true },
+    // One pending invitation for the same person, role and team (ADR 0017).
+    {
+      key: { companyKey: 1, emailLower: 1, teamKey: 1, role: 1 },
+      name: "pending_company_email_team_role_unique",
+      unique: true,
+      partialFilterExpression: { status: "pending" },
+    },
+    { key: { companyKey: 1, status: 1, createdAt: -1 }, name: "companyKey_status_createdAt" },
+  ],
 };

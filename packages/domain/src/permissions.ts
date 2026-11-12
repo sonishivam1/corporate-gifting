@@ -24,6 +24,7 @@ export const ACTIONS = [
   "budget:topup",
   "statement:view",
   "members:manage",
+  "teams:manage",
   "integrations:manage",
 ] as const;
 export type Action = (typeof ACTIONS)[number];
@@ -48,6 +49,7 @@ export const ROLE_ACTIONS: Readonly<Record<Action, readonly MemberRole[]>> = {
   "budget:topup": MANAGERS,
   "statement:view": MANAGERS,
   "members:manage": MANAGERS,
+  "teams:manage": MANAGERS,
   "integrations:manage": MANAGERS,
 };
 
@@ -98,4 +100,26 @@ export function companiesOf(memberships: readonly Membership[]): string[] {
  */
 export function reachableTeams(memberships: readonly Membership[], companyKey: string, teamKeys: readonly string[]): string[] {
   return teamKeys.filter((t) => rolesOnTeam(memberships, companyKey, t).length > 0);
+}
+
+/**
+ * The roles a person may give or take away in a company, from the roles they
+ * hold on the company itself (members plan, decision 1): owners every role,
+ * admins every role but owner, anyone else none.
+ */
+export function grantableRoles(companyRoles: readonly MemberRole[]): MemberRole[] {
+  if (companyRoles.includes("owner")) return [...MEMBER_ROLES];
+  if (companyRoles.includes("admin")) return MEMBER_ROLES.filter((r) => r !== "owner");
+  return [];
+}
+
+/** The roles a person holds on the company itself (owner, admin), not on a team. */
+export function companyRolesOf(memberships: readonly Membership[], companyKey: string): MemberRole[] {
+  const held = new Set(memberships.filter((m) => m.companyKey === companyKey && !m.teamKey && isCompanyRole(m.role)).map((m) => m.role));
+  return MEMBER_ROLES.filter((r) => held.has(r));
+}
+
+/** True when the membership has the right shape: a company role with no team, a team role with one. */
+export function isWellFormed(membership: Membership): boolean {
+  return isCompanyRole(membership.role) ? !membership.teamKey : Boolean(membership.teamKey);
 }

@@ -123,6 +123,25 @@ export function createCtAccounts(options: CtAccountsOptions): Required<Pick<Acco
       }
     },
 
+    async updateName(id, { firstName, lastName }) {
+      // The store's own customer only, at its current version; again once if it moved on in between.
+      for (let attempt = 1; ; attempt++) {
+        try {
+          const { version } = (await inStore().customers().withId({ ID: id }).get().execute()).body;
+          const updated = await inStore()
+            .customers()
+            .withId({ ID: id })
+            .post({ body: { version, actions: [{ action: "setFirstName", firstName }, { action: "setLastName", lastName }] } })
+            .execute();
+          return toCustomer(updated.body);
+        } catch (err) {
+          if (isClientError(err, 400, 404)) return null;
+          if (isClientError(err, 409) && attempt < 2) continue;
+          throw err;
+        }
+      }
+    },
+
     async signInWithPassword(email, password) {
       const { status, body } = await oauth(`/oauth/${projectKey}/in-store/key=${storeKey}/customers/token`, { grant_type: "password", username: email, password, scope: myScope });
       if (status === 400 && body.error === "invalid_customer_account_credentials") return null;

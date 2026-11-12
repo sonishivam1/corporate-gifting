@@ -23,7 +23,8 @@ export async function proxy(request: NextRequest) {
   const session = await openSession(request.cookies.get(SESSION_COOKIE)?.value);
 
   if (!session) {
-    if (PUBLIC_PATHS.has(pathname)) return NextResponse.next();
+    // An invitation link shows what it offers before sign-in (ADR 0017).
+    if (PUBLIC_PATHS.has(pathname) || pathname.startsWith("/invitations/")) return NextResponse.next();
     const url = new URL("/sign-in", request.url);
     if (pathname !== "/") url.searchParams.set("returnTo", pathname + search);
     const response = NextResponse.redirect(url);

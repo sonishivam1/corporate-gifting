@@ -10,18 +10,26 @@ import {
   type CollectionInput,
   collectionView,
   type CollectionView,
+  companyMembersView,
   decisionResultView,
   estimateView,
   giftRowView,
+  invitationPreview,
+  invitationsView,
+  invitationView,
+  type InviteInput,
   meView,
+  type NameInput,
   type OverviewRange,
   overviewView,
   productView,
   recipientImportView,
   type RecipientImportInput,
   recipientListView,
+  type RoleChangeInput,
   type SendInput,
   submitResultView,
+  teamView,
 } from "@gifting/domain";
 import { cookies } from "next/headers";
 import { cache } from "react";
@@ -111,7 +119,7 @@ const errorShape = z.object({ error: z.object({ code: z.string(), message: z.str
 async function call<S extends z.ZodType>(
   path: string,
   schema: S,
-  init: { method?: "GET" | "POST" | "PUT"; body?: unknown; headers?: Record<string, string> } = {},
+  init: { method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"; body?: unknown; headers?: Record<string, string> } = {},
 ): Promise<z.infer<S>> {
   // Outside the try: reading cookies is how Next marks the page dynamic, and that signal must not be swallowed.
   const workspace = await workspaceHeaders();
@@ -210,3 +218,40 @@ export const submitCampaign = (id: string) =>
 
 export const decideCampaign = (id: string, decision: "approve" | "decline") =>
   call(`/v1/campaigns/${encodeURIComponent(id)}/${decision}`, decisionResultView, { method: "POST" });
+
+// Members, teams and invitations of the company the dashboard works in (ADR 0017).
+const ok = z.object({ status: z.literal("ok") });
+const id = encodeURIComponent;
+
+export const getCompanyMembers = cache(() => call("/v1/company/members", companyMembersView));
+
+export const addMemberRole = (customerId: string, input: RoleChangeInput) =>
+  call(`/v1/company/members/${id(customerId)}/roles`, companyMembersView, { method: "POST", body: input });
+
+export const removeMemberRole = (customerId: string, input: RoleChangeInput) =>
+  call(`/v1/company/members/${id(customerId)}/roles?role=${input.role}${input.teamKey ? `&teamKey=${id(input.teamKey)}` : ""}`, companyMembersView, {
+    method: "DELETE",
+  });
+
+export const removeMember = (customerId: string) => call(`/v1/company/members/${id(customerId)}`, companyMembersView, { method: "DELETE" });
+
+export const createTeam = (name: string) => call("/v1/company/teams", teamView, { method: "POST", body: { name } });
+
+export const renameTeam = (teamKey: string, name: string) => call(`/v1/company/teams/${id(teamKey)}`, teamView, { method: "PATCH", body: { name } });
+
+export const getInvitations = () => call("/v1/company/invitations", invitationsView).then((r) => r.invitations);
+
+export const sendInvitation = (input: InviteInput) => call("/v1/company/invitations", invitationView, { method: "POST", body: input });
+
+export const resendInvitation = (invitationId: string) => call(`/v1/company/invitations/${id(invitationId)}/resend`, ok, { method: "POST" });
+
+export const revokeInvitation = (invitationId: string) => call(`/v1/company/invitations/${id(invitationId)}`, ok, { method: "DELETE" });
+
+/** What an invitation link offers. Anyone with the link may read it; it holds no email address. */
+export const getInvitationPreview = (token: string) => call(`/v1/invitations/${id(token)}`, invitationPreview);
+
+/** Accepts as the signed-in person; the API checks the invitation was sent to their address. */
+export const acceptInvitation = (token: string) =>
+  call(`/v1/invitations/${id(token)}/accept`, z.object({ companyKey: z.string(), teamKey: z.string().nullable(), role: z.string() }), { method: "POST" });
+
+export const updateMyName = (input: NameInput) => call("/v1/me", accountView, { method: "PATCH", body: input });

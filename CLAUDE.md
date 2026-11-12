@@ -38,6 +38,11 @@ must respect.
   A person's companies, teams and roles come from commercetools Business
   Units through the connector's `organizations`; every dashboard route
   declares the action it needs.
+- **Building (12 Nov):** [members, teams, invitations and profile](docs/plans/members-and-invitations.md)
+  ([ADR 0017](docs/architecture/decisions/0017-invitations.md)). Owners and
+  admins change roles and teams and invite by email, through optional
+  connector parts (`memberWrites`, `teamWrites`, `updateName`); a platform
+  without one answers `501 not_supported` and the app hides it.
 - **Next:** the week-1 [spikes](docs/plans/spikes.md). Spike 1, the
   company-balance order, gates everything in M4. After the spikes comes M1:
   accounts and money.
@@ -63,7 +68,7 @@ Node 24 and pnpm 10. On Windows with fnm, prefix commands with
 | `pnpm ct:plan` | Print the commercetools setup drafts (store, channels, types); no calls |
 | `pnpm ct:apply` | Set up the project from `.env`: types, product types, tax, zone and shipping, channels, store, associate roles, gift categories. Creates what's missing and adds missing fields and attributes; safe to re-run |
 | `pnpm seed` | Import the fictional products and stock, 250 demo customers, and 5 demo companies with 10 teams (Business Units) through the Import API (run `ct:apply` first) |
-| `pnpm member:add -- --email … --company … [--team …] --role … [--company-name …]` | Add a registered person (work email, verified) to a company with a role, until invitations exist (ADR 0016). Refuses an email with no account. `--company-name` creates the company, with a General team, if its key is new |
+| `pnpm member:add -- --email … --company … [--team …] --role … [--company-name …]` | Add a registered person (work email, verified) to a company with a role: an operator's tool, for a company's first owner (everyone else is invited, ADR 0017). Refuses an email with no account. `--company-name` creates the company, with a General team, if its key is new |
 | `pnpm catalog:extract` | Read the Christie Cookie storefront into `.data/catalogs/christie-cookie.json` (gitignored; with the client's permission) |
 | `pnpm catalog:import` / `pnpm catalog:remove` | Import that snapshot into the project (vendor channel, categories, products with images, stock), or delete it all again |
 | `pnpm worker` | Start the worker (today: lists the registered jobs) |
@@ -140,9 +145,9 @@ that module's exported service, never its collections.
   Scopes are listed in [commercetools design](docs/architecture/commercetools.md).
 
 **MongoDB holds only what commercetools can't** ([ADR 0002](docs/architecture/decisions/0002-mongodb-for-platform-data.md))
-- Eight collections: `accounts`, `ledgerEntries`, `collections`,
-  `recipients`, `campaigns`, `gifts`, `integrations`, `processedEvents`. A new
-  collection needs a decision record.
+- Nine collections: `accounts`, `ledgerEntries`, `collections`,
+  `recipients`, `campaigns`, `gifts`, `integrations`, `processedEvents`, and
+  `invitations` (ADR 0017). A new collection needs a decision record.
 - Shapes are Zod schemas in `packages/domain`; indexes are in
   `packages/db/src/indexes.ts`. Indexes for member lookups (lists, filters)
   start with `companyKey` or `teamKey`; the unique indexes are the

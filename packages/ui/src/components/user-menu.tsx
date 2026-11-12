@@ -1,6 +1,7 @@
 "use client";
 
-import { LogOut } from "lucide-react";
+import { LogOut, type LucideIcon } from "lucide-react";
+import type { ComponentType, ReactNode } from "react";
 
 import { Avatar, AvatarFallback } from "@gifting/ui/components/avatar";
 import { Button } from "@gifting/ui/components/button";
@@ -18,11 +19,29 @@ function initials(name: string): string {
   return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? (parts.at(-1)?.[0] ?? "") : "")).toUpperCase() || "?";
 }
 
+export type UserMenuLink = { href: string; label: string; icon: LucideIcon };
+type LinkComponent = ComponentType<{ href: string; className?: string; children: ReactNode }>;
+
 /**
- * The signed-in person in the header, and sign out. Sign-out is a form post
- * to the app's server action, never a link, so another site can't sign you out.
+ * The signed-in person in the header, their pages (`links`, opened with the
+ * app's router link `linkAs`), and sign out. Sign-out is a form post to the
+ * app's server action, never a link, so another site can't sign you out.
  */
-function UserMenu({ name, email, detail, signOut }: { name: string; email: string; detail?: string; signOut: () => Promise<void> }) {
+function UserMenu({
+  name,
+  email,
+  detail,
+  links = [],
+  linkAs: LinkAs = "a" as unknown as LinkComponent,
+  signOut,
+}: {
+  name: string;
+  email: string;
+  detail?: string;
+  links?: UserMenuLink[];
+  linkAs?: LinkComponent;
+  signOut: () => Promise<void>;
+}) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -40,6 +59,19 @@ function UserMenu({ name, email, detail, signOut }: { name: string; email: strin
           {detail ? <span className="truncate text-xs font-normal text-muted-foreground">{detail}</span> : null}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        {links.length ? (
+          <>
+            {links.map(({ href, label, icon: Icon }) => (
+              <DropdownMenuItem key={href} asChild>
+                <LinkAs href={href}>
+                  <Icon />
+                  {label}
+                </LinkAs>
+              </DropdownMenuItem>
+            ))}
+            <DropdownMenuSeparator />
+          </>
+        ) : null}
         <form action={signOut}>
           <DropdownMenuItem asChild>
             <button type="submit" className="w-full">

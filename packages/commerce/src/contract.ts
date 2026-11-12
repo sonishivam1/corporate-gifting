@@ -16,7 +16,8 @@
  * - it is versioned like the API: within a version, changes only add.
  *   The catalog joined with M2 (optional, so v1 connectors without it still
  *   work); orders, payment and events join it with M4; organizations
- *   (ADR 0016) joined in Nov 2026, also optional.
+ *   (ADR 0016) joined in Nov 2026, also optional, and their writes and
+ *   `accounts.updateName` (ADR 0017) a day later, each optional on its own.
  */
 import type { Membership, OrderPlacer } from "@gifting/domain";
 import type { Logger } from "@gifting/logger";
@@ -86,6 +87,11 @@ export type AccountsConnector = {
   renewPlatformSession?(platformSession: string): Promise<string | null>;
   /** Ends the platform's own session (sign-out). */
   endPlatformSession?(platformSession: string): Promise<void>;
+  /**
+   * Changes the customer's first and last name (ADR 0017). Null for an
+   * unknown id. Without it, the product shows names read-only (`editName`).
+   */
+  updateName?(id: string, name: { firstName: string; lastName: string }): Promise<Customer | null>;
 };
 
 /** One orderable version of a catalog item (a size, flavour or colour). */
@@ -149,8 +155,35 @@ export type OrgCompany = { key: string; name: string };
 /** A team of a company. `approvalThresholdCents` is null when the team has none set. */
 export type OrgTeam = { key: string; name: string; approvalThresholdCents: number | null };
 
-/** A person in a company: the customer's id and their memberships in that company only. */
-export type OrgMember = { id: string; name: string; memberships: Membership[] };
+/**
+ * A person in a company: the customer's id and their memberships in that
+ * company only. `email` where the platform gives it (lowercase); the product
+ * shows it only to people who manage members.
+ */
+export type OrgMember = { id: string; name: string; email?: string | null; memberships: Membership[] };
+
+/**
+ * Giving and taking away roles (ADR 0017). The product decides who may change
+ * whom; the connector only writes. Both are idempotent: giving a role already
+ * held, or taking away one not held, changes nothing and answers true. False
+ * for an unknown company, or a team that isn't the company's. The customer id
+ * always comes from `accounts` or `members`.
+ */
+export type MemberWrites = {
+  addRole(customerId: string, membership: Membership): Promise<boolean>;
+  removeRole(customerId: string, membership: Membership): Promise<boolean>;
+};
+
+/**
+ * Creating and renaming teams (ADR 0017). The key is the product's and never
+ * changes: the connector stores the one it is given, and answers
+ * `{ conflict: true }` when the platform already has it. Null for an unknown
+ * company, or (renaming) a team that isn't the company's.
+ */
+export type TeamWrites = {
+  createTeam(companyKey: string, team: { key: string; name: string }): Promise<OrgTeam | { conflict: true } | null>;
+  renameTeam(companyKey: string, teamKey: string, name: string): Promise<OrgTeam | null>;
+};
 
 /**
  * Which companies and teams a customer belongs to, and with which role
@@ -168,6 +201,10 @@ export type OrganizationsConnector = {
   teams(companyKey: string): Promise<OrgTeam[]>;
   /** Everyone with a role in the company or one of its teams. Empty for an unknown company. */
   members(companyKey: string): Promise<OrgMember[]>;
+  /** Without it, people's roles are managed in the platform (`manageMembers` is false). */
+  memberWrites?: MemberWrites;
+  /** Without it, teams are managed in the platform (`manageTeams` is false). */
+  teamWrites?: TeamWrites;
 };
 
 export type CommerceConnector = {
@@ -208,4 +245,15 @@ export function connectorProblem(connector: CommerceConnector): string | null {
   if (capabilities.signIn === "hosted" && !accounts.hostedSignIn) return `The ${connector.id} connector says it uses a hosted sign-in page but has no hostedSignIn.`;
   if (Boolean(accounts.renewPlatformSession) !== Boolean(accounts.endPlatformSession)) return `The ${connector.id} connector must have both renewPlatformSession and endPlatformSession, or neither.`;
   return null;
+}
+
+/** What this deployment lets the product change about people and teams (ADR 0017): the parts the connector offers. */
+export type OrganizationCapabilities = { manageMembers: boolean; manageTeams: boolean; editName: boolean };
+
+export function organizationCapabilities(connector: Pick<CommerceConnector, "accounts" | "organizations"> | null): OrganizationCapabilities {
+  return {
+    manageMembers: Boolean(connector?.organizations?.memberWrites),
+    manageTeams: Boolean(connector?.organizations?.teamWrites),
+    editName: Boolean(connector?.accounts.updateName),
+  };
 }

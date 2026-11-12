@@ -93,6 +93,8 @@ export const accountView = z.object({
   firstName: z.string().nullable(),
   lastName: z.string().nullable(),
   companyName: z.string().nullable(),
+  // `GET /v1/me` only: whether the platform lets the person change their name here (ADR 0017).
+  canEditName: z.boolean().optional(),
 });
 export type AccountView = z.infer<typeof accountView>;
 

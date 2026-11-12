@@ -203,7 +203,24 @@ describe("signed-in routes", () => {
   it("return the account for a valid token", async () => {
     const { accessToken } = await signedIn();
     const res = await app.inject({ method: "GET", url: "/v1/me", headers: { authorization: `Bearer ${accessToken}` } });
-    expect(res.json()).toEqual({ id: expect.any(String), email: "ada@example.com", firstName: "Ada", lastName: "Lovelace", companyName: null });
+    expect(res.json()).toEqual({ id: expect.any(String), email: "ada@example.com", firstName: "Ada", lastName: "Lovelace", companyName: null, canEditName: true });
+  });
+
+  it("change the person's own name on the platform, and show it at once (ADR 0017)", async () => {
+    const { accessToken } = await signedIn();
+    const auth = { authorization: `Bearer ${accessToken}` };
+    const res = await app.inject({ method: "PATCH", url: "/v1/me", headers: auth, payload: { firstName: " Augusta ", lastName: "King" } });
+    expect(res.json()).toMatchObject({ firstName: "Augusta", lastName: "King", canEditName: true });
+    expect((await me(accessToken)).json()).toMatchObject({ firstName: "Augusta", lastName: "King" });
+    expect((await app.inject({ method: "PATCH", url: "/v1/me", headers: auth, payload: { firstName: "", lastName: "King" } })).statusCode).toBe(400);
+  });
+
+  it("say when the platform keeps names to itself, and refuse a change with 501", async () => {
+    await start({ writes: { names: false } });
+    const { accessToken } = await signedIn();
+    expect((await me(accessToken)).json().canEditName).toBe(false);
+    const res = await app.inject({ method: "PATCH", url: "/v1/me", headers: { authorization: `Bearer ${accessToken}` }, payload: { firstName: "Augusta", lastName: "King" } });
+    expect([res.statusCode, code(res)]).toEqual([501, "not_supported"]);
   });
 
   it("refuse no token, a malformed header and an inactive token with 401", async () => {

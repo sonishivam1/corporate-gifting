@@ -18,6 +18,8 @@ money moving twice. Both are blocked in the database, not only in code.
 | Gift email carries injected markup or a bad link | Every user text is HTML-escaped; only http(s) links are used |
 | A company sees another company's data | The session's company and team come from the person's memberships in the commerce platform, never the request; every call is scoped to them; outside scope is "not found" |
 | A member does something their role doesn't allow | Every dashboard route declares an action; the API checks the person's roles on that team first (`403 forbidden`) |
+| A manager gives a role above their own, or changes their own | Owners give every role; admins every role but owner, and never touch an owner (`403 role_not_allowed`); nobody changes their own roles (`403 own_roles`); a company keeps at least one owner (`409 last_owner`) |
+| An invitation link guessed, leaked or forwarded | 32 random bytes, stored only as SHA-256; valid 7 days; accepted only by the signed-in account with the invited address (`403 invitation_wrong_account`), and once (the claim is the lock); a resend or withdrawal kills the old link; the link page shows no email and sends no referrer; 30 previews and 10 accepts a minute per address |
 | A vendor sees other vendors' orders, or recipient details it doesn't need | Vendor queries filter on the vendor's channel; only shipping fields returned |
 | Sender approves their own large campaign | Above each team's threshold an approver must approve: someone with `campaign:approve` on the team, never the campaign's sender |
 | Unfunded sends | Holds placed before any send; a short balance fails the whole campaign |
@@ -93,6 +95,14 @@ money moving twice. Both are blocked in the database, not only in code.
   hide what a person can't use, but the API is what enforces it.
 - **Refusals:** no membership is `403 no_membership`; another company's or
   team's data is `404`; an action the role doesn't grant is `403 forbidden`.
+- **Changing who belongs where** ([ADR 0017](decisions/0017-invitations.md)):
+  owners and admins (`members:manage`, `teams:manage`) give and take away
+  roles, create and rename teams, and invite by email. The rules are the
+  product's, the same on every platform: who may give which role, nobody on
+  themselves, the last owner kept. The platform only stores the result,
+  through the connector's optional `memberWrites` and `teamWrites`; without
+  them the routes answer `501 not_supported`. Every change is logged with
+  ids only (`org.role_added`, `org.invitation_sent`, …), never an email.
 
 | Action | Owner | Admin | Approver | Sender | Vendor | Ops |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -105,6 +115,7 @@ money moving twice. Both are blocked in the database, not only in code.
 | Edit the recipient directory (`recipients:manage`) | ✓ | ✓ | | | | |
 | Top up, see statements (`budget:topup`, `statement:view`) | ✓ | ✓ | | | | ✓ |
 | Manage members and integrations (`members:manage`, `integrations:manage`) | ✓ | ✓ | | | | ✓ |
+| Create and rename teams (`teams:manage`) | ✓ | ✓ | | | | |
 | See own orders, mark shipped | | | | | ✓ | |
 | Companies, vendors, refunds, adjustments | | | | | | ✓ |
 

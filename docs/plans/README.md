@@ -25,6 +25,7 @@ work packages. Each milestone step gets its own plan here when it starts.
 | [Build-your-own collection (M2.3)](build-your-own-collection.md) | Catalog, sender app | ✅ Built (2 Nov 2026) |
 | [Gift bundles: the recipient gets every gift](gift-bundles.md) | Campaigns, gifts, connectors, sender and recipient apps | ✅ Built (10 Nov 2026) |
 | [Organizations and role-based access](organizations-and-roles.md) | Accounts, connectors, API, sender app | Building |
+| [Members, teams, invitations and profile](members-and-invitations.md) | Accounts, connectors, API, sender app | Built |
 
 ## Template
 

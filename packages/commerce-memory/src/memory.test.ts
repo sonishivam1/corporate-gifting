@@ -1,7 +1,7 @@
 import { describeConnectorConformance } from "@gifting/commerce/conformance";
 import { describe, expect, it } from "vitest";
 
-import type { CatalogItem } from "@gifting/commerce";
+import { type CatalogItem, organizationCapabilities } from "@gifting/commerce";
 
 import { createMemoryConnector, type MemoryOrganizations, memoryOrganizations } from "./memory";
 
@@ -63,10 +63,22 @@ const organizations: MemoryOrganizations = {
   ],
 };
 
+let teams = 0;
+const organizationWrites = { companyKey: "company-a", teamKey: "team-a2", customerId: () => "person-3", newTeamKey: () => `team-a-new-${++teams}` };
+
 describeConnectorConformance("memory, with organizations", {
   connector: () => createMemoryConnector({ organizations }).connector,
   newEmail,
   organizations: { customerId: () => "person-1" },
+  organizationWrites,
+});
+
+// The same product checks against a platform that offers none of the writes: they skip, the rest passes.
+describeConnectorConformance("memory, with organizations but no writes", {
+  connector: () => createMemoryConnector({ organizations, writes: { members: false, teams: false, names: false } }).connector,
+  newEmail,
+  organizations: { customerId: () => "person-1" },
+  organizationWrites,
 });
 
 describe("memory organizations", () => {
@@ -81,5 +93,34 @@ describe("memory organizations", () => {
     const [first] = await orgs.membershipsOf("person-1");
     first!.role = "owner";
     expect((await orgs.membershipsOf("person-1"))[0]!.role).toBe("admin");
+  });
+});
+
+describe("memory organization writes", () => {
+  it("offers each part unless told not to, and reports the capabilities", () => {
+    expect(organizationCapabilities(createMemoryConnector({ organizations }).connector)).toEqual({ manageMembers: true, manageTeams: true, editName: true });
+    expect(organizationCapabilities(createMemoryConnector({ organizations, writes: { teams: false } }).connector)).toEqual({ manageMembers: true, manageTeams: false, editName: true });
+    expect(organizationCapabilities(createMemoryConnector({ writes: { names: false } }).connector)).toEqual({ manageMembers: false, manageTeams: false, editName: false });
+  });
+
+  it("works on its own copy, so two connectors never share changes", async () => {
+    const one = memoryOrganizations(organizations);
+    const two = memoryOrganizations(organizations);
+    await one.memberWrites!.addRole("person-9", { companyKey: "company-a", role: "owner" });
+    expect(await one.membershipsOf("person-9")).toEqual([{ companyKey: "company-a", role: "owner" }]);
+    expect(await two.membershipsOf("person-9")).toEqual([]);
+    expect(organizations.members.map((m) => m.id)).toEqual(["person-1", "person-2"]);
+  });
+
+  it("refuses a role of the wrong shape, and names a new member from the platform's customer", async () => {
+    const memory = createMemoryConnector({ organizations });
+    const registered = await memory.connector.accounts.register!({ email: "cy@a.example", password: "x", firstName: "Cy", lastName: "Lane" });
+    if (!("customer" in registered)) throw new Error("duplicate");
+    const writes = memory.connector.organizations!.memberWrites!;
+    expect(await writes.addRole(registered.customer.id, { companyKey: "company-a", teamKey: "team-a1", role: "owner" })).toBe(false);
+    expect(await writes.addRole(registered.customer.id, { companyKey: "company-a", role: "sender" })).toBe(false);
+    expect(await writes.addRole(registered.customer.id, { companyKey: "company-a", teamKey: "team-a1", role: "sender" })).toBe(true);
+    const members = await memory.connector.organizations!.members("company-a");
+    expect(members.find((m) => m.id === registered.customer.id)).toMatchObject({ name: "Cy Lane", email: "cy@a.example" });
   });
 });

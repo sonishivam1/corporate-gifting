@@ -251,5 +251,20 @@ export function createAccountsService(options: {
     isOps(account: AccountView): boolean {
       return opsEmails.has(account.email);
     },
+
+    /** Whether the platform lets people change their name here (ADR 0017). */
+    get canEditName(): boolean {
+      return Boolean(accounts.updateName);
+    },
+
+    /** Changes the person's first and last name on the platform. Their sessions see it at once. */
+    async updateName(customerId: string, name: { firstName: string; lastName: string }): Promise<AccountView> {
+      if (!accounts.updateName) throw new ApiError(501, "not_supported", "Names are managed in your commerce platform, not here.");
+      const customer = await accounts.updateName(customerId, name);
+      if (!customer) throw unauthenticated();
+      const account = view(customer);
+      for (const [sid, entry] of accountCache) if (entry.account.id === customerId) accountCache.set(sid, { ...entry, account });
+      return account;
+    },
   };
 }

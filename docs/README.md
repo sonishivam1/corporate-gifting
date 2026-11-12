@@ -33,7 +33,7 @@ flowchart LR
     apps["Web apps<br/>sender · recipient · vendor · ops"]
     api["Gifting API<br/>10 modules"]
     worker["Workers<br/>sends · reminders · expiry · events"]
-    db[("MongoDB Atlas<br/>8 collections")]
+    db[("MongoDB Atlas<br/>9 collections")]
   end
   ct["commercetools<br/>Business Units · catalog · carts<br/>payments · orders · shipments"]
   queue["Queue<br/>commercetools events"]

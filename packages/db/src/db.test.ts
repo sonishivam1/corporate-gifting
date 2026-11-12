@@ -9,9 +9,9 @@ const uniqueKeys = (collection: keyof typeof INDEXES) =>
   INDEXES[collection].filter((i) => i.unique).map((i) => Object.keys(i.key).join("+"));
 
 describe("collections", () => {
-  it("are exactly the eight in ADR 0002", () => {
+  it("are exactly the nine in ADR 0002 and ADR 0017", () => {
     expect(Object.values(COLLECTIONS).sort()).toEqual(
-      ["accounts", "campaigns", "collections", "gifts", "integrations", "ledgerEntries", "processedEvents", "recipients"],
+      ["accounts", "campaigns", "collections", "gifts", "integrations", "invitations", "ledgerEntries", "processedEvents", "recipients"],
     );
     expect(Object.keys(INDEXES).sort()).toEqual(Object.values(COLLECTIONS).sort());
   });
@@ -24,6 +24,12 @@ describe("exactly-once indexes", () => {
 
   it("make gift tokens, codes and occurrences unique", () => {
     expect(uniqueKeys("gifts")).toEqual(["tokenHash", "codeHash", "campaignId+recipientId+occurrence"]);
+  });
+
+  it("make invitation links unique, and one pending invitation per person, team and role", () => {
+    expect(uniqueKeys("invitations")).toEqual(["tokenHash", "companyKey+emailLower+teamKey+role"]);
+    const pending = INDEXES.invitations.find((i) => i.name === "pending_company_email_team_role_unique");
+    expect(pending?.partialFilterExpression).toEqual({ status: "pending" });
   });
 
   it("expire processed events after 30 days", () => {

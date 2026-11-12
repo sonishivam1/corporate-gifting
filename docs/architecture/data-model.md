@@ -25,6 +25,7 @@ MongoDB keeps their keys (`companyKey`, `teamKey`, `vendorKey`,
 | **Personal** | `recipients` | Personal fields are encrypted at rest and purged after the company's retention period. |
 | **Integration** | `integrations` | Connection status and a `secretRef`; never the secret itself. |
 | **Plumbing** | `processedEvents` | One document per handled commercetools message; TTL 30 days. |
+| **Access** | `invitations` | An email invited to one role in a company ([ADR 0017](decisions/0017-invitations.md)). Once accepted, the role itself lives in the commerce platform; only the invitation is ours. |
 
 ## Entities
 
@@ -59,6 +60,7 @@ erDiagram
 | `gifts` | `companyKey`, `teamKey`, `campaignId`, `recipientId`, `occurrence`, `budgetCents`, `holdCents`, `tokenHash`, `codeHash`, `status`, `statusAt` (when each status was reached; optional), `version`, `expiresAt`, `claim` (`sku`, and `skus` for a bundle: every item ordered), `notifications`, `ctOrderNumber` | unique `tokenHash`; unique `codeHash`; unique `{campaignId, recipientId, occurrence}`; `{status, expiresAt}`; `{teamKey, status}`; `{teamKey, statusAt.sent}` |
 | `integrations` | `companyKey`, `type` (hris, slack, teams), `status`, `secretRef`, `lastSyncAt` | unique `{companyKey, type}` |
 | `processedEvents` | `_id` = commercetools message id, `receivedAt` | TTL 30 days on `receivedAt` |
+| `invitations` | `_id` (`inv-<uuid>`), `companyKey`, `teamKey` (null for owner and admin), `role`, `emailLower`, `tokenHash` (SHA-256 of the link's 32 random bytes; the link itself is never stored), `status` (`pending`, `accepting`, `accepted`, `revoked`), `invitedBy`, `acceptedBy`, `revokedBy`, `createdAt`, `expiresAt` (7 days; a resend gives a new link and 7 more days), `acceptedAt`, `revokedAt`, `updatedAt` | unique `tokenHash`; unique `{companyKey, emailLower, teamKey, role}` among `pending` (partial); `{companyKey, status, createdAt}` |
 
 ## Campaign statuses
 
@@ -123,6 +125,7 @@ order so dashboards don't need to call commercetools.
 | Second birthday gift in a year | Unique `{campaignId, recipientId, occurrence}` on `gifts` |
 | Gift and money disagree | Gift status and its ledger entries in one multi-document transaction |
 | Duplicate commercetools event | Insert into `processedEvents` first; a duplicate key means skip |
+| An invitation accepted twice | One `findOneAndUpdate` from `pending` (not expired, the signed-in address) to `accepting` is the lock; a `null` result means someone got there first. The role is then added on the platform, which is idempotent |
 
 ## Money fields
 

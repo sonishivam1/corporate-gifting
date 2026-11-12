@@ -16,6 +16,7 @@ Postgres was considered in v1.
 Use MongoDB Atlas with the official Node.js driver and Zod schemas, for
 eight collections only: `accounts`, `ledgerEntries`, `collections`,
 `recipients`, `campaigns`, `gifts`, `integrations`, `processedEvents`.
+(A ninth, `invitations`, came with ADR 0017.)
 Anything commercetools models stays there (ADR 0001). Locally,
 `mongodb-atlas-local` in Docker gives a replica set, so transactions work.
 

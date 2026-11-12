@@ -167,7 +167,7 @@ reads another module's collections.
 
 | Package | Holds | Imported by |
 | --- | --- | --- |
-| `@gifting/domain` | Zod models for the 8 collections, money helpers, gift state machine, idempotency keys | everything |
+| `@gifting/domain` | Zod models for the 9 collections, money helpers, gift state machine, idempotency keys | everything |
 | `@gifting/ledger` | Ledger entry builders and the balance rule (pure) | api, worker |
 | `@gifting/db` | MongoDB client, typed collections, indexes, test-database guard | api, worker, infra |
 | `@gifting/commerce` | The commerce connector contract and its conformance suite ([ADR 0013](decisions/0013-commerce-adapters.md)) | api, connectors |

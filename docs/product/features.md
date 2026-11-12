@@ -12,7 +12,7 @@ Twenty capabilities across ten modules. Sixteen are in the POC.
 
 | # | Capability | Owning module | App | POC | Milestone | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | Company workspace with teams and roles | Accounts | sender, ops | Yes | M1 | In progress: register and sign-in built (B2C, ADR 0015); organizations and roles from commercetools Business Units, with a permission check on every dashboard route (ADR 0016). Invitations next |
+| 1 | Company workspace with teams and roles | Accounts | sender, ops | Yes | M1 | In progress: register and sign-in built (B2C, ADR 0015); organizations and roles from commercetools Business Units, with a permission check on every dashboard route (ADR 0016); owners and admins manage people, roles and teams and invite by email, and everyone edits their own name (ADR 0017) |
 | 2 | Per-team budgets and spend limits | Accounts + Ledger | sender | Yes | M1 | Partly built: balance computed from the ledger; demo top-ups seeded |
 | 3 | Approval before large sends | Campaigns | sender | Yes | M3 | Built: approve or decline, approver ≠ sender |
 | 4 | Prepaid balance, invoice and card top-ups | Billing + Ledger | sender | Yes (Stripe test mode) | M1 | Planned |
@@ -51,6 +51,13 @@ Ops creates a company; the API creates a commercetools Business Unit of type
 Company with one Division per team, then invites the owner through the
 identity provider. Members get a role (owner, admin, sender, approver) as an
 Associate Role on the unit. Each team has approvers and an approval threshold.
+
+**Built (12 Nov 2026, [plan](../plans/members-and-invitations.md)):** the
+account menu opens **My profile** (name, email, roles, companies) and
+**Organization & teams**: everyone sees the company's people and teams;
+owners and admins give and take away roles, remove people, create and rename
+teams, and invite by email (a 7-day link, accepted by the invited address).
+Each part shows only where the commerce platform lets the product change it.
 
 ### Budgets, billing and the ledger — Planned (M1, M3, M4, M6)
 Each team has one budget account: prepaid, or invoice-billed with a credit

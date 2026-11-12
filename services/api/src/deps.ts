@@ -25,6 +25,10 @@ export type AppDeps = {
   // Development sign-in (see http/session.ts). Never on in production.
   devAuth: boolean;
   recipientBaseUrl: string;
+  // The sender app's public URL, for invitation links (ADR 0017). Defaults to http://localhost:3000.
+  senderBaseUrl?: string;
+  // Sends invitation emails; the same mailer as account and gift emails. Without it, inviting answers 503.
+  mailer?: Mailer;
   now: () => Date;
   // Delivery channels by kind. Defaults to none registered: nothing is delivered.
   channels?: ChannelRegistry;
@@ -106,9 +110,10 @@ export function defaultDeps(
     org: orgFor(options.organizations, devAuth),
     devAuth,
     recipientBaseUrl: env.RECIPIENT_PUBLIC_URL ?? "http://localhost:3001",
+    senderBaseUrl: (env.SENDER_PUBLIC_URL ?? "http://localhost:3000").replace(/\/$/, ""),
     now: () => new Date(),
     giftEstimatePercent: estimatePercent(env),
-    ...(options.mailer ? { channels: defaultChannels(options.mailer) } : {}),
+    ...(options.mailer ? { channels: defaultChannels(options.mailer), mailer: options.mailer } : {}),
     ...(options.log ? { log: options.log } : {}),
   };
 }

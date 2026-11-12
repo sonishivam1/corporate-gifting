@@ -32,6 +32,20 @@ export type ConformanceOptions = {
    * Without it, only the checks for unknown customers and companies run.
    */
   organizations?: { customerId: () => string | Promise<string> };
+  /**
+   * Connectors with organization writes (ADR 0017): where the checks may give
+   * and take away a role and create a team. `customerId` is someone who holds
+   * no role in `companyKey` (the run takes back what it gives); `newTeamKey`
+   * a key no team has, different on every call; `cleanupTeams` deletes the
+   * teams the run created (needed on real platforms).
+   */
+  organizationWrites?: {
+    companyKey: string;
+    teamKey: string;
+    customerId: () => string | Promise<string>;
+    newTeamKey: () => string;
+    cleanupTeams?: (teamKeys: string[]) => Promise<void>;
+  };
   /** Per-test timeout; real platforms need a few seconds. */
   timeoutMs?: number;
 };
@@ -42,6 +56,7 @@ const REDIRECT = "http://localhost:3000/auth/callback";
 
 export function describeConnectorConformance(name: string, options: ConformanceOptions): void {
   const created: string[] = [];
+  const createdTeams: string[] = [];
   let connector: CommerceConnector;
   const timeout = options.timeoutMs ?? 5_000;
 
@@ -52,6 +67,7 @@ export function describeConnectorConformance(name: string, options: ConformanceO
     }, timeout * 2);
 
     afterAll(async () => {
+      if (createdTeams.length > 0) await options.organizationWrites?.cleanupTeams?.(createdTeams);
       if (created.length > 0) await options.cleanup?.(created);
     }, timeout * 4);
 
@@ -97,6 +113,14 @@ export function describeConnectorConformance(name: string, options: ConformanceO
         if (ok?.platformSession) await connector.accounts.endPlatformSession?.(ok.platformSession);
         expect(await signIn(customer.email, `${PASSWORD}x`)).toBeNull();
         expect(await signIn(options.newEmail(), PASSWORD)).toBeNull();
+      });
+
+      it("changes a customer's name (connectors that can), and answers an unknown id with null", { timeout }, async (ctx) => {
+        if (connector.capabilities.signIn !== "password" || !connector.accounts.updateName) return ctx.skip();
+        const customer = await registered();
+        expect(await connector.accounts.updateName(customer.id, { firstName: "Augusta", lastName: "King" })).toMatchObject({ id: customer.id, firstName: "Augusta", lastName: "King" });
+        expect(await connector.accounts.get(customer.id)).toMatchObject({ firstName: "Augusta", lastName: "King", email: customer.email });
+        expect(await connector.accounts.updateName(UNKNOWN_ID, { firstName: "No", lastName: "One" })).toBeNull();
       });
 
       it("records a verified email", { timeout }, async (ctx) => {
@@ -198,6 +222,42 @@ export function describeConnectorConformance(name: string, options: ConformanceO
           // Nobody's roles in another company leak into this one.
           for (const member of members) for (const m of member.memberships) expect(m.companyKey, member.id).toBe(companyKey);
         }
+      });
+
+      it("gives and takes away a role, idempotently (connectors with memberWrites)", { timeout: timeout * 4 }, async (ctx) => {
+        const writes = connector.organizations?.memberWrites;
+        const where = options.organizationWrites;
+        if (!writes || !where) return ctx.skip();
+        const orgs = connector.organizations!;
+        const customerId = await where.customerId();
+        const role = { companyKey: where.companyKey, teamKey: where.teamKey, role: "sender" as const };
+        const held = async () => (await orgs.membershipsOf(customerId)).filter((m) => m.companyKey === where.companyKey && m.teamKey === where.teamKey && m.role === "sender");
+        expect(await writes.addRole(customerId, role)).toBe(true);
+        expect(await writes.addRole(customerId, role)).toBe(true);
+        expect(await held()).toHaveLength(1);
+        expect((await orgs.members(where.companyKey)).map((m) => m.id)).toContain(customerId);
+        expect(await writes.removeRole(customerId, role)).toBe(true);
+        expect(await writes.removeRole(customerId, role)).toBe(true);
+        expect(await held()).toHaveLength(0);
+        // Nothing is created on the way: an unknown company or another company's team is refused.
+        expect(await writes.addRole(customerId, { companyKey: `no-such-company-${UNKNOWN_ID}`, role: "admin" })).toBe(false);
+        expect(await writes.addRole(customerId, { ...role, teamKey: `no-such-team-${UNKNOWN_ID}` })).toBe(false);
+      });
+
+      it("creates and renames a team with the product's key (connectors with teamWrites)", { timeout: timeout * 4 }, async (ctx) => {
+        const writes = connector.organizations?.teamWrites;
+        const where = options.organizationWrites;
+        if (!writes || !where) return ctx.skip();
+        const key = where.newTeamKey();
+        const team = await writes.createTeam(where.companyKey, { key, name: "Conformance" });
+        if (team && !("conflict" in team)) createdTeams.push(team.key);
+        expect(team).toMatchObject({ key, name: "Conformance", approvalThresholdCents: null });
+        expect((await connector.organizations!.teams(where.companyKey)).map((t) => t.key)).toContain(key);
+        expect(await writes.createTeam(where.companyKey, { key, name: "Again" })).toEqual({ conflict: true });
+        expect(await writes.renameTeam(where.companyKey, key, "Renamed")).toMatchObject({ key, name: "Renamed" });
+        expect((await connector.organizations!.teams(where.companyKey)).find((t) => t.key === key)?.name).toBe("Renamed");
+        expect(await writes.renameTeam(where.companyKey, `no-such-team-${UNKNOWN_ID}`, "x")).toBeNull();
+        expect(await writes.createTeam(`no-such-company-${UNKNOWN_ID}`, { key: where.newTeamKey(), name: "x" })).toBeNull();
       });
     });
 

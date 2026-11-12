@@ -41,8 +41,21 @@ Every route declares who may call it, in `defineRoute({ auth })`
 | POST | `/v1/auth/hosted/finish` | public | Like sign-in. Body: `code, state`. `400 invalid_state`, `401 sign_in_failed`, `403 email_not_verified` |
 | POST | `/v1/auth/refresh` | public | `{ accessToken, refreshToken, expiresAt }`, or `401` |
 | POST | `/v1/auth/sign-out` | public | `{ status: "signed_out" }`; ends the session at once, and the platform's own session |
-| GET | `/v1/me` | account | `AccountView`: `id, email, firstName, lastName, companyName` (`@gifting/domain`) |
-| GET | `/v1/workspace` | member | User (with `roles` on the current team), company, current team (threshold, approvers), the user's teams, `companies` (every company they belong to), `actions` (what they may do on the current team); `devUsers`, always `null` (the development picker was removed; kept because v1 only adds) |
+| GET | `/v1/me` | account | `AccountView`: `id, email, firstName, lastName, companyName` (`@gifting/domain`), and `canEditName` (the platform lets the product change it) |
+| PATCH | `/v1/me` | account | The person's own name: body `{ firstName, lastName }` (1 to 100 characters each, trimmed). Returns the account. `501 not_supported` when the platform keeps names to itself |
+| GET | `/v1/workspace` | member | User (with `roles` on the current team), company, current team (threshold, approvers), the user's teams, `companies` (every company they belong to), `actions` (what they may do on the current team), `capabilities` (`manageMembers`, `manageTeams`, `editName`: what the platform lets the product change; the app hides the rest); `devUsers`, always `null` (the development picker was removed; kept because v1 only adds) |
+| GET | `/v1/company/members` | member | `{ members[], teams[], grantable[] }`: everyone with a role in the company (`id`, `name`, `memberships[]` of `role, teamKey`), its teams, and the roles the caller may give. `email` only for callers who manage members |
+| POST | `/v1/company/members/:customerId/roles` | member · `members:manage` | Gives one role: body `{ role, teamKey }` (`teamKey` null for owner and admin, a team of the company otherwise). Returns the member list. Again: no change |
+| DELETE | `/v1/company/members/:customerId/roles?role&teamKey` | member · `members:manage` | Takes one role away. Returns the member list |
+| DELETE | `/v1/company/members/:customerId` | member · `members:manage` | Takes away every role the person holds in the company (each must be one the caller may give). Returns the member list |
+| POST | `/v1/company/teams` | member · `teams:manage` | A new team: body `{ name }` (1 to 80). Its key is `team-<company>-<name>`, numbered when taken (`-2`, …). Returns `{ key, name }` |
+| PATCH | `/v1/company/teams/:teamKey` | member · `teams:manage` | Renames a team of the company; the key never changes |
+| GET | `/v1/company/invitations` | member · `members:manage` | `{ invitations[] }`: pending ones, newest first (`id, email, role, teamKey, teamName, invitedByName, createdAt, expiresAt`) |
+| POST | `/v1/company/invitations` | member · `members:manage` | Emails a link to `SENDER_PUBLIC_URL/invitations/<token>`, valid 7 days: body `{ email, role, teamKey }`. Returns the invitation. `409 already_invited` for the same address and role while one is pending; `503 mail_not_configured` without a mailer. When the email can't be sent, nothing is kept |
+| POST | `/v1/company/invitations/:id/resend` | member · `members:manage` | A new link and 7 more days; the old link stops working. `{ status: "ok" }` |
+| DELETE | `/v1/company/invitations/:id` | member · `members:manage` | Withdraws it; the link stops working. `{ status: "ok" }` |
+| GET | `/v1/invitations/:token` | public (30 a minute) | `{ companyName, role, teamName, expiresAt }`: what the link offers, without the email. `404 invitation_not_found` when expired, withdrawn or used |
+| POST | `/v1/invitations/:token/accept` | account (10 a minute) | `{ companyKey, teamKey, role }`: the role is now the signed-in person's. `403 invitation_wrong_account` (sent to another address), `409 invitation_used`, `404 invitation_not_found` |
 | GET | `/v1/teams/:teamKey/overview?range=7d\|30d\|90d` | member · `reports:view` (that team) | The Home overview: `balance`, `sent` and `chose` (with the previous period), `expiringSoon` (next 7 days), `pendingApprovals`, `daily` (sent, opened, chose per day) and `statuses`. Counted by `overviewFrom()` in `@gifting/domain` |
 | GET | `/v1/teams/:teamKey/balance` | member · `budget:view` (that team) | `{ teamKey, currency, availableCents, heldCents, spentCents }`, computed from the ledger. A team with no budget account yet reads as all zeros (and a send is refused with `409 insufficient_funds`) |
 | GET | `/v1/catalog/products?budget&occasion&category&q` | member · `catalog:view` | `{ products[] }`: one per product, narrowed to the variants in stock (and within the budget). `sku`, `priceCents` and `imageUrl` are the default variant's (the cheapest); `variants[]` has `sku`, `label`, `priceCents`, `available`, `imageUrl`. A single-gift send takes a variant SKU |
@@ -98,6 +111,11 @@ company and one team ([ADR 0016](../architecture/decisions/0016-organizations-an
 | `403 forbidden` | The person's roles on this team don't grant the route's action |
 | `404 company_not_found` / `404 team_not_found` | The header names a company or team the person doesn't hold (the sender app then forgets its remembered choice) |
 | `404 not_found` | Another company's or team's data, whatever the headers say |
+| `400 invalid_role` | A company role (owner, admin) with a team, or a team role without one |
+| `403 role_not_allowed` | A role the caller may not give or take away: an admin and an owner's role |
+| `403 own_roles` | The caller's own roles: another owner or admin changes them |
+| `409 last_owner` | Taking away the company's last owner |
+| `501 not_supported` | The commerce platform doesn't let the product change people, teams or names ([ADR 0017](../architecture/decisions/0017-invitations.md)) |
 | `503 organizations_not_configured` | The commerce connector has no `organizations` (production only) |
 
 Development: with `DEV_AUTH=1` outside production, the `x-dev-user` header

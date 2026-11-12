@@ -37,6 +37,8 @@ export const meView = z.object({
     approverNames: z.array(z.string()),
   }),
   teams: z.array(z.object({ key: z.string(), name: z.string() })),
+  // What this deployment's commerce platform lets the product change (ADR 0017). The app hides what's false.
+  capabilities: z.object({ manageMembers: z.boolean(), manageTeams: z.boolean(), editName: z.boolean() }),
   // Always null: the development "Viewing as" picker was removed (12 Nov 2026). Kept because v1 changes only add.
   devUsers: z.array(member).nullable(),
 });
@@ -282,3 +284,71 @@ export const decisionResultView = z.object({
   status: z.enum(CAMPAIGN_STATUSES),
 });
 export type DecisionResultView = z.infer<typeof decisionResultView>;
+
+// Members, teams and invitations (ADR 0017, plan: members-and-invitations.md).
+
+const role = z.enum(MEMBER_ROLES);
+const membershipView = z.object({ role, teamKey: z.string().nullable() });
+
+/** `GET /v1/company/members`: everyone with a role in the session's company. */
+export const companyMembersView = z.object({
+  members: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      // Only for people who manage members, and only when the platform gives it.
+      email: z.string().nullable(),
+      memberships: z.array(membershipView),
+    }),
+  ),
+  teams: z.array(z.object({ key: z.string(), name: z.string() })),
+  // The roles the caller may give or take away here (empty when they manage nobody).
+  grantable: z.array(role),
+});
+export type CompanyMembersView = z.infer<typeof companyMembersView>;
+
+/** Give or take away one role: a company role without a team, a team role with one. */
+export const roleChangeInput = z.object({ role, teamKey: z.string().min(1).nullable().default(null) });
+export type RoleChangeInput = z.infer<typeof roleChangeInput>;
+
+const teamName = z.string().trim().min(1, "Enter a team name.").max(80, "Use at most 80 characters.");
+export const teamInput = z.object({ name: teamName });
+export type TeamInput = z.infer<typeof teamInput>;
+export const teamView = z.object({ key: z.string(), name: z.string() });
+export type TeamView = z.infer<typeof teamView>;
+
+export const inviteInput = z.object({
+  email: z.preprocess((v) => (typeof v === "string" ? v.trim().toLowerCase() : v), z.email({ error: "Enter a valid email address." }).max(254)),
+  role,
+  teamKey: z.string().min(1).nullable().default(null),
+});
+export type InviteInput = z.infer<typeof inviteInput>;
+
+/** A pending invitation, as owners and admins see it. */
+export const invitationView = z.object({
+  id: z.string(),
+  email: z.string(),
+  role,
+  teamKey: z.string().nullable(),
+  teamName: z.string().nullable(),
+  invitedByName: z.string(),
+  createdAt: z.string(),
+  expiresAt: z.string(),
+});
+export type InvitationView = z.infer<typeof invitationView>;
+export const invitationsView = z.object({ invitations: z.array(invitationView) });
+
+/** What the link page shows before the person accepts (no email: the link may be forwarded). */
+export const invitationPreview = z.object({
+  companyName: z.string(),
+  role,
+  teamName: z.string().nullable(),
+  expiresAt: z.string(),
+});
+export type InvitationPreview = z.infer<typeof invitationPreview>;
+
+export const nameInput = z.object({
+  firstName: z.string().trim().min(1, "Enter your first name.").max(100, "Use at most 100 characters."),
+  lastName: z.string().trim().min(1, "Enter your last name.").max(100, "Use at most 100 characters."),
+});
+export type NameInput = z.infer<typeof nameInput>;

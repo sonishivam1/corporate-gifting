@@ -4,6 +4,7 @@ import type { AppDeps } from "../../deps";
 import { ApiError } from "../../http/errors";
 import { defineRoute } from "../../http/route";
 import { requireSession } from "../../http/session";
+import type { MembersService } from "./members";
 
 /**
  * The workspace the dashboard works in (ADR 0016): the person, their roles
@@ -11,7 +12,7 @@ import { requireSession } from "../../http/session";
  * approvers, and the company and team switchers. Any member may read it.
  * The signed-in account itself is `GET /v1/me` (routes.ts).
  */
-export function workspaceRoutes(deps: AppDeps) {
+export function workspaceRoutes(deps: AppDeps, members: MembersService) {
   return [
     defineRoute({
       method: "GET",
@@ -45,6 +46,7 @@ export function workspaceRoutes(deps: AppDeps) {
             approverNames: approvers.map((m) => m.name),
           },
           teams: reachable.map((t) => ({ key: t.key, name: t.name })),
+          capabilities: { ...members.capabilities(), editName: request.server.accounts?.canEditName ?? false },
           // The sender app's "Viewing as" picker is gone; kept, always null, because v1 only adds (ADR 0010).
           devUsers: null,
         };

@@ -13,12 +13,15 @@ import {
   type CommerceConnector,
   CONTRACT_VERSION,
   type Customer,
+  type MemberWrites,
   type OrganizationsConnector,
   type OrgCompany,
   type OrgMember,
   type OrgTeam,
   type SignInMode,
+  type TeamWrites,
 } from "@gifting/commerce";
+import { isCompanyRole, type Membership } from "@gifting/domain";
 
 export type MemoryOptions = {
   /** Default "password". */
@@ -29,7 +32,11 @@ export type MemoryOptions = {
   catalog?: CatalogItem[];
   /** Companies, teams and members. Without them the connector has no organizations. */
   organizations?: MemoryOrganizations;
+  /** Which writes it offers (ADR 0017). Each defaults to true; false plays a platform without that part. */
+  writes?: MemoryWrites;
 };
+
+export type MemoryWrites = { members?: boolean; teams?: boolean; names?: boolean };
 
 /** Companies with their teams, and people with their memberships (in any company). */
 export type MemoryOrganizations = {
@@ -37,9 +44,65 @@ export type MemoryOrganizations = {
   members: OrgMember[];
 };
 
-/** Organizations kept in memory, with the rules a platform's connector applies. */
-export function memoryOrganizations(data: MemoryOrganizations): OrganizationsConnector {
+const sameMembership = (a: Membership, b: Membership) => a.companyKey === b.companyKey && a.role === b.role && (a.teamKey ?? null) === (b.teamKey ?? null);
+
+/**
+ * Organizations kept in memory, with the rules a platform's connector
+ * applies. It works on its own copy of `data`. `person` names someone given a
+ * role who wasn't in `data` yet (the memory connector reads its customers).
+ */
+export function memoryOrganizations(
+  input: MemoryOrganizations,
+  options: { writes?: Pick<MemoryWrites, "members" | "teams">; person?: (id: string) => { name: string; email: string | null } | null } = {},
+): OrganizationsConnector {
+  const data: MemoryOrganizations = structuredClone(input);
   const companyOf = (key: string) => data.companies.find((c) => c.key === key);
+  const fits = (m: Membership) => {
+    const company = companyOf(m.companyKey);
+    if (!company) return false;
+    if (isCompanyRole(m.role)) return !m.teamKey;
+    return Boolean(m.teamKey) && company.teams.some((t) => t.key === m.teamKey);
+  };
+
+  const memberWrites: MemberWrites = {
+    async addRole(customerId, membership) {
+      if (!fits(membership)) return false;
+      let member = data.members.find((m) => m.id === customerId);
+      if (!member) {
+        const person = options.person?.(customerId);
+        member = { id: customerId, name: person?.name ?? customerId, email: person?.email ?? null, memberships: [] };
+        data.members.push(member);
+      }
+      if (!member.memberships.some((m) => sameMembership(m, membership))) {
+        member.memberships.push({ companyKey: membership.companyKey, ...(membership.teamKey ? { teamKey: membership.teamKey } : {}), role: membership.role });
+      }
+      return true;
+    },
+    async removeRole(customerId, membership) {
+      if (!fits(membership)) return false;
+      const member = data.members.find((m) => m.id === customerId);
+      if (member) member.memberships = member.memberships.filter((m) => !sameMembership(m, membership));
+      return true;
+    },
+  };
+
+  const teamWrites: TeamWrites = {
+    async createTeam(companyKey, { key, name }) {
+      const company = companyOf(companyKey);
+      if (!company) return null;
+      if (data.companies.some((c) => c.key === key || c.teams.some((t) => t.key === key))) return { conflict: true };
+      const team: OrgTeam = { key, name, approvalThresholdCents: null };
+      company.teams.push(team);
+      return { ...team };
+    },
+    async renameTeam(companyKey, teamKey, name) {
+      const team = companyOf(companyKey)?.teams.find((t) => t.key === teamKey);
+      if (!team) return null;
+      team.name = name;
+      return { ...team };
+    },
+  };
+
   return {
     membershipsOf: async (customerId) => (data.members.find((m) => m.id === customerId)?.memberships ?? []).map((m) => ({ ...m })),
     company: async (key) => {
@@ -50,8 +113,10 @@ export function memoryOrganizations(data: MemoryOrganizations): OrganizationsCon
     members: async (companyKey) =>
       data.members.flatMap((m) => {
         const memberships = m.memberships.filter((x) => x.companyKey === companyKey).map((x) => ({ ...x }));
-        return memberships.length > 0 ? [{ id: m.id, name: m.name, memberships }] : [];
+        return memberships.length > 0 ? [{ id: m.id, name: m.name, ...(m.email !== undefined ? { email: m.email } : {}), memberships }] : [];
       }),
+    ...(options.writes?.members === false ? {} : { memberWrites }),
+    ...(options.writes?.teams === false ? {} : { teamWrites }),
   };
 }
 
@@ -104,7 +169,17 @@ export function createMemoryConnector(options: MemoryOptions = {}) {
     contractVersion: CONTRACT_VERSION,
     capabilities: { signIn },
     ...(options.catalog ? { catalog: memoryCatalog(options.catalog) } : {}),
-    ...(options.organizations ? { organizations: memoryOrganizations(options.organizations) } : {}),
+    ...(options.organizations
+      ? {
+          organizations: memoryOrganizations(options.organizations, {
+            writes: options.writes,
+            person: (id) => {
+              const customer = customers.get(id);
+              return customer ? { name: [customer.firstName, customer.lastName].filter(Boolean).join(" ") || customer.email, email: customer.email } : null;
+            },
+          }),
+        }
+      : {}),
     accounts: {
       ...(signIn === "password"
         ? {
@@ -172,6 +247,17 @@ export function createMemoryConnector(options: MemoryOptions = {}) {
         customer.emailVerified = true;
         return strip(customer);
       },
+      ...(options.writes?.names === false
+        ? {}
+        : {
+            async updateName(id: string, name: { firstName: string; lastName: string }) {
+              const customer = customers.get(id);
+              if (!customer) return null;
+              customer.firstName = name.firstName;
+              customer.lastName = name.lastName;
+              return strip(customer);
+            },
+          }),
       ...(platformSessions
         ? {
             async renewPlatformSession(session: string) {

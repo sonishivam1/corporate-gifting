@@ -37,6 +37,7 @@ export default defineConnector(({ env, log, production }) => ({
 | `signIn: "password"` | `register` (report a taken email as `{ duplicate: true }`), `signInWithPassword` (null for a wrong email or password) |
 | `signIn: "hosted"` | `hostedSignIn.start` (the platform's sign-in URL, with `state`, `redirectUri` and an optional `loginHint`) and `hostedSignIn.finish` (exchange the code; null when refused). Customers come back verified |
 | The platform keeps its own customer session | `renewPlatformSession` and `endPlatformSession`, both or neither |
+| The platform lets the product change a customer's name (optional; capability `editName`) | `updateName(id, { firstName, lastName })`: the updated customer, or null for one outside the deployment |
 
 The product does the rest the same on every platform: sessions, links,
 rate limits, emails and the rules (for example, no sign-in before the email
@@ -85,6 +86,24 @@ organizations_not_configured`) until the built-in directory exists.
 - The conformance suite checks it when you pass `organizations` fixture
   data: a customer's memberships, an unknown customer with none, and nobody
   from another company in `members()`.
+- `members()` gives each member's `email` too (lowercased), or null when
+  the platform has none: owners and admins see it.
+
+**Changing organizations (optional, [ADR 0017](../architecture/decisions/0017-invitations.md)).**
+Two independent parts; offer each one the platform can do. A part left out
+makes its routes answer `501 not_supported`, and the app hides it.
+
+| Part | Methods | Capability |
+| --- | --- | --- |
+| `organizations.memberWrites` | `addRole(customerId, membership)`, `removeRole(customerId, membership)`: true when done (also when nothing had to change), false for an unknown or disabled company or team, or a membership of the wrong shape | `manageMembers` |
+| `organizations.teamWrites` | `createTeam(companyKey, { key, name })`: the team, `{ conflict: true }` when the key is taken, null for an unknown company; `renameTeam(companyKey, teamKey, name)`: the team, or null when it isn't the company's | `manageTeams` |
+
+- Both are idempotent: giving a role held, or taking away one not held,
+  changes nothing and answers true.
+- Keep roles the product doesn't know as they are.
+- The product checks who may change whom; the connector only stores it.
+- The conformance suite checks them when you pass `organizationWrites`
+  fixtures (a company, a team, a customer to change, fresh team keys).
 
 ## Steps
 

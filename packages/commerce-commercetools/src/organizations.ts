@@ -75,7 +75,7 @@ export function toOrgMembers(units: readonly BusinessUnit[]): OrgMember[] {
       const id = associate.customer.id;
       const memberships = unitMemberships(unit, id);
       if (memberships.length === 0) continue;
-      const member = byId.get(id) ?? { id, name: personName(associate.customer.obj, id), memberships: [] };
+      const member = byId.get(id) ?? { id, name: personName(associate.customer.obj, id), email: associate.customer.obj?.email?.toLowerCase() ?? null, memberships: [] };
       for (const m of memberships) {
         if (!member.memberships.some((x) => x.role === m.role && (x.teamKey ?? null) === (m.teamKey ?? null))) member.memberships.push(m);
       }

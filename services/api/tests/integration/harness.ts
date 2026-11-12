@@ -1,10 +1,12 @@
 import { assertTestDb, getCollections, testDbName } from "@gifting/db";
 import { writeDemoData } from "@gifting/seed/write-demo";
+import type { Logger } from "@gifting/logger";
 import type { FastifyInstance } from "fastify";
 import { type Db, MongoClient } from "mongodb";
 
 import { buildApp } from "../../src/app";
 import type { AppDeps } from "../../src/deps";
+import type { AccountsService } from "../../src/modules/accounts/service";
 import { seedOrg } from "../../src/modules/accounts/org";
 import { seedCatalog } from "../../src/modules/catalog/source";
 
@@ -23,7 +25,7 @@ export type Harness = {
  * it. assertTestDb() refuses any other database name before anything is
  * written; the database is dropped afterwards.
  */
-export async function startHarness(extra: Partial<AppDeps> = {}): Promise<Harness> {
+export async function startHarness(extra: Partial<AppDeps> = {}, options: { accounts?: AccountsService; logger?: Logger } = {}): Promise<Harness> {
   const client = new MongoClient(process.env.MONGODB_URI ?? "mongodb://localhost:27017/?directConnection=true");
   await waitForPrimary(client);
   const name = testDbName();
@@ -31,6 +33,8 @@ export async function startHarness(extra: Partial<AppDeps> = {}): Promise<Harnes
   const db = client.db(name);
   await writeDemoData(db, NOW);
   const app = await buildApp({
+    ...(options.accounts ? { accounts: options.accounts } : {}),
+    ...(options.logger ? { logger: options.logger } : {}),
     deps: { client, db, catalog: seedCatalog, org: seedOrg, devAuth: true, recipientBaseUrl: "http://gifts.test", now: () => NOW, ...extra },
   });
   await app.ready();

@@ -8,7 +8,7 @@
  * fictional demo company from `infra/seed` (`seedOrg`); production refuses
  * the dashboard instead.
  */
-import type { OrganizationsConnector } from "@gifting/commerce";
+import type { MemberWrites, OrganizationsConnector, TeamWrites } from "@gifting/commerce";
 import { can, type MemberRole, type Membership, rolesOnTeam } from "@gifting/domain";
 import { demoCompany } from "@gifting/seed";
 
@@ -22,7 +22,7 @@ export type OrgTeam = {
   approvalThresholdCents: number;
 };
 
-export type OrgMember = { id: string; name: string; companyKey: string; memberships: Membership[] };
+export type OrgMember = { id: string; name: string; email: string | null; companyKey: string; memberships: Membership[] };
 
 export interface OrgDirectory {
   /** Every role the person holds, in every company (cached for up to a minute). */
@@ -36,11 +36,16 @@ export interface OrgDirectory {
   member(companyKey: string, id: string): Promise<OrgMember | null>;
   /** The people who may approve on the team: roles that grant `campaign:approve` there. */
   approvers(companyKey: string, teamKey: string): Promise<OrgMember[]>;
+  /** The connector's writes, when the platform offers them (ADR 0017). */
+  memberWrites?: MemberWrites;
+  teamWrites?: TeamWrites;
+  /** Drops what the cache remembers about the company (teams, members) and, given one, a person's memberships: call after a change. */
+  forget(companyKey: string, customerId?: string): void;
 }
 
 type Cache = { ttlMs: number; now: () => number };
 
-type Memo<A extends string[], T> = ((...args: A) => Promise<T>) & { fresh: (...args: A) => Promise<T> };
+type Memo<A extends string[], T> = ((...args: A) => Promise<T>) & { fresh: (...args: A) => Promise<T>; forget: (...args: A) => void };
 
 /**
  * Remembers each answer for `ttlMs`, so a dashboard page doesn't ask the
@@ -48,7 +53,7 @@ type Memo<A extends string[], T> = ((...args: A) => Promise<T>) & { fresh: (...a
  * platform again and remembers that answer instead.
  */
 function memo<A extends string[], T>(fn: (...args: A) => Promise<T>, cache: Cache): Memo<A, T> {
-  if (cache.ttlMs <= 0) return Object.assign((...args: A) => fn(...args), { fresh: fn });
+  if (cache.ttlMs <= 0) return Object.assign((...args: A) => fn(...args), { fresh: fn, forget: () => undefined });
   const entries = new Map<string, { at: number; value: Promise<T> }>();
   const load = (key: string, args: A) => {
     const value = fn(...args).catch((err: unknown) => {
@@ -64,7 +69,7 @@ function memo<A extends string[], T>(fn: (...args: A) => Promise<T>, cache: Cach
     const hit = entries.get(key);
     return hit && cache.now() - hit.at < cache.ttlMs ? hit.value : load(key, args);
   };
-  return Object.assign(cached, { fresh: (...args: A) => load(JSON.stringify(args), args) });
+  return Object.assign(cached, { fresh: (...args: A) => load(JSON.stringify(args), args), forget: (...args: A) => void entries.delete(JSON.stringify(args)) });
 }
 
 /** The API's directory over a connector's organizations. Role changes apply to reads within `ttlMs` (a minute by default), to writes at once. */
@@ -78,7 +83,7 @@ export function orgDirectory(orgs: OrganizationsConnector, options: Partial<Cach
   }, cache);
   const members = memo(async (companyKey: string): Promise<OrgMember[]> => {
     const list = await orgs.members(companyKey);
-    return list.map((m) => ({ id: m.id, name: m.name, companyKey, memberships: m.memberships.filter((x) => x.companyKey === companyKey) }));
+    return list.map((m) => ({ id: m.id, name: m.name, email: m.email ?? null, companyKey, memberships: m.memberships.filter((x) => x.companyKey === companyKey) }));
   }, cache);
 
   return {
@@ -91,6 +96,14 @@ export function orgDirectory(orgs: OrganizationsConnector, options: Partial<Cach
     member: async (companyKey, id) => (await members(companyKey)).find((m) => m.id === id) ?? null,
     approvers: async (companyKey, teamKey) =>
       (await members(companyKey)).filter((m) => can(rolesOnTeam(m.memberships, companyKey, teamKey), "campaign:approve")),
+    ...(orgs.memberWrites ? { memberWrites: orgs.memberWrites } : {}),
+    ...(orgs.teamWrites ? { teamWrites: orgs.teamWrites } : {}),
+    forget(companyKey, customerId) {
+      teams.forget(companyKey);
+      members.forget(companyKey);
+      company.forget(companyKey);
+      if (customerId) membershipsOf.forget(customerId);
+    },
   };
 }
 

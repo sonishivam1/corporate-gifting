@@ -100,7 +100,7 @@ No client in a browser. Each runs with only the scopes it needs.
 
 | Client | Used by | Scopes |
 | --- | --- | --- |
-| `gifting-api` | `services/api` (`CTP_API_*`; read-only `view_published_products`, `view_products` until M4) | `manage_orders`, `manage_payments`, `view_products`, `view_published_products`, `view_business_units`, `view_customers` (organizations, read for every dashboard session), `manage_business_units`, `manage_associate_roles` (invitations, later) (channels are readable with `view_products`) |
+| `gifting-api` | `services/api` (`CTP_API_*`; read-only `view_published_products`, `view_products` until M4) | `manage_orders`, `manage_payments`, `view_products`, `view_published_products`, `view_business_units`, `view_customers` (organizations, read for every dashboard session), `manage_business_units` (members and teams, ADR 0017: `addAssociate`, `changeAssociate`, `removeAssociate`, a Division created under the company, `changeName`; each read, then posted with its version, again on a version conflict, up to 3 times), `manage_customers` (registering customers, ADR 0015; a person's own name, ADR 0017: `setFirstName`, `setLastName` in the store) (channels are readable with `view_products`) |
 | `gifting-events` | `services/worker` | `view_orders`, `manage_orders` (shipment state, deliveries) |
 | `gifting-import` | `infra/seed` | `manage_import_containers`, `manage_products`, `manage_channels` |
 | `gifting-setup` | `infra/ct-setup` | `manage_project` (sandbox only; never in a deployed environment) |

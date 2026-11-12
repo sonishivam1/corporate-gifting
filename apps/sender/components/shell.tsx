@@ -8,8 +8,21 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@gifting/ui/compon
 import { NativeSelect, NativeSelectOption } from "@gifting/ui/components/native-select";
 import { SidebarShell, type SidebarNavItem } from "@gifting/ui/components/sidebar-shell";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@gifting/ui/components/tooltip";
-import { UserMenu } from "@gifting/ui/components/user-menu";
-import { BellIcon, Building2Icon, ChartColumnIcon, GridIcon, HouseIcon, LayersIcon, PlusIcon, RepeatIcon, SearchIcon, WalletIcon } from "lucide-react";
+import { UserMenu, type UserMenuLink } from "@gifting/ui/components/user-menu";
+import {
+  BellIcon,
+  Building2Icon,
+  ChartColumnIcon,
+  CircleUserIcon,
+  GridIcon,
+  HouseIcon,
+  LayersIcon,
+  PlusIcon,
+  RepeatIcon,
+  SearchIcon,
+  UsersIcon,
+  WalletIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type ReactNode, useTransition } from "react";
@@ -25,6 +38,12 @@ const NAV: SidebarNavItem[] = [
   { href: "/campaigns", label: "Campaigns", icon: ChartColumnIcon },
   { href: "/automations", label: "Automations", icon: RepeatIcon, soon: true },
   { href: "/budgets", label: "Budgets", icon: WalletIcon, soon: true },
+];
+
+/** The account menu's pages, above Sign out. */
+const ACCOUNT_LINKS: UserMenuLink[] = [
+  { href: "/settings/profile", label: "My profile", icon: CircleUserIcon },
+  { href: "/settings/organization", label: "Organization & teams", icon: UsersIcon },
 ];
 
 /** Search campaigns by name: a plain GET form, so it works before scripts load. */
@@ -122,7 +141,15 @@ export function Shell({
       actions={
         <>
           <ApprovalsBell count={pendingApprovals} />
-          <UserMenu name={account.name} email={account.email} detail={account.detail} signOut={signOut} />
+          <UserMenu
+            name={account.name}
+            email={account.email}
+            detail={account.detail}
+            // Organization & teams needs a company; someone in none sees only their profile.
+            links={me ? ACCOUNT_LINKS : ACCOUNT_LINKS.slice(0, 1)}
+            linkAs={Link}
+            signOut={signOut}
+          />
         </>
       }
     >

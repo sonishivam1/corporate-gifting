@@ -118,7 +118,7 @@ export const me = defineRoute({
   method: "GET",
   url: "/v1/me",
   schema: { response: accountView },
-  handler: async ({ account }) => account,
+  handler: async ({ account, request }) => ({ ...account, canEditName: request.server.accounts?.canEditName ?? false }),
 });
 
 export const accountsRoutes = [authOptions, register, verifyEmail, resendVerification, signIn, hostedStart, hostedFinish, refresh, signOut, me];

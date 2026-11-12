@@ -98,6 +98,7 @@ true values while the recipient pays nothing.
 | Gift email, recipient page, redemption into a commercetools order, resend, cancel | ✅ Built (M4) |
 | Gift bundles: every recipient gets 2 to 5 gifts, in one order | ✅ Built, see the [plan](docs/plans/gift-bundles.md) |
 | Organizations and roles: companies, teams and roles from commercetools, an action check on every dashboard route | ✅ Built, see the [plan](docs/plans/organizations-and-roles.md) |
+| Members, teams, invitations and profile: owners and admins manage people and teams and invite by email; everyone edits their name | ✅ Built, see the [plan](docs/plans/members-and-invitations.md) |
 | Vendor routing and tracking | Planned (M4) |
 | Automation and more channels | Planned (M5) |
 | Statements, reconciliation and reporting | Planned (M6) |

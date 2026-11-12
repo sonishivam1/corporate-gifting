@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@gifting/commerce": "workspace:*"
+    "@gifting/commerce": "workspace:*",
+    "@gifting/domain": "workspace:*"
   }
 }

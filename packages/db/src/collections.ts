@@ -4,13 +4,14 @@ import type {
   Gift,
   GiftCollection,
   Integration,
+  Invitation,
   LedgerEntry,
   ProcessedEvent,
   Recipient,
 } from "@gifting/domain";
 import type { Collection, Db } from "mongodb";
 
-/** The eight collections (ADR 0002). A new one needs a decision record. */
+/** The nine collections (ADR 0002, ADR 0017). A new one needs a decision record. */
 export const COLLECTIONS = {
   accounts: "accounts",
   ledgerEntries: "ledgerEntries",
@@ -20,6 +21,7 @@ export const COLLECTIONS = {
   gifts: "gifts",
   integrations: "integrations",
   processedEvents: "processedEvents",
+  invitations: "invitations",
 } as const;
 
 export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];
@@ -33,6 +35,7 @@ export type Collections = {
   gifts: Collection<Gift>;
   integrations: Collection<Integration>;
   processedEvents: Collection<ProcessedEvent>;
+  invitations: Collection<Invitation>;
 };
 
 /** Typed handles for every collection. Modules use only their own. */
@@ -46,5 +49,6 @@ export function collections(db: Db): Collections {
     gifts: db.collection<Gift>(COLLECTIONS.gifts),
     integrations: db.collection<Integration>(COLLECTIONS.integrations),
     processedEvents: db.collection<ProcessedEvent>(COLLECTIONS.processedEvents),
+    invitations: db.collection<Invitation>(COLLECTIONS.invitations),
   };
 }

@@ -9,6 +9,7 @@ import connector from "./index";
 
 const run = Date.now().toString(36);
 let n = 0;
+const writesCustomers: string[] = [];
 
 describeConnectorConformance("commercetools (sandbox)", {
   connector: () => connector({ env: process.env, log: createLogger("conformance", {}, { level: "silent" }), production: false }),
@@ -24,7 +25,31 @@ describeConnectorConformance("commercetools (sandbox)", {
       return id;
     },
   },
+  // Writes (ADR 0017): a customer made for the run gets and loses a sender role on the demo company's first
+  // team, and a team made for the run is deleted afterwards. The customer is deleted with the others.
+  organizationWrites: {
+    companyKey: "company-lumen-labs",
+    teamKey: "team-lumen-people",
+    async customerId() {
+      const ct = loadCtConfig(process.env);
+      const api = createCtApi(ct);
+      const email = `conformance-${run}-writes@gifting-conformance.example`;
+      const draft = { email, password: "Conformance-Check-2026!", firstName: "Role", lastName: "Check" };
+      const created = (await api.inStoreKeyWithStoreKeyValue({ storeKey: ct.storeKey }).customers().post({ body: draft }).execute()).body.customer;
+      writesCustomers.push(created.id);
+      return created.id;
+    },
+    newTeamKey: () => `team-conformance-${run}-${++n}`,
+    async cleanupTeams(keys) {
+      const api = createCtApi(loadCtConfig(process.env));
+      for (const key of keys) {
+        const { version } = (await api.businessUnits().withKey({ key }).get().execute()).body;
+        await api.businessUnits().withKey({ key }).delete({ queryArgs: { version } }).execute();
+      }
+    },
+  },
   async cleanup(ids) {
+    ids = [...ids, ...writesCustomers];
     const api = createCtApi(loadCtConfig(process.env));
     for (const id of ids) {
       const { version } = (await api.customers().withId({ ID: id }).get().execute()).body;

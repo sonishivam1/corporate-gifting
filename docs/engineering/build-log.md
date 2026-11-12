@@ -13,6 +13,28 @@ how it was verified, and any lesson worth keeping.
 
 ## 12 Nov 2026
 
+### Members, teams, invitations and profile
+- **What:** owners and admins manage the company in the dashboard: give and
+  take away roles, remove people, create and rename teams, and invite by
+  email (a 7-day link, accepted once by the invited address). Everyone has
+  a profile page and can change their name. The account menu opens both.
+  ADR 0017; a ninth collection, `invitations`.
+- **Any platform:** the rules (who may give which role, nobody on
+  themselves, the last owner) and invitations are the product's. The
+  platform only stores the result, through three optional connector parts:
+  `organizations.memberWrites`, `organizations.teamWrites` and
+  `accounts.updateName`. A missing part answers `501 not_supported`, the
+  workspace's `capabilities` say so, and the app hides it. commercetools
+  and memory implement all three; the conformance suite checks them.
+- **Verified:** unit tests (API 89, domain 109, memory 57, commercetools
+  38), `pnpm test:integration` (120 passed, 25 new), lint, typecheck,
+  build; break and restore on the role check and the accept claim.
+- **Lesson:** a read before a claim can hide a missing lock. The accept
+  route first read the invitation and refused anything not pending, so the
+  `findOneAndUpdate` filter could lose `status: "pending"` with every test
+  green, even one with two accepts at once. Claim first, read only to
+  explain a `null`; then the break-and-restore test fails as it should.
+
 ### Development "Viewing as" picker removed
 - **What:** the sender app's "Viewing as (development)" select, at the
   bottom of the sidebar, is gone, with its `gifting_dev_user` cookie,

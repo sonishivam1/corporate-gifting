@@ -5,6 +5,16 @@ change was built, see the [build log](docs/engineering/build-log.md).
 
 ## Unreleased
 
+### People, teams and invitations
+- The account menu now has **My profile** and **Organization & teams**.
+- My profile shows your name, email, roles and companies; change your name
+  there when your company's platform allows it.
+- Owners and admins can give and take away roles, remove people, create and
+  rename teams, and invite people by email. An invitation link works for 7
+  days, only for the address it was sent to; resend or withdraw it any time.
+- Admins can't change owners, nobody can change their own roles, and a
+  company always keeps an owner.
+
 ### Companies and roles
 - The dashboard shows the company and team you belong to. If you're in
   several companies, switch between them at the top; owners and admins can

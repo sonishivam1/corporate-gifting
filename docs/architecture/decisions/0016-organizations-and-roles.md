@@ -99,10 +99,11 @@ Facts that shape the decision:
    of `team-settings` is no longer read. A sender still can't approve their
    own campaign.
 
-8. **How people join, for now.** A person registers and verifies their
-   email (ADR 0015), then an operator adds them to a company with
-   `pnpm member:add`. Invitations by owners and admins come next, in their
-   own plan.
+8. **How people join.** A person registers and verifies their email
+   (ADR 0015). An operator adds a company's first owner with
+   `pnpm member:add`; since 12 Nov 2026 owners and admins invite everyone
+   else by email, and change roles and teams in the dashboard
+   ([ADR 0017](0017-invitations.md)).
 
 9. **Development.** With `DEV_AUTH=1`, the `x-dev-user` header still lets
    the dashboard act as any member of the organization directory. Without
