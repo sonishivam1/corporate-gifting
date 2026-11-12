@@ -307,6 +307,7 @@ that module's exported service, never its collections.
 | `build-service: the bundle imports packages missing from package.json` | A workspace package the service uses imports a third-party package; add it to the service's own `dependencies` (the bundle keeps third-party code external) |
 | After `shadcn add`, an app's `package.json` gained packages, or a component imports `@/hooks/…` | The CLI writes dependencies and hooks into the app it runs from. Move them to `packages/ui` (`package.json`, `src/hooks`, `src/lib`) and import `@gifting/ui/hooks/…` |
 | A Tailwind class used in an app or `packages/ui` has no style | `@source` in `packages/ui/src/styles/globals.css` must cover the file; it scans `apps/**` and `packages/ui/src/**` |
+| CI build fails with "next/font/google queries have exactly one entry" | The build fetched from Google Fonts and got an unexpected response. Fonts are local files in `packages/ui/src/fonts` loaded with `next/font/local`; don't go back to `next/font/google` |
 | `next/font` fonts don't apply (the page shows the system font) | Put `fontVariables` on `<html>`, not `<body>`: `--font-sans` is resolved on `:root` |
 | A Next.js app can't see a variable from the root `.env` | By design: apps read only their own `.env.local` (see `apps/<app>/.env.example`) |
 | `pnpm --filter <pkg> import` runs pnpm's own import command | Call scripts named like pnpm commands with `pnpm --filter <pkg> run <script>` |

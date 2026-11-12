@@ -13,6 +13,19 @@ how it was verified, and any lesson worth keeping.
 
 ## 12 Nov 2026
 
+### Fonts ship with the repo
+- **What:** CI's `pnpm build` failed in `apps/sender` with Turbopack's
+  "next/font/google queries have exactly one entry" for Sora. The font code
+  hadn't changed; what Google Fonts returned to the runner had, and a local
+  build fetched normal files. DM Sans and Sora (SIL Open Font License, latin
+  subset, variable weight) now live in `packages/ui/src/fonts` with their
+  licences and load through `next/font/local`.
+- **Verified:** the sender build, lint and typecheck pass; the built CSS
+  serves both files from `/_next/static/media` and names no Google host.
+- **Lesson:** a build that downloads at build time can fail for reasons
+  outside the repo. `pnpm build` already needs no database or commercetools;
+  now it needs no font service either.
+
 ### Members, teams, invitations and profile
 - **What:** owners and admins manage the company in the dashboard: give and
   take away roles, remove people, create and rename teams, and invite by

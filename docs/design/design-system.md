@@ -111,7 +111,9 @@ Ours, built on them:
   badges, and one `tile-<category>` pair per catalog category for product
   art.
 - DM Sans for text (`font-sans`) and Sora for headings (`font-heading`,
-  applied to `h1` to `h3`). Both are self-hosted by `next/font`
+  applied to `h1` to `h3`). Both are self-hosted with `next/font/local` from
+  the font files in `packages/ui/src/fonts` (latin subset, variable weight,
+  SIL Open Font License), so the build never calls Google Fonts
   (`@gifting/ui/lib/fonts`). Each app's root layout puts `fontVariables` on
   `<html>`, where `--font-sans` is resolved; on `<body>` the fonts silently
   fall back to the system stack.
