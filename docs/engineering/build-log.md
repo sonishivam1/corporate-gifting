@@ -11,6 +11,103 @@ how it was verified, and any lesson worth keeping.
 
 ---
 
+## 12 Nov 2026
+
+### Development "Viewing as" picker removed
+- **What:** the sender app's "Viewing as (development)" select, at the
+  bottom of the sidebar, is gone, with its `gifting_dev_user` cookie,
+  `switchUser` action and `x-dev-user` forwarding. `/v1/workspace` answers
+  `devUsers: null` and no longer lists the company's members for it; the
+  field stays, because v1 changes only add (ADR 0010).
+- **Why:** it came from before real sign-in, to see the dashboard as
+  different people. With sign-in and roles (ADR 0016) a picked person won
+  over the signed-in account, which hid what RBAC was doing, and it let
+  anyone with `DEV_AUTH=1` act as any member. Test roles with one real
+  account per role (`pnpm member:add`).
+- **Kept:** the API still reads `x-dev-user` with `DEV_AUTH=1` outside
+  production; the integration tests act as the demo people through it.
+- **Verified:** `pnpm lint`, `typecheck`, `test`, `build`, and
+  `pnpm test:integration` (95 passed).
+- **Also:** `deps.test.ts`'s "catalog and mailer together" test gets 20s.
+  Its first `buildApp` loads the whole app and took about 5.6s when every
+  package's tests ran at once, just past vitest's 5s default.
+
+## 11 Nov 2026
+
+### Organizations and role-based access
+- **What:** a signed-in person sees their own company's content and can do
+  only what their role allows ([ADR 0016](../architecture/decisions/0016-organizations-and-roles.md),
+  [plan](../plans/organizations-and-roles.md)).
+  - `@gifting/domain`: `permissions.ts`, the action list and the roles that
+    grant each (`can`, `actionsFor`, `rolesOnTeam`, `reachableTeams`);
+    `meView` adds `user.roles`, `companies` and `actions`.
+  - `@gifting/commerce`: an optional `organizations` part
+    (`membershipsOf`, `company`, `teams`, `members`) and its conformance
+    checks. Memory connector: `memoryOrganizations`. commercetools:
+    `createCtOrganizations` reads Company and Division Business Units and
+    their explicit associates; unknown roles, and roles on the wrong kind of
+    unit, are dropped.
+  - API: `auth: "member"` replaces `"workspace"`. Every member route
+    declares a `permission` (`defineRoute` refuses one without), checked in
+    the session hook before the handler (`403 forbidden`). The session comes
+    from the access token and the person's memberships, cached for a minute;
+    `x-gifting-company` and `x-gifting-team` choose among them. No company is
+    `403 no_membership`; production without organizations is
+    `503 organizations_not_configured`. Approvers are whoever holds
+    `campaign:approve` on the team (its approvers and the company's owners);
+    `approverIds` is no longer read. A team with no threshold counts as 0.
+  - Sender app: company switcher (more than one company), team switcher on
+    the new cookies and headers, send, build and edit controls hidden when
+    the role lacks them, a "not allowed" notice on those pages, and a page
+    for someone in no company.
+  - Demo data: an owner (Dana Okafor) and an admin (Theo Lindqvist) in the
+    demo company. `pnpm member:add` adds only registered people.
+- **Why:** sign-in (ADR 0015) proved who someone is, but the dashboard still
+  ran on the development session over the demo company, and production
+  refused it.
+- **Verified:** `pnpm lint`, `typecheck`, `test` and `build`. New tests:
+  every role's actions, roles on a team, the commercetools mapping, the
+  organizations conformance checks against memory, refusals per role,
+  signed-in members in two companies, no membership, and no organizations.
+  Break and restore: without the permission check, the refusal tests fail.
+  `pnpm test:integration`: 93 passed, including the owner approving with no
+  team role (and "not found" from another team), self-approval, an approver
+  refused sending, a sender and an admin refused approving, and an approver
+  refused editing a collection.
+- **Fix (same day):** on `pnpm dev:all` with commercetools, the dashboard
+  said "The request could not be read". The development fallback asked
+  commercetools for `user-maya`'s memberships, and commercetools refuses a
+  predicate on a non-UUID customer id (`400 InvalidInput`). The connector
+  now answers such ids with no memberships, and development falls back to
+  the demo company's first member in the directory in use.
+- **Fix (same day):** switching to a second company (Harbor & Finch) showed
+  "This page couldn't load". Its teams exist in commercetools but have no
+  budget account in MongoDB (`seed:demo` funds only the demo company), and
+  reading the balance answered `404 account_not_found`. A team with no
+  account now reads as an empty ledger; holds and captures still need one,
+  so a send there is refused with `409 insufficient_funds`. New integration
+  test: `unfunded-team.test.ts`.
+- **Hardening (same day):** a review of ADR 0016 found four gaps, now
+  closed (ADR 0016, "Hardening"):
+  - a company or team header the person no longer holds was quietly
+    replaced by their first one, so a stale choice could send a write
+    elsewhere; it is now `404 company_not_found` / `404 team_not_found`,
+    and the sender app forgets the choice (`/workspace/reset`);
+  - a removed role kept working for up to a minute; writes now read
+    memberships fresh, reads still use the minute's cache;
+  - an Inactive Business Unit in commercetools still granted roles; it no
+    longer does, nor do the teams of an Inactive company;
+  - membership reads stopped at 500 units; they now page through all.
+  Verified: new tests for each (refused headers, a role removed between a
+  read and a write, inactive company and team, paging past a page). Break
+  and restore: with the team refusal and the fresh read removed, 4 session
+  tests fail; with the inactive filter loosened, 2 connector tests fail.
+  Lesson: a connector test whose customer id isn't a UUID passes for the
+  wrong reason, since the guard answers before the code under test runs.
+- **Lesson:** keep the platform's job to "who belongs where". commercetools'
+  associate role permissions are about carts and quotes, and Shopify's B2B
+  has two fixed roles, so what a role may do has to be ours.
+
 ## 10 Nov 2026
 
 ### Gift bundles: the recipient gets every gift

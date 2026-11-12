@@ -10,6 +10,7 @@ import { GIFT_STATUSES } from "./gift-status";
 import { MEMBER_ROLES } from "./members";
 import { CAMPAIGN_STATUSES, CAMPAIGN_TYPES, CARD_COVERS, CHANNEL_KINDS, OCCASIONS } from "./models";
 import { CURRENCIES } from "./money";
+import { ACTIONS } from "./permissions";
 import { MAX_UPLOAD_ROWS, uploadRow } from "./recipient-upload";
 
 const cents = z.number().int().nonnegative();
@@ -22,8 +23,13 @@ export type ProductCategory = (typeof PRODUCT_CATEGORIES)[number];
 const member = z.object({ id: z.string(), name: z.string(), role: z.enum(MEMBER_ROLES) });
 
 export const meView = z.object({
-  user: member,
+  // `role` is the highest of `roles`: the roles that apply on the current team (ADR 0016).
+  user: member.extend({ roles: z.array(z.enum(MEMBER_ROLES)) }),
   company: z.object({ key: z.string(), name: z.string() }),
+  // Every company the person belongs to (the company switcher).
+  companies: z.array(z.object({ key: z.string(), name: z.string() })),
+  // What the person may do on the current team; the apps hide the rest.
+  actions: z.array(z.enum(ACTIONS)),
   team: z.object({
     key: z.string(),
     name: z.string(),
@@ -31,7 +37,7 @@ export const meView = z.object({
     approverNames: z.array(z.string()),
   }),
   teams: z.array(z.object({ key: z.string(), name: z.string() })),
-  // Only with development sign-in: who the "Viewing as" switcher offers.
+  // Always null: the development "Viewing as" picker was removed (12 Nov 2026). Kept because v1 changes only add.
   devUsers: z.array(member).nullable(),
 });
 export type MeView = z.infer<typeof meView>;

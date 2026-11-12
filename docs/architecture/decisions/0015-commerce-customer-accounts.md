@@ -107,7 +107,9 @@ A probe of the commercetools project on 29 Oct 2026 showed:
 - An admin must create the sign-in API client in the Merchant Center.
   Scopes: `manage_my_profile:{project}`.
 - The B2B parts already in the project (Business Units, associate roles,
-  member profiles, `pnpm member:add`) are no longer used for sign-in. They
-  are removed in the B2C clean-up that follows.
+  member profiles, `pnpm member:add`) are no longer used for sign-in.
+  ~~They are removed in the B2C clean-up that follows.~~ Kept: since
+  [ADR 0016](0016-organizations-and-roles.md) (11 Nov 2026) they hold each
+  person's company, teams and roles.
 - The rate limits are kept in memory, which fits the POC's single API
   instance. They move to MongoDB before there's more than one instance.

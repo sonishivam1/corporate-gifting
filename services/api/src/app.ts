@@ -1,5 +1,5 @@
 import rateLimit from "@fastify/rate-limit";
-import type { CatalogConnector } from "@gifting/commerce";
+import type { CatalogConnector, OrganizationsConnector } from "@gifting/commerce";
 import type { OrderPlacer } from "@gifting/domain";
 import { createLogger, type Logger } from "@gifting/logger";
 import Fastify, { type FastifyBaseLogger, type FastifyInstance } from "fastify";
@@ -19,9 +19,10 @@ import { health, meta } from "./system-routes";
  *   Without it, the sign-in routes and every signed-in route answer 503
  *   `auth_not_configured`, so the API still starts (and `/health` works)
  *   before a commerce connector is configured.
- * - `deps` is what the dashboard's "workspace" routes run against
- *   (database, demo company, development session); integration tests pass a
- *   throwaway database.
+ * - `deps` is what the dashboard's "member" routes run against (database,
+ *   organizations, catalog); integration tests pass a throwaway database.
+ * - `organizations` is the connector's companies, teams and roles
+ *   (ADR 0016); without it development reads the demo company.
  */
 export async function buildApp(
   options: {
@@ -31,6 +32,7 @@ export async function buildApp(
     catalog?: CatalogConnector | null;
     mailer?: Mailer | null;
     orders?: OrderPlacer;
+    organizations?: OrganizationsConnector | null;
   } = {},
 ): Promise<FastifyInstance> {
   const log = options.logger ?? createLogger("api");
@@ -85,7 +87,7 @@ export async function buildApp(
 
   app.setNotFoundHandler((_request, reply) => reply.status(404).send(errorBody("not_found", "Not found.")));
 
-  const deps = options.deps ?? defaultDeps(process.env, { log, catalog: options.catalog, mailer: options.mailer });
+  const deps = options.deps ?? defaultDeps(process.env, { log, catalog: options.catalog, mailer: options.mailer, organizations: options.organizations });
   // The commerce connector creates gift orders. Assigned, not spread: the default deps open the database lazily.
   if (options.orders && !deps.orders) deps.orders = options.orders;
   const modules = buildModules(deps);

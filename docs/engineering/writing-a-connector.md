@@ -57,6 +57,35 @@ caches lists and searches, and checks every variant again, so a search may
 return too much but must not miss anything. The conformance suite checks
 that a search returns exactly the variants that fit.
 
+## Organizations: what to implement (optional)
+
+`organizations` says which companies and teams a customer belongs to, and
+with which role ([ADR 0016](../architecture/decisions/0016-organizations-and-roles.md)).
+Without it, production refuses the dashboard (`503
+organizations_not_configured`) until the built-in directory exists.
+
+| Method | Returns |
+| --- | --- |
+| `membershipsOf(customerId)` | `OrgMembership[]`: `{ companyKey, teamKey?, role }`, one per role held. A role on the company has no `teamKey`; a role on a team has one. Empty for an unknown customer |
+| `company(companyKey)` | `{ key, name }`, or null |
+| `teams(companyKey)` | `OrgTeam[]`: `key`, `name`, `approvalThresholdCents` (null when unset) |
+| `members(companyKey)` | `OrgMember[]`: each customer's `id`, `name` and their memberships in that company only |
+
+- Keys are the product's stable company and team keys, never the
+  platform's ids. Every record stores them, so they must never change.
+- Leave out companies and teams the platform has disabled, and every team
+  of a disabled company: they grant nothing (commercetools: Business Units
+  with `status: Inactive`).
+- Return every result, however many: page through the platform's lists.
+- Roles are `owner` and `admin` (held on the company) and `approver` and
+  `sender` (held on a team). Map the platform's roles to these and drop any
+  other; the product decides what each may do.
+- Leave `organizations` out when the platform can't hold four roles on two
+  levels (Shopify's B2B has two fixed roles).
+- The conformance suite checks it when you pass `organizations` fixture
+  data: a customer's memberships, an unknown customer with none, and nobody
+  from another company in `members()`.
+
 ## Steps
 
 1. **Spike.** Check the platform can do what the contract needs. For

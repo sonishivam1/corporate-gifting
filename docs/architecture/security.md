@@ -16,9 +16,10 @@ money moving twice. Both are blocked in the database, not only in code.
 | Link secret leaks in a log, referrer or cache | The request log records the route pattern, not the URL; the recipient app sends no referrer, is never cached or indexed, and cannot be framed; a resend or reissue replaces the link and the old one stops working |
 | Someone hammers links or the choose step | Per-address limits (60 opens, 10 choices a minute) |
 | Gift email carries injected markup or a bad link | Every user text is HTML-escaped; only http(s) links are used |
-| A company sees another company's data | Every call scoped to the session's company and team; outside scope is "not found" |
+| A company sees another company's data | The session's company and team come from the person's memberships in the commerce platform, never the request; every call is scoped to them; outside scope is "not found" |
+| A member does something their role doesn't allow | Every dashboard route declares an action; the API checks the person's roles on that team first (`403 forbidden`) |
 | A vendor sees other vendors' orders, or recipient details it doesn't need | Vendor queries filter on the vendor's channel; only shipping fields returned |
-| Sender approves their own large campaign | Approver must differ from the sender, above each team's threshold |
+| Sender approves their own large campaign | Above each team's threshold an approver must approve: someone with `campaign:approve` on the team, never the campaign's sender |
 | Unfunded sends | Holds placed before any send; a short balance fails the whole campaign |
 | Duplicate or replayed commercetools events | `processedEvents` with the message id, TTL 30 days |
 | Stolen commercetools or provider credentials | Server-only, scoped per client, in a secrets manager; never in a browser, log or repo |
@@ -75,16 +76,35 @@ money moving twice. Both are blocked in the database, not only in code.
 - **Logs never include emails, passwords, tokens or links.** They log
   customer ids.
 
-## Roles and what they can do
+## Organizations, roles and what they can do
 
-| Action | Owner | Admin | Sender | Approver | Vendor | Ops |
+[ADR 0016](decisions/0016-organizations-and-roles.md),
+[plan](../plans/organizations-and-roles.md):
+
+- **Who belongs where comes from the commerce platform.** On commercetools a
+  company is a Company Business Unit, a team is a Division under it, and a
+  member is an associate with a role. The API reads them through the
+  connector's `organizations`, never from the request.
+- **Owners and admins** hold their role on the company, and it applies on
+  every team. **Approvers and senders** hold theirs on one team.
+- **What a role may do is ours:** the map in
+  `packages/domain/src/permissions.ts`. Every dashboard route declares the
+  action it needs, and the API refuses it before the handler runs. The apps
+  hide what a person can't use, but the API is what enforces it.
+- **Refusals:** no membership is `403 no_membership`; another company's or
+  team's data is `404`; an action the role doesn't grant is `403 forbidden`.
+
+| Action | Owner | Admin | Approver | Sender | Vendor | Ops |
 | --- | --- | --- | --- | --- | --- | --- |
-| Manage teams and members | ✓ | ✓ | | | | ✓ |
-| Top up, see statements | ✓ | ✓ | | | | ✓ |
-| Build collections | ✓ | ✓ | ✓ | | | ✓ (platform) |
-| Create campaigns | ✓ | ✓ | ✓ | | | |
-| Approve campaigns (not their own) | ✓ | | | ✓ | | |
-| Manage recipients and integrations | ✓ | ✓ | | | | |
+| See the Home overview, the team balance, the catalog and campaigns (`reports:view`, `budget:view`, `catalog:view`, `campaign:view`) | ✓ | ✓ | ✓ | ✓ | | |
+| Create and send campaigns (`campaign:create`) | ✓ | ✓ | | ✓ | | |
+| Approve or decline campaigns, never their own (`campaign:approve`) | ✓ | | ✓ | | | |
+| Send a gift again, cancel a gift (`gift:manage`) | ✓ | ✓ | | ✓ | | |
+| Build collections (`collection:manage`) | ✓ | ✓ | | ✓ | | ✓ (platform) |
+| Search the directory, add recipients while sending (`recipients:view`, `recipients:add`) | ✓ | ✓ | | ✓ | | |
+| Edit the recipient directory (`recipients:manage`) | ✓ | ✓ | | | | |
+| Top up, see statements (`budget:topup`, `statement:view`) | ✓ | ✓ | | | | ✓ |
+| Manage members and integrations (`members:manage`, `integrations:manage`) | ✓ | ✓ | | | | ✓ |
 | See own orders, mark shipped | | | | | ✓ | |
 | Companies, vendors, refunds, adjustments | | | | | | ✓ |
 

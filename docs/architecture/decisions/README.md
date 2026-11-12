@@ -20,7 +20,8 @@ costs. Status is **Proposed** (needs agreement), **Accepted**, or
 | [0012](0012-shadcn-ui.md) | shadcn/ui as the one component library, in `@gifting/ui` | Accepted |
 | [0013](0013-commerce-adapters.md) | Commerce through pluggable connectors: commercetools first, others when a client needs them | Accepted (29 Oct 2026; partly replaces 0001 and 0006) |
 | [0014](0014-google-cloud.md) | The cloud environment runs on Google Cloud | Accepted |
-| [0015](0015-commerce-customer-accounts.md) | Register and sign in with the commerce platform's customer accounts (commercetools OAuth password flow) | Accepted |
+| [0015](0015-commerce-customer-accounts.md) | Register and sign in with the commerce platform's customer accounts (commercetools OAuth password flow) | Accepted (B2B parts kept by 0016) |
+| [0016](0016-organizations-and-roles.md) | Organizations from the commerce platform; roles grant actions, checked on every route | Accepted |
 
 To add one, copy the shape of an existing record, take the next number, and
 link it here.

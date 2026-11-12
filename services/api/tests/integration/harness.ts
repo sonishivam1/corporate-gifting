@@ -64,10 +64,14 @@ async function waitForPrimary(client: MongoClient): Promise<void> {
   }
 }
 
-export const MAYA = { "x-dev-user": "user-maya", "x-dev-team": "team-lumen-people" };
-export const MAYA_SALES = { "x-dev-user": "user-maya", "x-dev-team": "team-lumen-sales" };
+export const MAYA = { "x-dev-user": "user-maya", "x-gifting-team": "team-lumen-people" };
+export const MAYA_SALES = { "x-dev-user": "user-maya", "x-gifting-team": "team-lumen-sales" };
 export const ROWAN = { "x-dev-user": "user-rowan" };
 export const IMANI = { "x-dev-user": "user-imani" };
+/** The demo company's owner (every team; may send and approve) and admin (every team; may send, never approve). */
+export const DANA = { "x-dev-user": "user-dana", "x-gifting-team": "team-lumen-people" };
+export const DANA_SALES = { "x-dev-user": "user-dana", "x-gifting-team": "team-lumen-sales" };
+export const THEO = { "x-dev-user": "user-theo", "x-gifting-team": "team-lumen-people" };
 
 export const people = (n: number) => Array.from({ length: n }, (_, i) => `rcp-lumen-${String(i + 1).padStart(2, "0")}`);
 

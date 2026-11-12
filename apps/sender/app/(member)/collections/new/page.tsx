@@ -1,9 +1,11 @@
 import { CollectionBuilder } from "@/components/collection-builder";
-import { getProducts } from "@/lib/api";
+import { NotAllowed } from "@/components/not-allowed";
+import { allowed, getProducts } from "@/lib/api";
 
 /** Build a collection. Opened from Collections, or from the send flow (`?from=send`), which it returns to. */
 export default async function NewCollectionPage({ searchParams }: PageProps<"/collections/new">) {
   const raw = await searchParams;
+  if (!(await allowed("collection:manage"))) return <NotAllowed what="build collections" />;
   const products = await getProducts();
   return (
     <div className="grid gap-6 pt-4">

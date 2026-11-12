@@ -34,11 +34,13 @@ export default async function CampaignsPage({ searchParams }: PageProps<"/campai
           <p className="text-sm text-muted-foreground">{me.team.name} team</p>
           <h1 className="text-3xl font-semibold">Campaigns</h1>
         </div>
-        <Button asChild>
-          <Link href="/campaigns/new">
-            <PlusIcon /> New campaign
-          </Link>
-        </Button>
+        {me.actions.includes("campaign:create") ? (
+          <Button asChild>
+            <Link href="/campaigns/new">
+              <PlusIcon /> New campaign
+            </Link>
+          </Button>
+        ) : null}
       </section>
 
       <Card>

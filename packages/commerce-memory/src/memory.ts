@@ -13,6 +13,10 @@ import {
   type CommerceConnector,
   CONTRACT_VERSION,
   type Customer,
+  type OrganizationsConnector,
+  type OrgCompany,
+  type OrgMember,
+  type OrgTeam,
   type SignInMode,
 } from "@gifting/commerce";
 
@@ -23,7 +27,33 @@ export type MemoryOptions = {
   platformSessions?: boolean;
   /** Items to sell. Without them the connector has no catalog, and the product serves its demo one. */
   catalog?: CatalogItem[];
+  /** Companies, teams and members. Without them the connector has no organizations. */
+  organizations?: MemoryOrganizations;
 };
+
+/** Companies with their teams, and people with their memberships (in any company). */
+export type MemoryOrganizations = {
+  companies: (OrgCompany & { teams: OrgTeam[] })[];
+  members: OrgMember[];
+};
+
+/** Organizations kept in memory, with the rules a platform's connector applies. */
+export function memoryOrganizations(data: MemoryOrganizations): OrganizationsConnector {
+  const companyOf = (key: string) => data.companies.find((c) => c.key === key);
+  return {
+    membershipsOf: async (customerId) => (data.members.find((m) => m.id === customerId)?.memberships ?? []).map((m) => ({ ...m })),
+    company: async (key) => {
+      const company = companyOf(key);
+      return company ? { key: company.key, name: company.name } : null;
+    },
+    teams: async (companyKey) => (companyOf(companyKey)?.teams ?? []).map((t) => ({ ...t })),
+    members: async (companyKey) =>
+      data.members.flatMap((m) => {
+        const memberships = m.memberships.filter((x) => x.companyKey === companyKey).map((x) => ({ ...x }));
+        return memberships.length > 0 ? [{ id: m.id, name: m.name, memberships }] : [];
+      }),
+  };
+}
 
 /** A catalog searched in memory, by the same rules a platform's search applies. */
 export function memoryCatalog(items: readonly CatalogItem[]): CatalogConnector {
@@ -74,6 +104,7 @@ export function createMemoryConnector(options: MemoryOptions = {}) {
     contractVersion: CONTRACT_VERSION,
     capabilities: { signIn },
     ...(options.catalog ? { catalog: memoryCatalog(options.catalog) } : {}),
+    ...(options.organizations ? { organizations: memoryOrganizations(options.organizations) } : {}),
     accounts: {
       ...(signIn === "password"
         ? {

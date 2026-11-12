@@ -13,7 +13,8 @@ export function catalogRoutes(catalog: CatalogService) {
     defineRoute({
       method: "GET",
       url: "/v1/catalog/products",
-      auth: "workspace",
+      auth: "member",
+      permission: "catalog:view",
       schema: { query: productQuery, response: z.object({ products: z.array(productView) }) },
       handler: async ({ query, request }) => {
         requireSession(request);
@@ -23,7 +24,8 @@ export function catalogRoutes(catalog: CatalogService) {
     defineRoute({
       method: "GET",
       url: "/v1/collections",
-      auth: "workspace",
+      auth: "member",
+      permission: "catalog:view",
       schema: { query: budget, response: z.object({ collections: z.array(collectionView) }) },
       handler: async ({ query, request }) => {
         const session = requireSession(request);
@@ -33,7 +35,8 @@ export function catalogRoutes(catalog: CatalogService) {
     defineRoute({
       method: "GET",
       url: "/v1/collections/:id/items",
-      auth: "workspace",
+      auth: "member",
+      permission: "catalog:view",
       schema: { params: z.object({ id: z.string().min(1) }), query: budget, response: z.object({ items: z.array(productView) }) },
       handler: async ({ params, query, request }) => {
         const session = requireSession(request);
@@ -45,21 +48,24 @@ export function catalogRoutes(catalog: CatalogService) {
     defineRoute({
       method: "POST",
       url: "/v1/collections",
-      auth: "workspace",
+      auth: "member",
+      permission: "collection:manage",
       schema: { body: collectionInput, response: collectionView },
       handler: async ({ body, request }) => catalog.createCollection(requireSession(request), body),
     }),
     defineRoute({
       method: "PUT",
       url: "/v1/collections/:id",
-      auth: "workspace",
+      auth: "member",
+      permission: "collection:manage",
       schema: { params: byId, body: collectionInput, response: collectionView },
       handler: async ({ params, body, request }) => catalog.updateCollection(requireSession(request), params.id, body),
     }),
     defineRoute({
       method: "POST",
       url: "/v1/collections/:id/archive",
-      auth: "workspace",
+      auth: "member",
+      permission: "collection:manage",
       schema: { params: byId, response: z.object({ archived: z.literal(true) }) },
       handler: async ({ params, request }) => {
         await catalog.archiveCollection(requireSession(request), params.id);

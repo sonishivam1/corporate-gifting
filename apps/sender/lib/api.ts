@@ -2,6 +2,7 @@ import "server-only";
 
 import {
   accountView,
+  type Action,
   type AccountView,
   balanceView,
   campaignDetailView,
@@ -26,15 +27,14 @@ import { cookies } from "next/headers";
 import { cache } from "react";
 import { z } from "zod";
 
-import { devSessionHeaders } from "./dev-session";
+import { workspaceHeaders } from "./dev-session";
 import { openSession, SESSION_COOKIE } from "./session";
 
 /**
  * Calls to the Gifting API. Apps talk only to the API, never to commercetools,
  * the database or providers (ADR 0004). Signed-in calls carry the access token
  * from the session cookie, from this server only. Dashboard calls also carry
- * the development "Viewing as" headers that pick the demo workspace (until
- * the B2C workspace model is decided). Responses are parsed with the same
+ * the chosen company and team; the API checks them against the person's memberships. Responses are parsed with the same
  * schemas the API uses, so a drift fails loudly here.
  */
 export const API_URL = (process.env.API_PUBLIC_URL ?? "http://localhost:4000").replace(/\/$/, "");
@@ -114,7 +114,7 @@ async function call<S extends z.ZodType>(
   init: { method?: "GET" | "POST" | "PUT"; body?: unknown; headers?: Record<string, string> } = {},
 ): Promise<z.infer<S>> {
   // Outside the try: reading cookies is how Next marks the page dynamic, and that signal must not be swallowed.
-  const workspace = await devSessionHeaders();
+  const workspace = await workspaceHeaders();
   const session = await openSession((await cookies()).get(SESSION_COOKIE)?.value);
   let res: Response;
   try {
@@ -143,8 +143,13 @@ async function call<S extends z.ZodType>(
   return schema.parse(json);
 }
 
-/** The dashboard's workspace: company, team, approvers (development session, demo company). */
-export const getWorkspace = () => call("/v1/workspace", meView);
+/** The dashboard's workspace: the person's roles and allowed actions, company, team, approvers. Once per request. */
+export const getWorkspace = cache(() => call("/v1/workspace", meView));
+
+/** True when the person's roles on the current team allow the action (ADR 0016). The API refuses it anyway. */
+export async function allowed(action: Action): Promise<boolean> {
+  return (await getWorkspace()).actions.includes(action);
+}
 
 export const getBalance = (teamKey: string) => call(`/v1/teams/${encodeURIComponent(teamKey)}/balance`, balanceView);
 

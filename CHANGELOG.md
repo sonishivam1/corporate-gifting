@@ -5,6 +5,19 @@ change was built, see the [build log](docs/engineering/build-log.md).
 
 ## Unreleased
 
+### Companies and roles
+- The dashboard shows the company and team you belong to. If you're in
+  several companies, switch between them at the top; owners and admins can
+  switch between every team.
+- What you can do follows your role: senders send and build collections,
+  approvers approve (never their own sends), owners and admins can do both
+  (admins don't approve). Buttons you can't use are hidden.
+- Signed in but not in a company yet? The dashboard says so, and who can
+  add you.
+- If you're removed from a company or team you had open, the dashboard
+  opens your first one instead, and a removed role stops sends and
+  approvals straight away.
+
 ### Gift bundles
 - Send several gifts at once: in "Specific gifts", pick up to 5 products and
   every recipient gets all of them. The review shows the price per

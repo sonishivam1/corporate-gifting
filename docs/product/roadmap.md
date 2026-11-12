@@ -8,7 +8,7 @@ commitments. Owners are suggestions to confirm.
 **This file is updated with every milestone step**, together with
 [features.md](features.md) and the README progress table.
 
-_Last updated: 10 Nov 2026 (gift bundles built: every recipient gets 2 to 5 gifts in one order; earlier: build-your-own collection built, M2 complete; register and sign-in on commercetools customer accounts, commerce as a plug-in, spike 2, the sender dashboard ahead of M1 to M3)._
+_Last updated: 11 Nov 2026 (organizations and roles built: companies, teams and roles from commercetools Business Units, a permission check on every dashboard route; earlier: 10 Nov, gift bundles built: every recipient gets 2 to 5 gifts in one order; earlier: build-your-own collection built, M2 complete; register and sign-in on commercetools customer accounts, commerce as a plug-in, spike 2, the sender dashboard ahead of M1 to M3)._
 
 ## Where we are
 

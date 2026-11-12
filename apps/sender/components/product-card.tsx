@@ -24,7 +24,8 @@ import { money, priceLabel } from "@/lib/format";
 
 const sendHref = (sku: string) => `/campaigns/new?sku=${encodeURIComponent(sku)}`;
 
-export function ProductCard({ product }: { product: ProductView }) {
+/** `canSend`: the person's role may send gifts on this team; otherwise the card only shows the gift. */
+export function ProductCard({ product, canSend = true }: { product: ProductView; canSend?: boolean }) {
   const [sku, setSku] = useState(product.sku);
   const variant = product.variants.find((v) => v.sku === sku) ?? product.variants[0]!;
   const variantId = useId();
@@ -77,13 +78,15 @@ export function ProductCard({ product }: { product: ProductView }) {
               ))}
             </div>
           </div>
-          <SheetFooter>
-            <Button asChild>
-              <Link href={sendHref(variant.sku)}>
-                <SendIcon /> Send this gift
-              </Link>
-            </Button>
-          </SheetFooter>
+          {canSend ? (
+            <SheetFooter>
+              <Button asChild>
+                <Link href={sendHref(variant.sku)}>
+                  <SendIcon /> Send this gift
+                </Link>
+              </Button>
+            </SheetFooter>
+          ) : null}
         </SheetContent>
       </Sheet>
       <CardContent className="grid gap-1 px-4 pt-3">
@@ -96,11 +99,13 @@ export function ProductCard({ product }: { product: ProductView }) {
       </CardContent>
       <CardFooter className="mt-auto flex items-center justify-between px-4 pt-3 pb-4">
         <span className="font-semibold tabular-nums">{priceLabel(product)}</span>
-        <Button asChild size="sm" variant="outline">
-          <Link href={sendHref(product.sku)}>
-            <SendIcon /> Send
-          </Link>
-        </Button>
+        {canSend ? (
+          <Button asChild size="sm" variant="outline">
+            <Link href={sendHref(product.sku)}>
+              <SendIcon /> Send
+            </Link>
+          </Button>
+        ) : null}
       </CardFooter>
     </Card>
   );

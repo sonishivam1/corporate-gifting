@@ -15,9 +15,10 @@
  *   checks instead of a platform's name;
  * - it is versioned like the API: within a version, changes only add.
  *   The catalog joined with M2 (optional, so v1 connectors without it still
- *   work); orders, payment and events join it with M4.
+ *   work); orders, payment and events join it with M4; organizations
+ *   (ADR 0016) joined in Nov 2026, also optional.
  */
-import type { OrderPlacer } from "@gifting/domain";
+import type { Membership, OrderPlacer } from "@gifting/domain";
 import type { Logger } from "@gifting/logger";
 
 /** The contract version this package defines. A connector built for it keeps working within it. */
@@ -142,6 +143,33 @@ export type CatalogConnector = {
   getItem(sku: string): Promise<CatalogItem | null>;
 };
 
+/** A customer company. `key` is the product's stable key, never a platform id. */
+export type OrgCompany = { key: string; name: string };
+
+/** A team of a company. `approvalThresholdCents` is null when the team has none set. */
+export type OrgTeam = { key: string; name: string; approvalThresholdCents: number | null };
+
+/** A person in a company: the customer's id and their memberships in that company only. */
+export type OrgMember = { id: string; name: string; memberships: Membership[] };
+
+/**
+ * Which companies and teams a customer belongs to, and with which role
+ * (ADR 0016). Roles are the product's four: `owner` and `admin` held on the
+ * company (no `teamKey`), `approver` and `sender` held on one team. A
+ * connector maps its platform's roles to these and drops any other; what a
+ * role may do is the product's own map, never the platform's.
+ */
+export type OrganizationsConnector = {
+  /** Every role the customer holds, in every company. Empty for an unknown customer. */
+  membershipsOf(customerId: string): Promise<Membership[]>;
+  /** Null for an unknown key. */
+  company(companyKey: string): Promise<OrgCompany | null>;
+  /** The company's teams, in display order. Empty for an unknown company. */
+  teams(companyKey: string): Promise<OrgTeam[]>;
+  /** Everyone with a role in the company or one of its teams. Empty for an unknown company. */
+  members(companyKey: string): Promise<OrgMember[]>;
+};
+
 export type CommerceConnector = {
   /** The connector's name, as set in COMMERCE_CONNECTOR, for example "commercetools". */
   id: string;
@@ -152,6 +180,8 @@ export type CommerceConnector = {
   catalog?: CatalogConnector;
   /** Creates the order when a recipient chooses a gift, and finds it again. A platform without it cannot redeem gifts. */
   orders?: OrderPlacer;
+  /** Companies, teams and roles. Without it, production refuses the dashboard (ADR 0016). */
+  organizations?: OrganizationsConnector;
   /** Checks settings and credentials before the API takes requests. Throws with a message that names no secret. */
   check?(): Promise<void>;
 };

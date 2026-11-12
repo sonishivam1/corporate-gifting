@@ -11,7 +11,8 @@ export function ledgerRoutes(ledger: LedgerService) {
     defineRoute({
       method: "GET",
       url: "/v1/teams/:teamKey/balance",
-      auth: "workspace",
+      auth: "member",
+      permission: "budget:view",
       schema: { params: z.object({ teamKey: z.string().min(1) }), response: balanceView },
       handler: async ({ params, request }) => {
         const session = requireSession(request);

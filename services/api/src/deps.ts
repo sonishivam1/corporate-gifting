@@ -1,12 +1,12 @@
 import { type ChannelRegistry, createChannelRegistry, emailChannel } from "@gifting/channels";
-import type { CatalogConnector } from "@gifting/commerce";
+import type { CatalogConnector, OrganizationsConnector } from "@gifting/commerce";
 import { getClient, getDb } from "@gifting/db";
 import type { Logger } from "@gifting/logger";
 import { OrderError, type OrderPlacer } from "@gifting/domain";
 import type { Db, MongoClient } from "mongodb";
 
 import type { Mailer } from "./mail/mailer";
-import { seedOrg, type OrgDirectory } from "./modules/accounts/org";
+import { orgDirectory, seedOrg, type OrgDirectory } from "./modules/accounts/org";
 import { connectorCatalog } from "./modules/catalog/connector-source";
 import { type CatalogSource, seedCatalog, seedOccasions } from "./modules/catalog/source";
 
@@ -19,8 +19,9 @@ export type AppDeps = {
   db: Db;
   // The commerce connector's catalog, or the demo catalog (see catalogFor).
   catalog: CatalogSource;
-  // A stand-in for commercetools Business Units until M1.
-  org: OrgDirectory;
+  // Companies, teams and roles (ADR 0016): the connector's organizations, else
+  // the demo company in development. Null: the dashboard answers 503.
+  org: OrgDirectory | null;
   // Development sign-in (see http/session.ts). Never on in production.
   devAuth: boolean;
   recipientBaseUrl: string;
@@ -47,6 +48,16 @@ export function catalogFor(connector: CatalogConnector | null | undefined, log?:
     fallbackOccasions: (sku) => seedOccasions.get(sku),
     onError: (err) => log?.error({ err }, "catalog read failed"),
   });
+}
+
+/**
+ * The connector's organizations when it has them (ADR 0016). Without them,
+ * development reads the demo company from `infra/seed`, and production has
+ * none: every dashboard route answers `503 organizations_not_configured`.
+ */
+export function orgFor(organizations: OrganizationsConnector | null | undefined, devAuth: boolean): OrgDirectory | null {
+  if (organizations) return orgDirectory(organizations);
+  return devAuth ? seedOrg : null;
 }
 
 /** Order creation is off until a connector provides it: redeeming a gift then says so plainly instead of pretending. */
@@ -80,9 +91,10 @@ function estimatePercent(env: Record<string, string | undefined>): number {
  */
 export function defaultDeps(
   env: Record<string, string | undefined> = process.env,
-  options: { log?: Logger; catalog?: CatalogConnector | null; mailer?: Mailer | null } = {},
+  options: { log?: Logger; catalog?: CatalogConnector | null; mailer?: Mailer | null; organizations?: OrganizationsConnector | null } = {},
 ): AppDeps {
   const catalog = catalogFor(options.catalog, options.log);
+  const devAuth = env.DEV_AUTH === "1" && env.NODE_ENV !== "production";
   return {
     get client() {
       return getClient();
@@ -91,8 +103,8 @@ export function defaultDeps(
       return getDb();
     },
     catalog,
-    org: seedOrg,
-    devAuth: env.DEV_AUTH === "1" && env.NODE_ENV !== "production",
+    org: orgFor(options.organizations, devAuth),
+    devAuth,
     recipientBaseUrl: env.RECIPIENT_PUBLIC_URL ?? "http://localhost:3001",
     now: () => new Date(),
     giftEstimatePercent: estimatePercent(env),

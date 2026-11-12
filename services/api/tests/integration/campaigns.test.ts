@@ -4,6 +4,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import {
   createAndSubmit,
+  DANA,
+  DANA_SALES,
   type Harness,
   IMANI,
   MAYA,
@@ -13,6 +15,7 @@ import {
   ROWAN,
   send,
   startHarness,
+  THEO,
 } from "./harness";
 
 let h: Harness;
@@ -164,18 +167,38 @@ describe("approval", () => {
     expect(await holdsFor(id!)).toBe(0);
   });
 
-  it("treats a sender who isn't an approver as not found", async () => {
+  it("refuses a sender or an admin: their roles can't approve", async () => {
     const { id } = await createAndSubmit(h.app, MAYA, big());
-    const res = await h.app.inject({ method: "POST", url: `/v1/campaigns/${id}/approve`, headers: MAYA });
-    expect(res.statusCode).toBe(404);
+    for (const headers of [MAYA, THEO]) {
+      const res = await h.app.inject({ method: "POST", url: `/v1/campaigns/${id}/approve`, headers });
+      expect([res.statusCode, res.json().error.code]).toEqual([403, "forbidden"]);
+    }
+    expect(await holdsFor(id!)).toBe(0);
   });
 
-  it("refuses an approver approving their own campaign", async () => {
-    const { id } = await createAndSubmit(h.app, ROWAN, big());
-    const res = await h.app.inject({ method: "POST", url: `/v1/campaigns/${id}/approve`, headers: ROWAN });
+  it("refuses an approver sending: their role can't create campaigns", async () => {
+    const res = await h.app.inject({ method: "POST", url: "/v1/campaigns", headers: ROWAN, payload: big() });
+    expect([res.statusCode, res.json().error.code]).toEqual([403, "forbidden"]);
+  });
+
+  it("refuses an owner approving their own campaign", async () => {
+    const { id } = await createAndSubmit(h.app, DANA, big());
+    const res = await h.app.inject({ method: "POST", url: `/v1/campaigns/${id}/approve`, headers: DANA });
     expect(res.statusCode).toBe(403);
     expect(res.json().error.code).toBe("self_approval");
     expect(await holdsFor(id!)).toBe(0);
+  });
+
+  it("lets the owner approve with no team role, inside the team they chose", async () => {
+    const { id } = await createAndSubmit(h.app, MAYA, big());
+    // Working in Sales, People's campaign is out of scope.
+    expect((await h.app.inject({ method: "POST", url: `/v1/campaigns/${id}/approve`, headers: DANA_SALES })).statusCode).toBe(404);
+    const detail = await h.app.inject({ method: "GET", url: `/v1/campaigns/${id}`, headers: DANA });
+    expect(detail.json()).toMatchObject({ canDecide: true });
+    expect(detail.json().approval.approverNames).toEqual(["Rowan Ellis", "Dana Okafor"]);
+    const res = await h.app.inject({ method: "POST", url: `/v1/campaigns/${id}/approve`, headers: DANA });
+    expect(res.statusCode).toBe(200);
+    expect((await h.c.campaigns.findOne({ _id: id! }))?.approval).toMatchObject({ approverId: "user-dana", decision: "approved" });
   });
 
   it("treats another team's approver as not found", async () => {

@@ -1,5 +1,6 @@
 import { findVariant } from "@gifting/domain";
 
+import { NotAllowed } from "@/components/not-allowed";
 import { getBalance, getCollections, getProducts, getRecipients, getWorkspace } from "@/lib/api";
 
 import { SendFlow } from "./send-flow";
@@ -9,6 +10,7 @@ export default async function NewCampaignPage({ searchParams }: PageProps<"/camp
   const raw = await searchParams;
   const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
   const me = await getWorkspace();
+  if (!me.actions.includes("campaign:create")) return <NotAllowed what="send gifts" />;
   const [balance, collections, products, recipients] = await Promise.all([
     getBalance(me.team.key),
     getCollections(),

@@ -62,9 +62,10 @@ describe("the catalog and the mailer together", () => {
   it("are both used by buildApp, so passing a mailer never drops the connector's catalog", async () => {
     vi.stubEnv("DEV_AUTH", "1");
     const app = await buildApp({ catalog: memoryCatalog([mug]), mailer });
-    const res = await app.inject({ method: "GET", url: "/v1/catalog/products", headers: { "x-dev-user": "user-maya", "x-dev-team": "team-lumen-people" } });
+    const res = await app.inject({ method: "GET", url: "/v1/catalog/products", headers: { "x-dev-user": "user-maya", "x-gifting-team": "team-lumen-people" } });
     await app.close();
     expect(res.statusCode).toBe(200);
     expect(res.body).toContain("Only From The Connector");
-  });
+    // The first buildApp in this file loads the whole app: past 5s when every package's tests run at once.
+  }, 20_000);
 });

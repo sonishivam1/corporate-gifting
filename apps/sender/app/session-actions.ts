@@ -3,20 +3,20 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 
-import { DEV_TEAM_COOKIE, DEV_USER_COOKIE } from "@/lib/dev-session";
+import { COMPANY_COOKIE, TEAM_COOKIE } from "@/lib/dev-session";
 
 const COOKIE = { httpOnly: true, sameSite: "lax", path: "/" } as const;
 
-// The API decides whether the user and team are real; these only remember the choice.
-export async function switchTeam(teamKey: string) {
-  (await cookies()).set(DEV_TEAM_COOKIE, teamKey, COOKIE);
+// The API decides whether the company and team are the person's own; these only remember the choice.
+export async function switchCompany(companyKey: string) {
+  const jar = await cookies();
+  jar.set(COMPANY_COOKIE, companyKey, COOKIE);
+  // Their first team in that company, until they pick another.
+  jar.delete(TEAM_COOKIE);
   revalidatePath("/", "layout");
 }
 
-export async function switchUser(userId: string) {
-  const jar = await cookies();
-  jar.set(DEV_USER_COOKIE, userId, COOKIE);
-  // Their own first team, until they pick another.
-  jar.delete(DEV_TEAM_COOKIE);
+export async function switchTeam(teamKey: string) {
+  (await cookies()).set(TEAM_COOKIE, teamKey, COOKIE);
   revalidatePath("/", "layout");
 }

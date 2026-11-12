@@ -85,7 +85,7 @@ describe("the sender sends again or cancels", () => {
   it("will not touch a gift in another team", async () => {
     const { id } = await sendCampaign(1);
     const gift = (await h.c.gifts.findOne({ campaignId: id }))!;
-    const other = { "x-dev-user": "user-maya", "x-dev-team": "team-lumen-sales" };
+    const other = { "x-dev-user": "user-maya", "x-gifting-team": "team-lumen-sales" };
     expect((await h.app.inject({ method: "POST", url: `/v1/gifts/${gift._id}/cancel`, headers: other })).statusCode).toBe(404);
     expect((await h.app.inject({ method: "POST", url: `/v1/gifts/${gift._id}/resend`, headers: other })).statusCode).toBe(404);
   });
