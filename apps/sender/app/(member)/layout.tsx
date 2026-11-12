@@ -12,6 +12,9 @@ import { ApiCallError, getBalance, getCampaigns, getMe, getWorkspace } from "@/l
 
 import { signOutAction } from "../actions";
 
+/** The API's answer when the remembered company or team is no longer the person's. */
+const STALE_CHOICE = new Set(["company_not_found", "team_not_found"]);
+
 /** The dashboard's workspace and balance. Only API failures are handled here; anything else (including Next's own signals) goes on up. */
 async function loadWorkspace() {
   const workspace = await getWorkspace().catch((err: unknown) => {
@@ -19,7 +22,8 @@ async function loadWorkspace() {
     throw err;
   });
   if (workspace instanceof ApiCallError) {
-    return { workspace: null, balance: null, pendingApprovals: 0, problem: workspace.message, noMembership: workspace.code === "no_membership" };
+    if (STALE_CHOICE.has(workspace.code)) return { workspace: null, balance: null, pendingApprovals: 0, problem: null, noMembership: false, staleChoice: true };
+    return { workspace: null, balance: null, pendingApprovals: 0, problem: workspace.message, noMembership: workspace.code === "no_membership", staleChoice: false };
   }
   // The balance is the first read from the database: if that is down, say so here rather than fail every page.
   const balance = await getBalance(workspace.team.key).catch((err: unknown) => {
@@ -27,7 +31,7 @@ async function loadWorkspace() {
     throw err;
   });
   if (balance instanceof ApiCallError) {
-    return { workspace, balance: null, pendingApprovals: 0, problem: balance.code === "database_unavailable" ? balance.message : null, noMembership: false };
+    return { workspace, balance: null, pendingApprovals: 0, problem: balance.code === "database_unavailable" ? balance.message : null, noMembership: false, staleChoice: false };
   }
   // For the bell: a failure here only hides the count.
   const pendingApprovals = await getCampaigns("pending_approval", 1)
@@ -36,7 +40,7 @@ async function loadWorkspace() {
       if (err instanceof ApiCallError) return 0;
       throw err;
     });
-  return { workspace, balance, pendingApprovals, problem: null, noMembership: false };
+  return { workspace, balance, pendingApprovals, problem: null, noMembership: false, staleChoice: false };
 }
 
 /**
@@ -44,7 +48,8 @@ async function loadWorkspace() {
  * checked the session cookie; this asks the Gifting API who it belongs to,
  * then loads the dashboard's workspace: the company and team they work in,
  * from their memberships (ADR 0016). Someone in no company yet gets a page
- * that says how to join.
+ * that says how to join; a remembered company or team that is no longer
+ * theirs is forgotten (/workspace/reset).
  */
 export default async function SignedInLayout({ children }: { children: ReactNode }) {
   await connection();
@@ -69,7 +74,9 @@ export default async function SignedInLayout({ children }: { children: ReactNode
   }
 
   const { me } = result;
-  const { workspace, balance, pendingApprovals, problem, noMembership } = await loadWorkspace();
+  const { workspace, balance, pendingApprovals, problem, noMembership, staleChoice } = await loadWorkspace();
+  // Outside any try: redirect() works by throwing.
+  if (staleChoice) redirect("/workspace/reset");
   const name = [me.firstName, me.lastName].filter(Boolean).join(" ") || me.email;
   if (noMembership) {
     return (

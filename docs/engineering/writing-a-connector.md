@@ -72,7 +72,11 @@ organizations_not_configured`) until the built-in directory exists.
 | `members(companyKey)` | `OrgMember[]`: each customer's `id`, `name` and their memberships in that company only |
 
 - Keys are the product's stable company and team keys, never the
-  platform's ids.
+  platform's ids. Every record stores them, so they must never change.
+- Leave out companies and teams the platform has disabled, and every team
+  of a disabled company: they grant nothing (commercetools: Business Units
+  with `status: Inactive`).
+- Return every result, however many: page through the platform's lists.
 - Roles are `owner` and `admin` (held on the company) and `approver` and
   `sender` (held on a team). Map the platform's roles to these and drop any
   other; the product decides what each may do.

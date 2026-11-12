@@ -42,17 +42,22 @@ const header = (request: FastifyRequest, name: string) => {
 
 type Person = { id: string; name: string; memberships: Membership[] };
 
-async function devPerson(org: OrgDirectory, id: string): Promise<Person | null> {
-  const memberships = await org.membershipsOf(id);
+/** How to read memberships: from the minute's cache, or `fresh` for a write (ADR 0016, "Hardening"). */
+type Read = { fresh: boolean };
+
+const membershipsOf = (org: OrgDirectory, id: string, read: Read) => (read.fresh ? org.currentMembershipsOf(id) : org.membershipsOf(id));
+
+async function devPerson(org: OrgDirectory, id: string, read: Read): Promise<Person | null> {
+  const memberships = await membershipsOf(org, id, read);
   const [companyKey] = companiesOf(memberships);
   if (!companyKey) return null;
   const member = await org.member(companyKey, id);
   return { id, name: member?.name ?? id, memberships };
 }
 
-async function firstMember(org: OrgDirectory, companyKey: string): Promise<Person | null> {
+async function firstMember(org: OrgDirectory, companyKey: string, read: Read): Promise<Person | null> {
   const [member] = await org.members(companyKey);
-  return member ? devPerson(org, member.id) : null;
+  return member ? devPerson(org, member.id, read) : null;
 }
 
 /**
@@ -63,7 +68,7 @@ async function firstMember(org: OrgDirectory, companyKey: string): Promise<Perso
  *   demo sender (built-in demo data) or the demo company's first member (a
  *   platform's directory, where the demo ids don't exist).
  */
-async function person(request: FastifyRequest, deps: AppDeps): Promise<Person> {
+async function person(request: FastifyRequest, deps: AppDeps, read: Read): Promise<Person> {
   const accounts = request.server.accounts;
   const token = bearerToken(request.headers.authorization);
   const directory = (): OrgDirectory => {
@@ -74,17 +79,17 @@ async function person(request: FastifyRequest, deps: AppDeps): Promise<Person> {
   if (deps.devAuth) {
     const org = directory();
     const asked = header(request, DEV_USER_HEADER);
-    const viewingAs = asked ? await devPerson(org, asked) : null;
+    const viewingAs = asked ? await devPerson(org, asked, read) : null;
     if (viewingAs) return viewingAs;
     if (token && accounts) {
       const account = await accounts.authenticate(token).catch(() => null);
       if (account) {
-        const memberships = await org.membershipsOf(account.id);
+        const memberships = await membershipsOf(org, account.id, read);
         if (memberships.length > 0) return { id: account.id, name: accountName(account), memberships };
       }
     }
     // The demo sender in the built-in demo data; on a platform's directory, the demo company's first member.
-    const fallback = (await devPerson(org, DEV_DEFAULT_USER)) ?? (await firstMember(org, DEV_COMPANY_KEY));
+    const fallback = (await devPerson(org, DEV_DEFAULT_USER, read)) ?? (await firstMember(org, DEV_COMPANY_KEY, read));
     if (fallback) return fallback;
     throw new ApiError(403, "no_membership", "No member to view the dashboard as.");
   }
@@ -93,27 +98,39 @@ async function person(request: FastifyRequest, deps: AppDeps): Promise<Person> {
   if (!token) throw new ApiError(401, "unauthenticated", "Sign in to continue.");
   // Who is calling comes first, so a stranger learns nothing about how the server is set up.
   const account = await accounts.authenticate(token);
-  return { id: account.id, name: accountName(account), memberships: await directory().membershipsOf(account.id) };
+  return { id: account.id, name: accountName(account), memberships: await membershipsOf(directory(), account.id, read) };
 }
 
 function accountName(account: { email: string; firstName: string | null; lastName: string | null }): string {
   return [account.firstName, account.lastName].filter(Boolean).join(" ").trim() || account.email;
 }
 
-/** The company and team the person works in: the ones the headers ask for when they hold them, else their first. */
-export async function resolveSession(request: FastifyRequest, deps: AppDeps): Promise<Session> {
-  const who = await person(request, deps);
+/**
+ * The company and team the person works in. A header must name one they
+ * hold: a company or team that isn't theirs (a stale choice, say, after a
+ * role was removed) is refused as not found, never swapped for another, so a
+ * write can't land somewhere the caller didn't choose. With no header, their
+ * first company and its first team they can reach, in the platform's stable
+ * order (the app remembers the choice).
+ *
+ * `fresh` reads the memberships past the cache: writes use it, so a removed
+ * role stops writes at once (reads may lag by up to the cache's minute).
+ */
+export async function resolveSession(request: FastifyRequest, deps: AppDeps, read: Read = { fresh: false }): Promise<Session> {
+  const who = await person(request, deps, read);
   const org = deps.org!;
 
   const companies = companiesOf(who.memberships);
   if (companies.length === 0) throw new ApiError(403, "no_membership", "You're not a member of a company yet. Ask your company's owner or admin to add you.");
   const askedCompany = header(request, COMPANY_HEADER);
-  const companyKey = askedCompany && companies.includes(askedCompany) ? askedCompany : companies[0]!;
+  if (askedCompany && !companies.includes(askedCompany)) throw new ApiError(404, "company_not_found", "That company isn't one of yours.");
+  const companyKey = askedCompany ?? companies[0]!;
 
   const teams = reachableTeams(who.memberships, companyKey, (await org.teams(companyKey)).map((t) => t.key));
   if (teams.length === 0) throw new ApiError(403, "no_membership", "Your company has no team you can work in yet.");
   const askedTeam = header(request, TEAM_HEADER);
-  const teamKey = askedTeam && teams.includes(askedTeam) ? askedTeam : teams[0]!;
+  if (askedTeam && !teams.includes(askedTeam)) throw new ApiError(404, "team_not_found", "That team isn't one of yours.");
+  const teamKey = askedTeam ?? teams[0]!;
 
   return { userId: who.id, userName: who.name, companyKey, teamKey, roles: rolesOnTeam(who.memberships, companyKey, teamKey), memberships: who.memberships };
 }
@@ -122,6 +139,8 @@ export async function resolveSession(request: FastifyRequest, deps: AppDeps): Pr
 export function assertAllowed(session: Session, action: Action): void {
   if (!can(session.roles, action)) throw new ApiError(403, "forbidden", "Your role on this team doesn't allow that.");
 }
+
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 /**
  * Member routes (http/route.ts) get their session here, before the
@@ -132,7 +151,8 @@ export function registerSession(app: FastifyInstance, deps: AppDeps): void {
   app.addHook("onRequest", async (request) => {
     const config = request.routeOptions.config;
     if (config?.member !== true) return;
-    const session = await resolveSession(request, deps);
+    // Writes check the person's roles as they are now, not as cached (ADR 0016, "Hardening").
+    const session = await resolveSession(request, deps, { fresh: !SAFE_METHODS.has(request.method) });
     if (!config.permission) throw new ApiError(500, "internal_error", "This route declares no permission.");
     if (config.permission !== "member") assertAllowed(session, config.permission);
     request.session = session;

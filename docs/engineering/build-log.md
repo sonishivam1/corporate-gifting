@@ -66,6 +66,23 @@ how it was verified, and any lesson worth keeping.
   account now reads as an empty ledger; holds and captures still need one,
   so a send there is refused with `409 insufficient_funds`. New integration
   test: `unfunded-team.test.ts`.
+- **Hardening (same day):** a review of ADR 0016 found four gaps, now
+  closed (ADR 0016, "Hardening"):
+  - a company or team header the person no longer holds was quietly
+    replaced by their first one, so a stale choice could send a write
+    elsewhere; it is now `404 company_not_found` / `404 team_not_found`,
+    and the sender app forgets the choice (`/workspace/reset`);
+  - a removed role kept working for up to a minute; writes now read
+    memberships fresh, reads still use the minute's cache;
+  - an Inactive Business Unit in commercetools still granted roles; it no
+    longer does, nor do the teams of an Inactive company;
+  - membership reads stopped at 500 units; they now page through all.
+  Verified: new tests for each (refused headers, a role removed between a
+  read and a write, inactive company and team, paging past a page). Break
+  and restore: with the team refusal and the fresh read removed, 4 session
+  tests fail; with the inactive filter loosened, 2 connector tests fail.
+  Lesson: a connector test whose customer id isn't a UUID passes for the
+  wrong reason, since the guard answers before the code under test runs.
 - **Lesson:** keep the platform's job to "who belongs where". commercetools'
   associate role permissions are about carts and quotes, and Shopify's B2B
   has two fixed roles, so what a role may do has to be ours.

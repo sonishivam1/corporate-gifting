@@ -76,13 +76,16 @@ company and one team ([ADR 0016](../architecture/decisions/0016-organizations-an
 
 - The person comes from the API's access token, as on account routes.
 - Their companies, teams and roles come from the commerce platform, through
-  the connector's `organizations` (cached for a minute). Owners and admins
+  the connector's `organizations` (cached for a minute for reads; every
+  write reads them fresh, so a removed role stops writes at once). Owners and admins
   hold their role on the company and reach every team; approvers and
   senders hold theirs on one team.
 - The sender app picks the company and team with the `x-gifting-company`
   and `x-gifting-team` headers. They are checked against the person's
-  memberships; one they don't hold is ignored, and the first membership is
-  used instead. Company and team never come from the body.
+  memberships; one they don't hold is refused (`404 company_not_found`,
+  `404 team_not_found`), never swapped for another. With no header, the
+  person's first company and its first team they can reach. Company and
+  team never come from the body.
 - Each route names the action it needs (after the dot in the Auth column).
   The roles that grant each action are in
   [`packages/domain/src/permissions.ts`](../../packages/domain/src/permissions.ts)
@@ -93,6 +96,7 @@ company and one team ([ADR 0016](../architecture/decisions/0016-organizations-an
 | `401 unauthenticated` | No access token (and no development session) |
 | `403 no_membership` | Signed in, but in no company yet: an operator adds them with `pnpm member:add` |
 | `403 forbidden` | The person's roles on this team don't grant the route's action |
+| `404 company_not_found` / `404 team_not_found` | The header names a company or team the person doesn't hold (the sender app then forgets its remembered choice) |
 | `404 not_found` | Another company's or team's data, whatever the headers say |
 | `503 organizations_not_configured` | The commerce connector has no `organizations` (production only) |
 

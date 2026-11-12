@@ -14,6 +14,9 @@ change was built, see the [build log](docs/engineering/build-log.md).
   (admins don't approve). Buttons you can't use are hidden.
 - Signed in but not in a company yet? The dashboard says so, and who can
   add you.
+- If you're removed from a company or team you had open, the dashboard
+  opens your first one instead, and a removed role stops sends and
+  approvals straight away.
 
 ### Gift bundles
 - Send several gifts at once: in "Specific gifts", pick up to 5 products and

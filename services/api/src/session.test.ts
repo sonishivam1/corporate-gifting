@@ -1,8 +1,9 @@
 import type { FastifyInstance } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import type { OrganizationsConnector } from "@gifting/commerce";
 import { memoryOrganizations } from "@gifting/commerce-memory";
-import type { AccountView } from "@gifting/domain";
+import type { AccountView, Membership } from "@gifting/domain";
 
 import { buildApp } from "./app";
 import { defaultDeps } from "./deps";
@@ -61,11 +62,12 @@ describe("development sign-in", () => {
     expect(res.json().actions).not.toContain("campaign:approve");
   });
 
-  it("switches team only to one the user belongs to", async () => {
+  it("switches team only to one the user belongs to, and refuses another as not found", async () => {
     const sales = await app.inject({ method: "GET", url: "/v1/workspace", headers: asUser("user-maya", "team-lumen-sales") });
     expect(sales.json().team.key).toBe("team-lumen-sales");
+    // Never swapped for another team: a write would land somewhere the caller didn't choose.
     const notMine = await app.inject({ method: "GET", url: "/v1/workspace", headers: asUser("user-rowan", "team-lumen-sales") });
-    expect(notMine.json().team.key).toBe("team-lumen-people");
+    expect([notMine.statusCode, notMine.json().error.code]).toEqual([404, "team_not_found"]);
   });
 
   it("falls back to the demo sender for an unknown user", async () => {
@@ -96,9 +98,9 @@ describe("development sign-in", () => {
     expect(res.json()).toMatchObject({ user: { id: "c-owner", role: "owner" }, team: { key: "team-lumen-people" } });
   });
 
-  it("ignores a company the person doesn't belong to", async () => {
+  it("refuses a company the person doesn't belong to as not found", async () => {
     const res = await app.inject({ method: "GET", url: "/v1/workspace", headers: { ...asUser("user-maya"), "x-gifting-company": "company-orbit-studio" } });
-    expect(res.json().company.key).toBe("company-lumen-labs");
+    expect([res.statusCode, res.json().error.code]).toEqual([404, "company_not_found"]);
   });
 });
 
@@ -125,10 +127,11 @@ describe("permissions", () => {
     }
   });
 
-  it("uses the roles on the chosen team: a team the person has no role on is ignored", async () => {
-    const res = await app.inject({ method: "GET", url: "/v1/workspace", headers: asUser("user-rowan", "team-lumen-sales") });
+  it("uses the roles on the chosen team, and refuses a team the person has no role on before any permission", async () => {
+    const res = await app.inject({ method: "GET", url: "/v1/workspace", headers: asUser("user-rowan") });
     expect(res.json().team.key).toBe("team-lumen-people");
     expect(res.json().actions).toContain("campaign:approve");
+    expect(await refused("user-rowan", "POST", "/v1/campaigns/cmp-1/approve", "team-lumen-sales")).toEqual([404, "team_not_found"]);
   });
 
   it("requires every member route to declare a permission, and no other route to", () => {
@@ -185,13 +188,51 @@ describe("signed-in members (no development session)", () => {
     const b = await workspace(member, "token-cust-1", { "x-gifting-company": "company-b" });
     expect(b.json()).toMatchObject({ company: { key: "company-b" }, team: { key: "team-b2" }, user: { roles: ["sender"] } });
     expect(b.json().teams).toEqual([{ key: "team-b2", name: "Two" }]);
-    // Only a team they hold a role on, whatever the team header says.
+    // Only a team they hold a role on: another is refused, never replaced.
     const wrongTeam = await workspace(member, "token-cust-1", { "x-gifting-company": "company-b", "x-gifting-team": "team-b1" });
-    expect(wrongTeam.json().team.key).toBe("team-b2");
+    expect([wrongTeam.statusCode, wrongTeam.json().error.code]).toEqual([404, "team_not_found"]);
+    // A team of the other company is not one of this company's.
+    const otherCompanysTeam = await workspace(member, "token-cust-1", { "x-gifting-company": "company-b", "x-gifting-team": "team-a1" });
+    expect(otherCompanysTeam.json().error.code).toBe("team_not_found");
+    const notTheirs = await workspace(member, "token-cust-1", { "x-gifting-company": "company-c" });
+    expect([notTheirs.statusCode, notTheirs.json().error.code]).toEqual([404, "company_not_found"]);
   });
 
   it("counts a team with no threshold as 0: everything needs approval", async () => {
     expect((await workspace(member, "token-cust-1")).json().team.approvalThresholdCents).toBe(0);
+  });
+
+  it("checks a write against the person's roles now, while reads may use the minute's cache", async () => {
+    // A platform where the person's one role can be taken away, counting how often it is asked.
+    let held: Membership[] = [{ companyKey: "company-a", teamKey: "team-a1", role: "sender" }];
+    let asked = 0;
+    const revocable: OrganizationsConnector = {
+      ...orgs,
+      membershipsOf: async () => {
+        asked += 1;
+        return held.map((m) => ({ ...m }));
+      },
+    };
+    const deps = defaultDeps({ NODE_ENV: "production" });
+    deps.org = orgDirectory(revocable, { ttlMs: 60_000 });
+    const cached = await buildApp({ accounts, deps });
+    try {
+      expect((await workspace(cached, "token-cust-1")).statusCode).toBe(200);
+      expect((await workspace(cached, "token-cust-1")).statusCode).toBe(200);
+      expect(asked).toBe(1);
+
+      held = [];
+      // A read within the minute still sees the old role…
+      expect((await workspace(cached, "token-cust-1")).statusCode).toBe(200);
+      // …but a write asks the platform, and is refused before its handler runs.
+      const write = await cached.inject({ method: "POST", url: "/v1/campaigns/estimate", headers: { authorization: "Bearer token-cust-1" }, payload: {} });
+      expect([write.statusCode, write.json().error.code]).toEqual([403, "no_membership"]);
+      expect(asked).toBe(2);
+      // And the fresh answer replaces the cached one, so reads stop too.
+      expect((await workspace(cached, "token-cust-1")).json().error.code).toBe("no_membership");
+    } finally {
+      await cached.close();
+    }
   });
 
   it("refuses someone in no company with no_membership", async () => {

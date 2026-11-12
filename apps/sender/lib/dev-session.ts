@@ -6,7 +6,8 @@ import { cookies } from "next/headers";
  * The company and team the dashboard works in, and in development the
  * "Viewing as" person (ADR 0016). They live in cookies and reach the API as
  * headers. The API checks the company and team against the signed-in
- * person's memberships and ignores ones they don't hold; it reads the
+ * person's memberships and refuses ones they don't hold (404, and the
+ * layout then forgets them through /workspace/reset); it reads the
  * development person only when DEV_AUTH=1 outside production.
  */
 export const COMPANY_COOKIE = "gifting_company";

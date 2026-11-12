@@ -74,10 +74,12 @@ Facts that shape the decision:
 5. **A real member session.** Dashboard routes use `auth: "member"`:
    - the access token gives the account (ADR 0015);
    - `membershipsOf(account)` gives their companies and roles, cached for a
-     minute;
+     minute for reads; writes read them fresh (see "Hardening");
    - the company and team come from the `x-gifting-company` and
      `x-gifting-team` headers the sender app sends, checked against those
-     memberships, else the first ones;
+     memberships. A header that names one the person doesn't hold is
+     refused, never replaced. With no header, their first company and its
+     first team they can reach;
    - the session holds the company, the team and the roles that apply on
      that team.
 
@@ -86,6 +88,9 @@ Facts that shape the decision:
      them.
    - Another company's or team's data: `404`, as before (CLAUDE.md "Scope
      and access").
+   - A company or team header the person doesn't hold:
+     `404 company_not_found` or `404 team_not_found`. The sender app then
+     forgets its remembered choice.
    - An action the role doesn't grant, inside their own team:
      `403 forbidden`.
 
@@ -109,7 +114,8 @@ Facts that shape the decision:
 ## Consequences
 
 - One person can belong to several companies, and switch between them.
-- Role changes take up to a minute to apply (the membership cache).
+- Role changes stop writes at once, and reads within a minute (the
+  membership cache).
 - Production needs the commerce platform to have organizations, or the
   dashboard answers `503 organizations_not_configured`.
 - The API client needs `view_business_units` and `view_customers`.
@@ -117,3 +123,62 @@ Facts that shape the decision:
   connector with `organizations` must pass it.
 - Ops stays as it is: operators are the verified emails in `OPS_EMAILS`.
 - Vendor access (orders routed to the vendor's channel) is a separate step.
+
+## Hardening (11 Nov 2026)
+
+A review of this decision asked for a stricter session and clearer rules.
+These amend the decisions above; nothing in them is replaced.
+
+1. **No silent switch.** A company or team header the person doesn't hold
+   is refused (`404 company_not_found`, `404 team_not_found`), so a stale
+   choice can't send a write to another company or team. With no header,
+   the API picks the person's first company and its first reachable team,
+   in the platform's stable order (commercetools: Company units, then by
+   name); the app remembers the choice in a cookie and the person changes
+   it with the switcher. With one company that is the only one.
+2. **Roles add up.** On a team, a person holds the union of their company
+   roles and their roles on that team, and may do whatever any of them
+   grants. Rules that aren't about roles stay separate checks that no role
+   bypasses: a sender never approves their own campaign; a recipient
+   reaches only their own gift (by link); a vendor reaches only orders
+   routed to their channel; company roles never grant ops.
+3. **Two checks on every member route.** The action (the route's
+   `permission`, before the handler) and the resource (every query filters
+   by the session's company or team; anything outside is `404`).
+4. **Revocation.** Reads may use memberships cached for up to a minute.
+   Every write (any method but GET, HEAD or OPTIONS) reads them from the
+   platform first, and that answer refreshes the cache. Removing a role in
+   commercetools therefore stops that person's sends, approvals, top-ups
+   and edits at once. Clearing the cache from commercetools Subscriptions
+   (associate and unit messages) is a later step.
+5. **What belongs to the company and what to a team.**
+
+   | Belongs to the company | Belongs to a team |
+   | --- | --- |
+   | Members and roles (in the platform) | Budget account, ledger entries, balance |
+   | Recipients (the directory) | Campaigns and their approvals |
+   | Collections built by the company | Gifts (through their campaign) |
+   | Integrations | Approval threshold |
+
+   A company role reaches every team, so owners and admins see each
+   team's money by switching team. A company-wide view (all teams' balances
+   together) would be its own route on the company, not a team route that
+   ignores the team.
+6. **Connector lifecycle.**
+   - An inactive company grants nothing, and neither do its teams; an
+     inactive team grants nothing (commercetools: a Business Unit with
+     `status: Inactive`).
+   - A deleted team disappears from `teams`, so nobody can choose it. Its
+     campaigns, gifts and ledger stay in MongoDB, unreachable from the
+     dashboard, for statements and audit.
+   - A person removed from the platform authenticates no more (ADR 0015),
+     and a person removed from a unit loses its roles.
+   - Keys are the identity: every record stores `companyKey` and
+     `teamKey`, so a connector must give keys that never change.
+   - Reads page through every unit, however many.
+   - Roles the product doesn't know are dropped, never mapped to a higher
+     role.
+7. **Not yet.** Role and membership audit events belong with invitations,
+   where the product starts changing memberships itself. Finance-only roles,
+   custom roles and permission editing need their own decision; the four
+   roles stay until then.

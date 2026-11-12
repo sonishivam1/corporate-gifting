@@ -25,8 +25,10 @@ export type OrgTeam = {
 export type OrgMember = { id: string; name: string; companyKey: string; memberships: Membership[] };
 
 export interface OrgDirectory {
-  /** Every role the person holds, in every company. */
+  /** Every role the person holds, in every company (cached for up to a minute). */
   membershipsOf(customerId: string): Promise<Membership[]>;
+  /** The same, read from the platform now, past the cache (and refreshing it): writes use this, so a removed role stops them at once. */
+  currentMembershipsOf(customerId: string): Promise<Membership[]>;
   company(key: string): Promise<{ key: string; name: string } | null>;
   teams(companyKey: string): Promise<OrgTeam[]>;
   team(companyKey: string, teamKey: string): Promise<OrgTeam | null>;
@@ -38,25 +40,34 @@ export interface OrgDirectory {
 
 type Cache = { ttlMs: number; now: () => number };
 
-/** Remembers each answer for `ttlMs`, so a dashboard page doesn't ask the platform on every call. A failure is not remembered. */
-function memo<A extends string[], T>(fn: (...args: A) => Promise<T>, cache: Cache): (...args: A) => Promise<T> {
-  if (cache.ttlMs <= 0) return fn;
+type Memo<A extends string[], T> = ((...args: A) => Promise<T>) & { fresh: (...args: A) => Promise<T> };
+
+/**
+ * Remembers each answer for `ttlMs`, so a dashboard page doesn't ask the
+ * platform on every call. A failure is not remembered. `fresh` asks the
+ * platform again and remembers that answer instead.
+ */
+function memo<A extends string[], T>(fn: (...args: A) => Promise<T>, cache: Cache): Memo<A, T> {
+  if (cache.ttlMs <= 0) return Object.assign((...args: A) => fn(...args), { fresh: fn });
   const entries = new Map<string, { at: number; value: Promise<T> }>();
-  return (...args: A) => {
-    const key = JSON.stringify(args);
-    const hit = entries.get(key);
-    if (hit && cache.now() - hit.at < cache.ttlMs) return hit.value;
+  const load = (key: string, args: A) => {
     const value = fn(...args).catch((err: unknown) => {
-      entries.delete(key);
+      if (entries.get(key)?.value === value) entries.delete(key);
       throw err;
     });
     if (entries.size > 5_000) entries.clear();
     entries.set(key, { at: cache.now(), value });
     return value;
   };
+  const cached = (...args: A) => {
+    const key = JSON.stringify(args);
+    const hit = entries.get(key);
+    return hit && cache.now() - hit.at < cache.ttlMs ? hit.value : load(key, args);
+  };
+  return Object.assign(cached, { fresh: (...args: A) => load(JSON.stringify(args), args) });
 }
 
-/** The API's directory over a connector's organizations. Role changes apply within `ttlMs` (a minute by default). */
+/** The API's directory over a connector's organizations. Role changes apply to reads within `ttlMs` (a minute by default), to writes at once. */
 export function orgDirectory(orgs: OrganizationsConnector, options: Partial<Cache> = {}): OrgDirectory {
   const cache: Cache = { ttlMs: options.ttlMs ?? 60_000, now: options.now ?? Date.now };
   const membershipsOf = memo((id: string) => orgs.membershipsOf(id), cache);
@@ -72,6 +83,7 @@ export function orgDirectory(orgs: OrganizationsConnector, options: Partial<Cach
 
   return {
     membershipsOf,
+    currentMembershipsOf: membershipsOf.fresh,
     company,
     teams,
     team: async (companyKey, teamKey) => (await teams(companyKey)).find((t) => t.key === teamKey) ?? null,

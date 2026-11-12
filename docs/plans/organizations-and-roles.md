@@ -142,6 +142,18 @@ All ten pieces, as planned. Differences and details:
   (`var.id`, `var.key`). Team names drop the company's prefix ("Lumen Labs ·
   People" shows as "People"). `team-settings.approverIds` is still written
   by `pnpm seed`, but no longer read.
+- **Hardening (same day, after a review of the ADR):** see ADR 0016,
+  "Hardening".
+  - A company or team header the person doesn't hold is refused
+    (`404 company_not_found`, `404 team_not_found`) instead of being
+    swapped for their first one. The sender app's layout sends people to
+    `/workspace/reset`, which forgets the remembered company and team.
+  - Writes (any method but GET, HEAD, OPTIONS) read memberships past the
+    cache (`currentMembershipsOf`), and refresh it.
+  - commercetools: Inactive Business Units grant nothing, nor do the teams
+    of an Inactive company (a second query reads the companies of
+    team-only memberships, `key in :keys`). Reads page by id
+    (`sort: id asc`, `id > :after`) instead of stopping at 500.
 - **Sender app:** the team cookie is now `gifting_team` (was
   `gifting_dev_team`) next to `gifting_company`; a team chosen before this
   change is forgotten once.
