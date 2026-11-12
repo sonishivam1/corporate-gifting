@@ -37,7 +37,7 @@ export const meView = z.object({
     approverNames: z.array(z.string()),
   }),
   teams: z.array(z.object({ key: z.string(), name: z.string() })),
-  // Only with development sign-in: who the "Viewing as" switcher offers.
+  // Always null: the development "Viewing as" picker was removed (12 Nov 2026). Kept because v1 changes only add.
   devUsers: z.array(member).nullable(),
 });
 export type MeView = z.infer<typeof meView>;

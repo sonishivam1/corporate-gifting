@@ -34,8 +34,7 @@ import { openSession, SESSION_COOKIE } from "./session";
  * Calls to the Gifting API. Apps talk only to the API, never to commercetools,
  * the database or providers (ADR 0004). Signed-in calls carry the access token
  * from the session cookie, from this server only. Dashboard calls also carry
- * the chosen company and team (and, in development, the "Viewing as"
- * person); the API checks them against the person's memberships. Responses are parsed with the same
+ * the chosen company and team; the API checks them against the person's memberships. Responses are parsed with the same
  * schemas the API uses, so a drift fails loudly here.
  */
 export const API_URL = (process.env.API_PUBLIC_URL ?? "http://localhost:4000").replace(/\/$/, "");

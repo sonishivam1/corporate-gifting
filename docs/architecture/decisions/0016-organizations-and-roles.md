@@ -109,7 +109,9 @@ Facts that shape the decision:
    the header, the signed-in person's own membership is used, else the demo
    company's first member. Without a connector that has organizations, the
    directory is the demo company from `infra/seed`. Production never reads
-   the header.
+   the header. Since 12 Nov 2026 only the API tests send it: the sender
+   app's "Viewing as" picker is removed, so the browser always shows the
+   signed-in person (one account per role, added with `pnpm member:add`).
 
 ## Consequences
 

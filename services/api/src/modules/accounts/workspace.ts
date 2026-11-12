@@ -23,12 +23,11 @@ export function workspaceRoutes(deps: AppDeps) {
         const session = requireSession(request);
         const org = deps.org;
         if (!org) throw new ApiError(503, "organizations_not_configured", "Companies and roles are not configured on this server.");
-        const [company, team, teams, approvers, members, companies] = await Promise.all([
+        const [company, team, teams, approvers, companies] = await Promise.all([
           org.company(session.companyKey),
           org.team(session.companyKey, session.teamKey),
           org.teams(session.companyKey),
           org.approvers(session.companyKey, session.teamKey),
-          deps.devAuth ? org.members(session.companyKey) : Promise.resolve([]),
           Promise.all(companiesOf(session.memberships).map((key) => org.company(key))),
         ]);
         if (!company || !team) throw new ApiError(404, "not_found", "Not found.");
@@ -46,12 +45,8 @@ export function workspaceRoutes(deps: AppDeps) {
             approverNames: approvers.map((m) => m.name),
           },
           teams: reachable.map((t) => ({ key: t.key, name: t.name })),
-          devUsers: deps.devAuth
-            ? members.map((m) => {
-                const firstTeam = teams.find((t) => rolesOnTeam(m.memberships, session.companyKey, t.key).length > 0)?.key ?? "";
-                return { id: m.id, name: m.name, role: highest(rolesOnTeam(m.memberships, session.companyKey, firstTeam)) };
-              })
-            : null,
+          // The sender app's "Viewing as" picker is gone; kept, always null, because v1 only adds (ADR 0010).
+          devUsers: null,
         };
       },
     }),

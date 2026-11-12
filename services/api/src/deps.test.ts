@@ -66,5 +66,6 @@ describe("the catalog and the mailer together", () => {
     await app.close();
     expect(res.statusCode).toBe(200);
     expect(res.body).toContain("Only From The Connector");
-  });
+    // The first buildApp in this file loads the whole app: past 5s when every package's tests run at once.
+  }, 20_000);
 });

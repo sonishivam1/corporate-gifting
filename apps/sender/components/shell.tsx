@@ -14,7 +14,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type ReactNode, useTransition } from "react";
 
-import { switchCompany, switchTeam, switchUser } from "@/app/session-actions";
+import { switchCompany, switchTeam } from "@/app/session-actions";
 import { money } from "@/lib/format";
 
 /** The prototype's menu, in its order. Pages not built yet show "Soon". */
@@ -90,8 +90,8 @@ function ApprovalsBell({ count }: { count: number }) {
 }
 
 /**
- * The dashboard frame: navigation, the workspace footer (team, balance,
- * "Viewing as") and the signed-in person's account menu with sign-out.
+ * The dashboard frame: navigation, the workspace footer (team and balance)
+ * and the signed-in person's account menu with sign-out.
  */
 export function Shell({
   me,
@@ -179,27 +179,6 @@ function Footer({ me, balance }: { me: MeView; balance: BalanceView | null }) {
           ) : null}
         </div>
       </div>
-      {me.devUsers ? (
-        <Field className="gap-1.5 px-1">
-          <FieldLabel htmlFor="viewing-as" className="text-xs font-normal text-muted-foreground">
-            Viewing as (development)
-          </FieldLabel>
-          <NativeSelect
-            id="viewing-as"
-            size="sm"
-            className="w-full"
-            value={me.user.id}
-            disabled={pending}
-            onChange={(e) => startTransition(() => switchUser(e.target.value))}
-          >
-            {me.devUsers.map((u) => (
-              <NativeSelectOption key={u.id} value={u.id}>
-                {u.name} ({u.role})
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
-        </Field>
-      ) : null}
     </div>
   );
 }

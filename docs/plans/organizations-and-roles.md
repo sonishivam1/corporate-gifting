@@ -71,7 +71,8 @@ their routes come with M1's money work).
 7. **Joining:** register, verify, then an operator runs `pnpm member:add`.
 8. **Development:** `x-dev-user` still picks any member of the directory
    when `DEV_AUTH=1`; otherwise the signed-in person's own membership, else
-   the demo company's first member.
+   the demo company's first member. (Since 12 Nov 2026 only the API tests
+   send it; see As built.)
 
 ## Tests
 
@@ -142,6 +143,13 @@ All ten pieces, as planned. Differences and details:
   (`var.id`, `var.key`). Team names drop the company's prefix ("Lumen Labs ·
   People" shows as "People"). `team-settings.approverIds` is still written
   by `pnpm seed`, but no longer read.
+- **"Viewing as" removed (12 Nov):** with real sign-in and roles, the
+  sender app's development picker got in the way: a picked person won over
+  the signed-in account, which hid what RBAC was doing. The picker, its
+  `gifting_dev_user` cookie and the `x-dev-user` forwarding are gone from
+  the sender app; `/v1/workspace` answers `devUsers: null` (kept, since v1
+  only adds). The API still reads `x-dev-user` with `DEV_AUTH=1`, for its
+  tests. Test roles in the browser with one real account per role.
 - **Hardening (same day, after a review of the ADR):** see ADR 0016,
   "Hardening".
   - A company or team header the person doesn't hold is refused

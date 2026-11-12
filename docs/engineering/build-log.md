@@ -11,6 +11,27 @@ how it was verified, and any lesson worth keeping.
 
 ---
 
+## 12 Nov 2026
+
+### Development "Viewing as" picker removed
+- **What:** the sender app's "Viewing as (development)" select, at the
+  bottom of the sidebar, is gone, with its `gifting_dev_user` cookie,
+  `switchUser` action and `x-dev-user` forwarding. `/v1/workspace` answers
+  `devUsers: null` and no longer lists the company's members for it; the
+  field stays, because v1 changes only add (ADR 0010).
+- **Why:** it came from before real sign-in, to see the dashboard as
+  different people. With sign-in and roles (ADR 0016) a picked person won
+  over the signed-in account, which hid what RBAC was doing, and it let
+  anyone with `DEV_AUTH=1` act as any member. Test roles with one real
+  account per role (`pnpm member:add`).
+- **Kept:** the API still reads `x-dev-user` with `DEV_AUTH=1` outside
+  production; the integration tests act as the demo people through it.
+- **Verified:** `pnpm lint`, `typecheck`, `test`, `build`, and
+  `pnpm test:integration` (95 passed).
+- **Also:** `deps.test.ts`'s "catalog and mailer together" test gets 20s.
+  Its first `buildApp` loads the whole app and took about 5.6s when every
+  package's tests ran at once, just past vitest's 5s default.
+
 ## 11 Nov 2026
 
 ### Organizations and role-based access

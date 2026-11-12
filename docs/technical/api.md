@@ -42,7 +42,7 @@ Every route declares who may call it, in `defineRoute({ auth })`
 | POST | `/v1/auth/refresh` | public | `{ accessToken, refreshToken, expiresAt }`, or `401` |
 | POST | `/v1/auth/sign-out` | public | `{ status: "signed_out" }`; ends the session at once, and the platform's own session |
 | GET | `/v1/me` | account | `AccountView`: `id, email, firstName, lastName, companyName` (`@gifting/domain`) |
-| GET | `/v1/workspace` | member | User (with `roles` on the current team), company, current team (threshold, approvers), the user's teams, `companies` (every company they belong to), `actions` (what they may do on the current team); `devUsers` with development sign-in |
+| GET | `/v1/workspace` | member | User (with `roles` on the current team), company, current team (threshold, approvers), the user's teams, `companies` (every company they belong to), `actions` (what they may do on the current team); `devUsers`, always `null` (the development picker was removed; kept because v1 only adds) |
 | GET | `/v1/teams/:teamKey/overview?range=7d\|30d\|90d` | member · `reports:view` (that team) | The Home overview: `balance`, `sent` and `chose` (with the previous period), `expiringSoon` (next 7 days), `pendingApprovals`, `daily` (sent, opened, chose per day) and `statuses`. Counted by `overviewFrom()` in `@gifting/domain` |
 | GET | `/v1/teams/:teamKey/balance` | member · `budget:view` (that team) | `{ teamKey, currency, availableCents, heldCents, spentCents }`, computed from the ledger. A team with no budget account yet reads as all zeros (and a send is refused with `409 insufficient_funds`) |
 | GET | `/v1/catalog/products?budget&occasion&category&q` | member · `catalog:view` | `{ products[] }`: one per product, narrowed to the variants in stock (and within the budget). `sku`, `priceCents` and `imageUrl` are the default variant's (the cheapest); `variants[]` has `sku`, `label`, `priceCents`, `available`, `imageUrl`. A single-gift send takes a variant SKU |
@@ -101,7 +101,8 @@ company and one team ([ADR 0016](../architecture/decisions/0016-organizations-an
 | `503 organizations_not_configured` | The commerce connector has no `organizations` (production only) |
 
 Development: with `DEV_AUTH=1` outside production, the `x-dev-user` header
-the sender app forwards acts as any member of the directory (the demo
+(sent only by the API's tests; the sender app no longer forwards one) acts
+as any member of the directory (the demo
 company from `infra/seed` when the connector has no `organizations`).
 Without it, the signed-in person's own membership is used, else the demo
 company's first member. Account routes (`/v1/me` and the rest) always need
